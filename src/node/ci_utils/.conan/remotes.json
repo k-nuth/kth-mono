@@ -1,0 +1,14 @@
+{
+ "remotes": [
+  {
+   "name": "conancenter",
+   "url": "https://center.conan.io",
+   "verify_ssl": true
+  },
+  {
+   "name": "kth",
+   "url": "https://packages.kth.cash/api/",
+   "verify_ssl": true
+  }
+ ]
+}

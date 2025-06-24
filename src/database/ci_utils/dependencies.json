@@ -1,0 +1,13 @@
+{
+  "secp256k1": [],
+  "infrastructure": ["secp256k1"],
+  "domain": ["infrastructure"],
+  "consensus": ["secp256k1", "domain"],
+  "database":["domain"],
+  "network":["domain"],
+  "blockchain":["database"],
+  "node" : ["blockchain", "network"],
+  "rpc" : ["node"],
+  "kth": ["node", "rpc"],
+  "c-api": ["node"]
+}

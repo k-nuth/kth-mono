@@ -1,0 +1,35 @@
+# Autotools:
+*.la
+*.lo
+*.o
+.deps
+.libs
+/aclocal.m4
+/autom4te.cache
+/build-aux
+/config.*
+/configure
+/libtool
+Makefile
+Makefile.in
+
+# IDE's and editors:
+*~
+.*.swp
+.dirstamp
+/*.kdev4
+/.cproject
+/.project
+/.settings
+/nbproject
+bin
+obj
+
+/build
+__pycache__/
+.idea/
+cmake-build-debug/
+
+CMakeSettings.json
+
+.vscode/

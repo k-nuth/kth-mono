@@ -1,0 +1,11 @@
+#
+#  Command-line completion for node.
+#
+_node()
+{
+    local current="${COMP_WORDS[COMP_CWORD]}"
+    local options=" --help --initchain --version -h -i -v"
+
+    COMPREPLY=( `compgen -W "$options" -- $current` )
+}
+complete -F _node node

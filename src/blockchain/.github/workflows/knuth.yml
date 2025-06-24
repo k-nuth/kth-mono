@@ -1,0 +1,228 @@
+name: Build and Test
+
+# on: [push, pull_request]
+on:
+  push:
+    branches:
+#       - main   # tagged latest
+      - master # tagged latest
+#       - dev    # tagged test
+      - init
+    tags:
+      - v* # semver release
+  pull_request: # runs tests
+  workflow_dispatch: {}
+
+env:
+  NAME: blockchain
+  CONAN_REMOTE: kth
+  CONAN_REMOTE_URL: https://packages.kth.cash/api/
+
+jobs:
+  master:
+    name: Master and Dev
+    if: github.event_name != 'pull_request' &&
+        (github.ref == 'refs/heads/master' ||
+        github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Master Build
+        shell: bash
+        run: |
+          echo "Stable packages are published in Release branches"
+
+  check:
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    outputs:
+      permitted: ${{ steps.check.outputs.permitted }}
+    steps:
+      - id: check
+        continue-on-error: true
+        uses: prince-chrismc/check-actor-permissions-action@v2
+        with:
+          permission: write
+
+  setup:
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: ${{ steps.version.outputs.build-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0 # Required due to the way Git works, without it this action won't be able to find any or the correct tags
+      - id: version
+        uses: ./ci_utils/.github/actions/determine-version
+        with:
+          github-ref: ${{ github.ref }}
+          run-number: ${{ github.run_number }}
+
+  # build-base-docker-image:
+  #   name: Builds Alpine Docker image
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     # name: docker.pkg.github.com/${{ github.repository }}/alpine-image:${{ steps.version.outputs.version }}
+  #     name: docker.pkg.github.com/k-nuth/kth/alpine-image:${{ steps.version.outputs.version }}
+  #   env:
+  #     # name: docker.pkg.github.com/${{ github.repository }}/alpine-image
+  #     name: docker.pkg.github.com/k-nuth/kth/alpine-image
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         submodules: true
+  #     - id: version
+  #       run: echo "version=${{ hashFiles('./ci_utils/Dockerfile.build') }}" >> $GITHUB_OUTPUT
+  #     - uses: docker/login-action@v2
+  #       with:
+  #         registry: docker.pkg.github.com
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - id: check
+  #       name: check existence
+  #       run: |
+  #         docker pull ${{ env.name }}:${{ steps.version.outputs.version }} > /dev/null && echo "exists=true" >> $GITHUB_OUTPUT || echo "exists=false" >> $GITHUB_OUTPUT
+  #     - if: ${{ steps.check.outputs.exists == 'false' }}
+  #       run: docker build . --file ./ci_utils/Dockerfile.build --tag ${{ env.name }}:${{ steps.version.outputs.version }}
+  #     - if: ${{ steps.check.outputs.exists == 'false' }}
+  #       run: docker push ${{ env.name }}:${{ steps.version.outputs.version }}
+
+  generate-matrix:
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+    name: Generate Job Matrix
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Download matrix configuration
+        run: |
+          curl -O https://raw.githubusercontent.com/k-nuth/ci-utils/master/.github/matrix.json
+      - name: Generate Job Matrix
+        id: set-matrix
+        run: |
+          MATRIX=$(cat ./matrix.json)
+          echo "${MATRIX}"
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+
+  # calc-deps-with-container:
+  #   needs: [setup, generate-matrix]
+  #   strategy:
+  #     matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+  #   name: ${{ matrix.config.name }}
+  #   uses: k-nuth/ci-utils/.github/workflows/calc-deps-with-container.yml@master
+  #   with:
+  #     if: ${{ matrix.config.compiler == 'GCC' }}
+  #     os: ${{ matrix.config.os }}
+  #     image: "kthnode/gcc${{ matrix.config.version }}${{ matrix.config.docker_suffix }}"
+  #     conan-remote: "kth"
+  #     build-version: ${{ needs.setup.outputs.build-version }}
+  #   secrets:
+  #     conan-user: ${{ secrets.CONAN_LOGIN_USERNAME }}
+  #     conan-password: ${{ secrets.CONAN_3_PASSWORD }}
+
+  # calc-deps-without-container:
+  #   needs: [setup, generate-matrix]
+  #   strategy:
+  #     matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+  #   name: ${{ matrix.config.name }}
+  #   uses: k-nuth/ci-utils/.github/workflows/calc-deps-without-container.yml@master
+  #   with:
+  #     if: ${{ matrix.config.compiler != 'GCC' }}
+  #     os: ${{ matrix.config.os }}
+  #     conan-remote: "kth"
+  #     build-version: ${{ needs.setup.outputs.build-version }}
+  #   secrets:
+  #     conan-user: ${{ secrets.CONAN_LOGIN_USERNAME }}
+  #     conan-password: ${{ secrets.CONAN_3_PASSWORD }}
+
+  # build-deps-with-container:
+  #   needs: [calc-deps-with-container]
+  #   strategy:
+  #     matrix: ${{ fromJson(needs.calc-deps-with-container.outputs.matrix) }}
+  #   name: ${{ matrix.config.name }}
+  #   uses: k-nuth/ci-utils/.github/workflows/build-deps-with-container.yml@master
+  #   with:
+  #     if: ${{ matrix.config.compiler == 'GCC' }}
+  #     os: ${{ matrix.config.os }}
+  #     image: "kthnode/gcc${{ matrix.config.version }}${{ matrix.config.docker_suffix }}"
+  #     reference: ${{ matrix.config.reference }}
+  #     conan-remote: "kth"
+  #   secrets:
+  #     conan-user: ${{ secrets.CONAN_LOGIN_USERNAME }}
+  #     conan-password: ${{ secrets.CONAN_3_PASSWORD }}
+
+  # build-deps-without-container:
+  #   needs: [calc-deps-without-container]
+  #   strategy:
+  #     matrix: ${{ fromJson(needs.calc-deps-without-container.outputs.matrix) }}
+  #   name: ${{ matrix.config.name }}
+  #   uses: k-nuth/ci-utils/.github/workflows/build-deps-without-container.yml@master
+  #   with:
+  #     if: ${{ matrix.config.compiler != 'GCC' }}
+  #     os: ${{ matrix.config.os }}
+  #     reference: ${{ matrix.config.reference }}
+  #     conan-remote: "kth"
+  #   secrets:
+  #     conan-user: ${{ secrets.CONAN_LOGIN_USERNAME }}
+  #     conan-password: ${{ secrets.CONAN_3_PASSWORD }}
+
+  build-with-container:
+    needs: [setup, generate-matrix]
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
+    name: ${{ matrix.config.name }}
+    uses: k-nuth/ci-utils/.github/workflows/build-with-container.yml@master
+    with:
+      if: ${{ matrix.config.compiler == 'GCC' }}
+      upload: ${{ github.event_name == 'push' }} # && needs.check.outputs.permitted == 'true'
+      os: ${{ matrix.config.os }}
+      image: "kthnode/gcc${{ matrix.config.version }}${{ matrix.config.docker_suffix }}"
+      conan-remote: "kth"
+      recipe-name: "blockchain"
+      compiler: ${{ matrix.config.compiler }}
+      compiler-version: ${{ matrix.config.version }}
+      version-file: "include/kth/blockchain/version.hpp"
+      build-version: "${{ needs.setup.outputs.build-version }}"
+
+    secrets:
+      CONAN_LOGIN_USERNAME: ${{ secrets.CONAN_LOGIN_USERNAME }}
+      CONAN_PASSWORD: ${{ secrets.CONAN_3_PASSWORD }}
+
+  build-without-container:
+    needs: [setup, generate-matrix]
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
+    name: ${{ matrix.config.name }}
+    uses: k-nuth/ci-utils/.github/workflows/build-without-container.yml@master
+    with:
+      if: ${{ matrix.config.compiler != 'GCC' }}
+      upload: ${{ github.event_name == 'push' }} # && needs.check.outputs.permitted == 'true'
+      os: ${{ matrix.config.os }}
+      conan-remote: "kth"
+      recipe-name: "blockchain"
+      compiler: ${{ matrix.config.compiler }}
+      compiler-version: ${{ matrix.config.version }}
+      version-file: "include/kth/blockchain/version.hpp"
+      build-version: "${{ needs.setup.outputs.build-version }}"
+    secrets:
+      CONAN_LOGIN_USERNAME: ${{ secrets.CONAN_LOGIN_USERNAME }}
+      CONAN_PASSWORD: ${{ secrets.CONAN_3_PASSWORD }}
+
+  static-checks:
+    # needs: wait-for-dependencies
+    name: Static Checks
+    if: github.ref == 'refs/heads/devX' ||
+        startsWith(github.ref, 'refs/heads/testci') ||
+        startsWith(github.ref, 'refs/heads/release') ||
+        startsWith(github.ref, 'refs/heads/hotfix')
+
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Static Checks
+        shell: bash
+        run: |
+          echo ${{github.ref}}
+

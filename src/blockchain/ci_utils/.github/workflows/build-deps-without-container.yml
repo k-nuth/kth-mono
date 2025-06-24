@@ -1,0 +1,74 @@
+on:
+  workflow_call:
+    inputs:
+      if:
+        description: 'Whether to run this job'
+        required: false
+        type: boolean
+      os:
+        required: true
+        type: string
+      reference:
+        required: true
+        type: string
+      conan-remote:
+        required: true
+        type: string
+    secrets:
+      conan-user:
+        required: true
+      conan-password:
+        required: true
+jobs:
+  reusable-build-deps-without-container:
+    if: ${{ inputs.if }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - if: ${{ inputs.reference != 'null' }}
+        run: |
+          echo "inputs.conan-remote: ${{ inputs.conan-remote }}"
+          echo "CONAN_REMOTE: $CONAN_REMOTE"
+          echo "inputs.if: ${{ inputs.if }}"
+          echo "inputs.os: ${{ inputs.os }}"
+          echo "inputs.reference: ${{ inputs.reference }}"
+
+          python -c 'import platform; print(platform.machine())'
+          python3 -c 'import platform; print(platform.machine())'
+
+          python -c 'import sysconfig; print(sysconfig.get_platform())'
+          python3 -c 'import sysconfig; print(sysconfig.get_platform())'
+
+
+          uname -m
+          python3 --version
+          pip3 install cpuid --upgrade --user
+          pip3 install kthbuild --upgrade --user
+          # python3 -m pip install kthbuild --upgrade
+
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      # - if: ${{ inputs.reference != 'null' && inputs.compiler != 'GCC' }}
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: '3.11'
+      - if: ${{ inputs.reference != 'null' }}
+        uses: ./ci_utils/.github/actions/setup-conan
+      # - if: ${{ inputs.reference != 'null' }}
+      #   uses: ./ci_utils/.github/actions/setup-kthbuild
+      - if: ${{ inputs.reference != 'null' }}
+        run: conan remote login -p ${{ secrets.conan-password }} ${{ inputs.conan-remote }} ${{ secrets.conan-user }}
+      - name: download
+        if: ${{ inputs.reference != 'null' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: conan-lockfile-no-container
+      - name: build
+        if: ${{ inputs.reference != 'null' }}
+        run: conan install --requires=${{ inputs.reference }} -l conan.lock -b missing -pr:b general-ci-cd -pr:h general-ci-cd
+      - name: upload
+        if: ${{ inputs.reference != 'null' }}
+        run: conan upload ${{ inputs.reference }} -r ${{ inputs.conan-remote }} # --all
+      - run: exit 0

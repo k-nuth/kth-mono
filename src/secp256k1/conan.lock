@@ -1,0 +1,10 @@
+{
+    "version": "0.5",
+    "requires": [
+        "gmp/6.3.0#df20ffb6d21c34d67704305bcd1dea9e%1716966936.742"
+    ],
+    "build_requires": [
+        "m4/1.4.19#c1c4b1ee919e34630bb9b50046253d3c%1676610086.39"
+    ],
+    "python_requires": []
+}

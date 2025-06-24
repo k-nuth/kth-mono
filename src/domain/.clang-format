@@ -1,0 +1,19 @@
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+---
+Language:        Cpp
+# BasedOnStyle:  LLVM
+# BasedOnStyle:  Google
+BasedOnStyle:  Chromium
+# BasedOnStyle:  Mozilla
+# BasedOnStyle:  WebKit
+
+
+BreakBeforeBraces: Attach
+ColumnLimit: 0
+
+Standard:        Cpp11
+UseTab:          Never
+IndentWidth:     4
+
+
