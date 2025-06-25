@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Download matrix configuration
         run: |
-          curl -O https://raw.githubusercontent.com/k-nuth/ci-utils/master/.github/matrix.json
+          curl -O https://raw.githubusercontent.com/k-nuth/ci-utils/<COMMIT_SHA>/.github/matrix.json
       - name: Generate Job Matrix
         id: set-matrix
         run: |
