@@ -1,0 +1,106 @@
+on:
+  workflow_call:
+    inputs:
+      if:
+        description: 'Whether to run this job'
+        required: true
+        type: boolean
+      upload:
+        description: 'Have to upload the package'
+        required: true
+        type: boolean
+      os:
+        required: true
+        type: string
+      recipe-name:
+        required: true
+        type: string
+      conan-remote:
+        required: true
+        type: string
+      compiler:
+        required: true
+        type: string
+      compiler-version:
+        required: true
+        type: string
+      build-version:
+        required: true
+        type: string
+    secrets:
+      CONAN_LOGIN_USERNAME:
+        required: true
+      CONAN_PASSWORD:
+        required: true
+jobs:
+  reusable-build-without-container:
+    if: ${{ inputs.if }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - run: |
+          echo "inputs.conan-remote: ${{ inputs.conan-remote }}"
+          echo "inputs.if: ${{ inputs.if }}"
+          echo "inputs.os: ${{ inputs.os }}"
+
+          echo "inputs.conan-remote:       ${{ inputs.conan-remote }}"
+          echo "inputs.recipe-name:        ${{ inputs.recipe-name }}"
+
+          echo "inputs.compiler:           ${{ inputs.compiler }}"
+          echo "inputs.compiler-version:   ${{ inputs.compiler-version }}"
+
+          echo "inputs.version-file:       ${{ inputs.version-file }}"
+          echo "inputs.upload:             ${{ inputs.upload }}"
+          # echo "github.event_name:         ${{ github.event_name }}"
+
+      # ----------------------------------------------------------------
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.conan/data
+          key: ${{ runner.os }}-${{ hashFiles('**/conan.lock') }}
+      # - uses: actions/cache@v4
+      #   with:
+      #     path: ~/.cache/pip
+      #     key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+
+      # - if: ${{ inputs.compiler != 'GCC' }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - uses: ./ci_utils/.github/actions/setup-conan
+      - uses: ./ci_utils/.github/actions/setup-kthbuild
+      - uses: lukka/get-cmake@latest
+
+      # - uses: github/codeql-action/init@v2
+      #   with:
+      #     languages: 'cpp'
+
+      - uses: ./ci_utils/.github/actions/replace-version-monorepo
+        with:
+          new-version: ${{ inputs.build-version }}
+
+
+      - name: build
+        working-directory: .
+        # This should not be logged in to conan remote since we are building for ubuntu the binaries are available in CCI
+        run: |
+          conan remote login -p ${{ secrets.CONAN_PASSWORD }} ${{ inputs.conan-remote }} ${{ secrets.CONAN_LOGIN_USERNAME }}
+          # conan lock create conanfile.py --version ${{ inputs.build-version }} --lockfile=conan.lock --lockfile-out=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd -o march_id=ZLm9Pjh
+          # conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd --build=missing -o march_id=ZLm9Pjh
+          conan lock create conanfile.py --version ${{ inputs.build-version }} --lockfile=conan.lock --lockfile-out=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd
+          conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd --build=missing
+
+      # - uses: github/codeql-action/analyze@v2
+
+      - name: upload
+        # if: github.event_name == 'push' && needs.check.outputs.permitted == 'true'
+        if: ${{ inputs.upload }}
+        run: |
+          conan remote login -p ${{ secrets.CONAN_PASSWORD }} ${{ inputs.conan-remote }} ${{ secrets.CONAN_LOGIN_USERNAME }}
+          conan upload ${{ inputs.recipe-name }}/${{ inputs.build-version }}@ -r ${{ inputs.conan-remote }} # --all

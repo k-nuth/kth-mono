@@ -1,0 +1,44 @@
+name: "Replace Version in Mono-repo"
+description: "Replaces version in all version files across the mono-repo"
+inputs:
+  old-version:
+    description: "The version that needs to be eliminated"
+    required: false
+    default: "0.0.0-dev.1"
+  new-version:
+    description: "The version that needs to be inserted"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Replace version in all version files
+      run: |
+        echo "Replacing version from '${{ inputs.old-version }}' to '${{ inputs.new-version }}'"
+        
+        # Define all version files in the mono-repo
+        version_files=(
+          "src/c-api/include/kth/capi/version.h"
+          "src/node-exe/src/version.hpp"
+          "src/blockchain/include/kth/blockchain/version.hpp"
+          "src/node/include/kth/node/version.hpp"
+          "src/infrastructure/include/kth/infrastructure/version.hpp"
+          "src/domain/include/kth/domain/version.hpp"
+          "src/consensus/include/kth/consensus/version.hpp"
+          "src/secp256k1/include/secp256k1/version.h"
+          "src/database/include/kth/database/version.hpp"
+          "src/network/include/kth/network/version.hpp"
+        )
+        
+        # Replace version in each file that exists
+        for file in "${version_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "Updating version in: $file"
+            sed -i'' -e 's/${{ inputs.old-version }}/${{ inputs.new-version }}/g' "$file"
+            rm -rf "${file}-e" || true
+          else
+            echo "File not found (skipping): $file"
+          fi
+        done
+        
+        echo "Version replacement completed!"
+      shell: bash

@@ -1,13 +1,11 @@
 name: Build and Test
 
-# on: [push, pull_request]
 on:
   push:
     branches:
-#       - main   # tagged latest
       - master # tagged latest
-#       - dev    # tagged test
-      - init
+      - 'release/**' # release branches
+      - 'hotfix/**' # hotfix branches
     tags:
       - v* # semver release
   pull_request: # runs tests
@@ -19,24 +17,28 @@ env:
   CONAN_REMOTE_URL: https://packages.kth.cash/api/
 
 jobs:
-  master:
-    name: Master and Dev
-    if: github.event_name != 'pull_request' &&
-        (github.ref == 'refs/heads/master' ||
-        github.ref == 'refs/heads/dev')
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Master Build
-        shell: bash
-        run: |
-          echo "Stable packages are published in Release branches"
-
-  check:
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+  debug:
     runs-on: ubuntu-latest
     outputs:
       permitted: ${{ steps.check.outputs.permitted }}
     steps:
+      - name: Debug Check Job
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Condition result: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' }}"
+
+  check:
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    outputs:
+      permitted: ${{ steps.check.outputs.permitted }}
+    steps:
+      - name: Debug Check Job
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Condition result: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' }}"
       - id: check
         continue-on-error: true
         uses: prince-chrismc/check-actor-permissions-action@v2
@@ -44,7 +46,7 @@ jobs:
           permission: write
 
   setup:
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       build-version: ${{ steps.version.outputs.build-version }}
@@ -89,15 +91,21 @@ jobs:
   #       run: docker push ${{ env.name }}:${{ steps.version.outputs.version }}
 
   generate-matrix:
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
     name: Generate Job Matrix
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Debug Info
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Head ref: ${{ github.head_ref }}"
+          echo "Base ref: ${{ github.base_ref }}"
       - name: Download matrix configuration
         run: |
-          curl -O https://raw.githubusercontent.com/k-nuth/ci-utils/<COMMIT_SHA>/.github/matrix.json
+          curl -O https://raw.githubusercontent.com/k-nuth/ci-utils/645fee4d60d8e3763789c83f77fcafe732b82e9c/.github/matrix.json
       - name: Generate Job Matrix
         id: set-matrix
         run: |
@@ -173,17 +181,16 @@ jobs:
       fail-fast: false
       matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
     name: ${{ matrix.config.name }}
-    uses: k-nuth/ci-utils/.github/workflows/build-with-container.yml@master
+    uses: ./.github/workflows/build-with-container.yml
     with:
       if: ${{ matrix.config.compiler == 'GCC' }}
-      upload: ${{ github.event_name == 'push' }} # && needs.check.outputs.permitted == 'true'
+      upload: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/hotfix')) }}
       os: ${{ matrix.config.os }}
       image: "kthnode/gcc${{ matrix.config.version }}${{ matrix.config.docker_suffix }}"
       conan-remote: "kth"
       recipe-name: "kth-mono"
       compiler: ${{ matrix.config.compiler }}
       compiler-version: ${{ matrix.config.version }}
-      version-file: "include/kth/capi/version.h"
       build-version: "${{ needs.setup.outputs.build-version }}"
 
     secrets:
@@ -196,16 +203,15 @@ jobs:
       fail-fast: false
       matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
     name: ${{ matrix.config.name }}
-    uses: k-nuth/ci-utils/.github/workflows/build-without-container.yml@master
+    uses: ./.github/workflows/build-without-container.yml
     with:
       if: ${{ matrix.config.compiler != 'GCC' }}
-      upload: ${{ github.event_name == 'push' }} # && needs.check.outputs.permitted == 'true'
+      upload: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/hotfix')) }}
       os: ${{ matrix.config.os }}
       conan-remote: "kth"
       recipe-name: "kth-mono"
       compiler: ${{ matrix.config.compiler }}
       compiler-version: ${{ matrix.config.version }}
-      version-file: "include/kth/capi/version.h"
       build-version: "${{ needs.setup.outputs.build-version }}"
     secrets:
       CONAN_LOGIN_USERNAME: ${{ secrets.CONAN_LOGIN_USERNAME }}
@@ -219,7 +225,7 @@ jobs:
         startsWith(github.ref, 'refs/heads/release') ||
         startsWith(github.ref, 'refs/heads/hotfix')
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Static Checks
         shell: bash
