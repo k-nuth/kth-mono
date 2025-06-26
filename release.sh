@@ -72,8 +72,24 @@ done
 # squash merge the PR, do not delete the branch
 gh pr merge --squash --auto "release/${VERSION}"
 
-# remove the release branch locally and remotely
-git push origin --delete "release/${VERSION}"
-git branch -D "release/${VERSION}"
+# switch to master and pull latest changes
 git checkout master
 git pull origin master
+
+# create and push the version tag
+echo "Creating tag v${VERSION}..."
+git tag -a "v${VERSION}" -m "Release version ${VERSION}"
+git push origin "v${VERSION}"
+
+# create GitHub release
+echo "Creating GitHub release v${VERSION}..."
+gh release create "v${VERSION}" \
+    --title "Release ${VERSION}" \
+    --notes "Release version ${VERSION}" \
+    --latest
+
+echo "✅ Release v${VERSION} created successfully!"
+
+# remove the release branch locally and remotely
+git push origin --delete "release-${VERSION}"
+git branch -D "release-${VERSION}"
