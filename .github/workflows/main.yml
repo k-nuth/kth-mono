@@ -189,7 +189,7 @@ jobs:
       os: ${{ matrix.config.os }}
       image: "kthnode/gcc${{ matrix.config.version }}${{ matrix.config.docker_suffix }}"
       conan-remote: "kth"
-      recipe-name: "kth-mono"
+      recipe-name: "kth"
       compiler: ${{ matrix.config.compiler }}
       compiler-version: ${{ matrix.config.version }}
       build-version: "${{ needs.setup.outputs.build-version }}"
@@ -210,7 +210,7 @@ jobs:
       upload: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/hotfix') || startsWith(github.ref, 'refs/heads/dev-publish')) }}
       os: ${{ matrix.config.os }}
       conan-remote: "kth"
-      recipe-name: "kth-mono"
+      recipe-name: "kth"
       compiler: ${{ matrix.config.compiler }}
       compiler-version: ${{ matrix.config.version }}
       build-version: "${{ needs.setup.outputs.build-version }}"
