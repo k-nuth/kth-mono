@@ -6,6 +6,7 @@ on:
       - master # tagged latest
       - 'release/**' # release branches
       - 'hotfix/**' # hotfix branches
+      - 'dev-publish/**' # development branches that publish packages
     tags:
       - v* # semver release
   pull_request: # runs tests
@@ -29,7 +30,7 @@ jobs:
           echo "Condition result: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' }}"
 
   check:
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/dev-publish')
     runs-on: ubuntu-latest
     outputs:
       permitted: ${{ steps.check.outputs.permitted }}
@@ -38,7 +39,7 @@ jobs:
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Ref: ${{ github.ref }}"
-          echo "Condition result: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' }}"
+          echo "Condition result: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/dev-publish') }}"
       - id: check
         continue-on-error: true
         uses: prince-chrismc/check-actor-permissions-action@v2
@@ -46,7 +47,7 @@ jobs:
           permission: write
 
   setup:
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/dev-publish')
     runs-on: ubuntu-latest
     outputs:
       build-version: ${{ steps.version.outputs.build-version }}
@@ -91,7 +92,7 @@ jobs:
   #       run: docker push ${{ env.name }}:${{ steps.version.outputs.version }}
 
   generate-matrix:
-    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/dev-publish')
     name: Generate Job Matrix
     runs-on: ubuntu-22.04
     outputs:
