@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -71,9 +71,9 @@ public:
     // ------------------------------------------------------------------------
 
 
-    virtual void fetch_block(size_t height, bool witness, block_fetch_handler handler) const = 0;
+    virtual void fetch_block(size_t height, block_fetch_handler handler) const = 0;
 
-    virtual void fetch_block(hash_digest const& hash, bool witness, block_fetch_handler handler) const = 0;
+    virtual void fetch_block(hash_digest const& hash, block_fetch_handler handler) const = 0;
 
     virtual void fetch_locator_block_hashes(get_blocks_const_ptr locator, hash_digest const& threshold, size_t limit, inventory_fetch_handler handler) const = 0;
 
@@ -89,13 +89,13 @@ public:
 
     virtual void fetch_ds_proof(hash_digest const& hash, ds_proof_fetch_handler handler) const = 0;
 
-    virtual void fetch_transaction(hash_digest const& hash, bool require_confirmed, bool witness, transaction_fetch_handler handler) const = 0;
+    virtual void fetch_transaction(hash_digest const& hash, bool require_confirmed, transaction_fetch_handler handler) const = 0;
 
     virtual void fetch_transaction_position(hash_digest const& hash, bool require_confirmed, transaction_index_fetch_handler handler) const = 0;
 
-    virtual void for_each_transaction(size_t from, size_t to, bool witness, for_each_tx_handler const& handler) const = 0;
+    // virtual void for_each_transaction(size_t from, size_t to, for_each_tx_handler const& handler) const = 0;
 
-    virtual void for_each_transaction_non_coinbase(size_t from, size_t to, bool witness, for_each_tx_handler const& handler) const = 0;
+    // virtual void for_each_transaction_non_coinbase(size_t from, size_t to, for_each_tx_handler const& handler) const = 0;
 
     virtual void fetch_locator_block_headers(get_headers_const_ptr locator, hash_digest const& threshold, size_t limit, locator_block_headers_fetch_handler handler) const = 0;
 
@@ -129,11 +129,11 @@ public:
     virtual void fetch_template(merkle_block_fetch_handler handler) const = 0;
     virtual void fetch_mempool(size_t count_limit, uint64_t minimum_fee, inventory_fetch_handler handler) const = 0;
 
-    virtual std::vector<mempool_transaction_summary> get_mempool_transactions(std::vector<std::string> const& payment_addresses, bool use_testnet_rules, bool witness) const = 0;
+    virtual std::vector<mempool_transaction_summary> get_mempool_transactions(std::vector<std::string> const& payment_addresses, bool use_testnet_rules) const = 0;
 
-    virtual std::vector<mempool_transaction_summary> get_mempool_transactions(std::string const& payment_address, bool use_testnet_rules, bool witness) const = 0;
+    virtual std::vector<mempool_transaction_summary> get_mempool_transactions(std::string const& payment_address, bool use_testnet_rules) const = 0;
 
-    virtual std::vector<domain::chain::transaction> get_mempool_transactions_from_wallets(std::vector<domain::wallet::payment_address> const& payment_addresses, bool use_testnet_rules, bool witness) const = 0;
+    virtual std::vector<domain::chain::transaction> get_mempool_transactions_from_wallets(std::vector<domain::wallet::payment_address> const& payment_addresses, bool use_testnet_rules) const = 0;
 
     virtual void fetch_unconfirmed_transaction(hash_digest const& hash, transaction_unconfirmed_fetch_handler handler) const = 0;
 

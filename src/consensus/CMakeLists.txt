@@ -1,14 +1,14 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2025 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(consensus VERSION 0 LANGUAGES CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
@@ -80,8 +80,12 @@ _check_has_decl(sys/endian.h HAVE_SYS_ENDIAN_H htobe16 HAVE_DECL_HTOBE16)
 _check_has_decl(sys/endian.h HAVE_SYS_ENDIAN_H htobe32 HAVE_DECL_HTOBE32)
 _check_has_decl(sys/endian.h HAVE_SYS_ENDIAN_H htobe64 HAVE_DECL_HTOBE64)
 
-find_package(secp256k1 REQUIRED)
+
+if (NOT GLOBAL_BUILD)
+  find_package(secp256k1 REQUIRED)
+endif()
 find_package(Boost COMPONENTS boost REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 include(CheckCXXCompilerFlag)
 
@@ -127,14 +131,19 @@ if (${CURRENCY} STREQUAL "BCH")
     src/bch-rules/pubkey.h
     src/bch-rules/feerate.cpp
     src/bch-rules/feerate.h
+    src/bch-rules/random.cpp
+    src/bch-rules/random.h
     src/bch-rules/serialize.h
     src/bch-rules/tinyformat.h
     src/bch-rules/uint256.cpp
     src/bch-rules/uint256.h
     src/bch-rules/version.h
+
     src/bch-rules/compat/byteswap.h
     src/bch-rules/compat/endian.h
     src/bch-rules/crypto/common.h
+    src/bch-rules/crypto/chacha20.cpp
+    src/bch-rules/crypto/chacha20.h
     src/bch-rules/crypto/hmac_sha512.cpp
     src/bch-rules/crypto/hmac_sha512.h
     src/bch-rules/crypto/ripemd160.cpp
@@ -154,6 +163,8 @@ if (${CURRENCY} STREQUAL "BCH")
     src/bch-rules/primitives/transaction.h
     src/bch-rules/primitives/txid.h
 
+    src/bch-rules/script/bigint.h
+    src/bch-rules/script/bigint.cpp
     src/bch-rules/script/bitfield.cpp
     src/bch-rules/script/bitfield.h
     src/bch-rules/script/interpreter.cpp
@@ -163,17 +174,23 @@ if (${CURRENCY} STREQUAL "BCH")
     src/bch-rules/script/script_flags.h
     src/bch-rules/script/script_error.h
     src/bch-rules/script/script_execution_context.cpp
+    src/bch-rules/script/script_num_encoding.h
+    src/bch-rules/script/script_num_encoding.cpp
     src/bch-rules/script/sigencoding.h
     src/bch-rules/script/sigencoding.cpp
 
     src/bch-rules/support/cleanse.h
     src/bch-rules/support/cleanse.cpp
+    src/bch-rules/support/lockedpool.h
+    src/bch-rules/support/lockedpool.cpp
 
 
     src/bch-rules/util/strencodings.cpp
     src/bch-rules/util/strencodings.h
     src/bch-rules/util/string.cpp
     src/bch-rules/util/string.h
+    src/bch-rules/util/time.h
+    src/bch-rules/util/time.cpp
   )
 else()
   set(kth_sources_clone
@@ -217,7 +234,7 @@ endif()
 # add_library(${PROJECT_NAME}-clone OBJECT)
 add_library(${PROJECT_NAME}-clone ${MODE} ${kth_sources_clone})
 add_library(${PROJECT_NAME}-clone::${PROJECT_NAME}-clone ALIAS ${PROJECT_NAME}-clone)
-set_target_properties(${PROJECT_NAME}-clone PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME}-clone PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 if (ENABLE_POSITION_INDEPENDENT_CODE)
   set_property(TARGET ${PROJECT_NAME}-clone PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -233,7 +250,7 @@ endif()
 target_compile_definitions(${PROJECT_NAME}-clone PRIVATE $<TARGET_PROPERTY:secp256k1::secp256k1,INTERFACE_COMPILE_DEFINITIONS>)
 target_include_directories(${PROJECT_NAME}-clone PRIVATE $<TARGET_PROPERTY:secp256k1::secp256k1,INTERFACE_INCLUDE_DIRECTORIES>)
 
-target_link_libraries(${PROJECT_NAME}-clone PUBLIC Boost::boost)
+target_link_libraries(${PROJECT_NAME}-clone PUBLIC Boost::boost OpenSSL::Crypto)
 
 if (${CURRENCY} STREQUAL "BCH")
   _group_sources(${PROJECT_NAME}-clone "${CMAKE_CURRENT_SOURCE_DIR}/src/bch-rules")
@@ -248,12 +265,14 @@ if (ENABLE_SHARED)
 endif()
 
 set(kth_sources
+  src/consensus/conversions.cpp
   src/consensus/consensus.cpp
   src/consensus/consensus.hpp
 )
 
 set(kth_headers
   include/kth/consensus.hpp
+  include/kth/consensus/conversions.hpp
   include/kth/consensus/define.hpp
   include/kth/consensus/export.hpp
   include/kth/consensus/version.hpp
@@ -261,7 +280,7 @@ set(kth_headers
 
 add_library(${PROJECT_NAME} ${MODE} ${kth_sources} ${kth_headers} $<TARGET_OBJECTS:${PROJECT_NAME}-clone>)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 if (ENABLE_POSITION_INDEPENDENT_CODE)
   set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -288,6 +307,7 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC secp256k1::secp256k1)
 target_link_libraries(${PROJECT_NAME} PUBLIC Boost::boost)
+target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::Crypto)
 
 if (MINGW)
   target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32 wsock32) #TODO(fernando): manage with Conan

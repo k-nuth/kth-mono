@@ -1,13 +1,12 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2022 The Bitcoin developers
+// Copyright (c) 2017-2023 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #pragma once
 
 #include <serialize.h>
-#include <support/allocators/zeroafterfree.h>
 
 #include <algorithm>
 #include <cassert>
@@ -178,6 +177,8 @@ public:
     int GetType() const { return m_type; }
     void SetType(int type) { m_type = type; }
 
+    size_t GetPos() const { return m_pos; }
+
     size_t size() const { return m_data.size() - m_pos; }
     bool empty() const { return m_data.size() == m_pos; }
 
@@ -216,23 +217,23 @@ using VectorReader = GenericVectorReader<std::vector<uint8_t>>; //! for compat. 
  */
 class CDataStream {
 protected:
-    typedef CSerializeData vector_type;
-    vector_type vch;
+    std::vector<char> vch;
     unsigned int nReadPos;
 
     int nType;
     int nVersion;
 
 public:
-    typedef vector_type::allocator_type allocator_type;
-    typedef vector_type::size_type size_type;
-    typedef vector_type::difference_type difference_type;
-    typedef vector_type::reference reference;
-    typedef vector_type::const_reference const_reference;
-    typedef vector_type::value_type value_type;
-    typedef vector_type::iterator iterator;
-    typedef vector_type::const_iterator const_iterator;
-    typedef vector_type::reverse_iterator reverse_iterator;
+    using vector_type = decltype(vch);
+    using allocator_type = vector_type::allocator_type;
+    using size_type = vector_type::size_type;
+    using difference_type = vector_type::difference_type;
+    using reference = vector_type::reference;
+    using const_reference = vector_type::const_reference;
+    using value_type = vector_type::value_type;
+    using iterator = vector_type::iterator;
+    using const_iterator = vector_type::const_iterator;
+    using reverse_iterator = vector_type::reverse_iterator;
 
     explicit CDataStream(int nTypeIn, int nVersionIn) {
         Init(nTypeIn, nVersionIn);
@@ -247,11 +248,6 @@ public:
     CDataStream(const char *pbegin, const char *pend, int nTypeIn,
                 int nVersionIn)
         : vch(pbegin, pend) {
-        Init(nTypeIn, nVersionIn);
-    }
-
-    CDataStream(const vector_type &vchIn, int nTypeIn, int nVersionIn)
-        : vch(vchIn.begin(), vchIn.end()) {
         Init(nTypeIn, nVersionIn);
     }
 
@@ -468,7 +464,7 @@ public:
         return (*this);
     }
 
-    void GetAndClear(CSerializeData &d) {
+    void GetAndClear(vector_type &d) {
         d.insert(d.end(), begin(), end());
         clear();
     }
@@ -599,16 +595,32 @@ public:
  * close the file early, use file.fclose() instead of fclose(file).
  */
 class CAutoFile {
-private:
-    const int nType;
-    const int nVersion;
+    int nType;
+    int nVersion;
 
     FILE *file;
+
+    void setNull() { nType = nVersion = 0; file = nullptr; }
 
 public:
     CAutoFile(FILE *filenew, int nTypeIn, int nVersionIn)
         : nType(nTypeIn), nVersion(nVersionIn) {
         file = filenew;
+    }
+
+    // Alow move-construct to transfer ownership
+    CAutoFile(CAutoFile &&o) : nType(o.nType), nVersion(o.nVersion), file(o.file) { o.setNull(); }
+
+    // Allow move-assign to transfer ownership
+    CAutoFile &operator=(CAutoFile &&o) {
+        if (this != &o) {
+            if (file != o.file) fclose(); // close our managed file if we have one and it's not same as o's
+            file = o.file;
+            nType = o.nType;
+            nVersion = o.nVersion;
+            o.setNull(); // null out moved-from object to complete the transfer
+        }
+        return *this;
     }
 
     ~CAutoFile() { fclose(); }

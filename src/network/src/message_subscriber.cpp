@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,13 +13,13 @@
 #define RELAY_CODE(code, value) value##_subscriber_->relay(code, {})
 
 // This allows us to block the peer while handling the message.
-#define CASE_HANDLE_MESSAGE(stream, version, value) \
+#define CASE_HANDLE_MESSAGE(reader, version, value) \
     case message_type::value: \
-        return handle<domain::message::value>(stream, version, value##_subscriber_)
+        return handle<domain::message::value>(reader, version, value##_subscriber_)
 
-#define CASE_RELAY_MESSAGE(stream, version, value) \
+#define CASE_RELAY_MESSAGE(reader, version, value) \
     case message_type::value: \
-        return relay<domain::message::value>(stream, version, value##_subscriber_)
+        return relay<domain::message::value>(reader, version, value##_subscriber_)
 
 #define START_SUBSCRIBER(value) value##_subscriber_->start()
 
@@ -95,38 +95,38 @@ void message_subscriber::broadcast(code const& ec) {
     // RELAY_CODE(ec, xverack);
 }
 
-code message_subscriber::load(message_type type, uint32_t version, std::istream& stream) const {
+code message_subscriber::load(message_type type, uint32_t version, byte_reader& reader) const {
     switch (type) {
-        CASE_RELAY_MESSAGE(stream, version, address);
-        CASE_RELAY_MESSAGE(stream, version, alert);
-        CASE_HANDLE_MESSAGE(stream, version, block);
-        CASE_RELAY_MESSAGE(stream, version, block_transactions);
-        CASE_RELAY_MESSAGE(stream, version, compact_block);
-        CASE_RELAY_MESSAGE(stream, version, double_spend_proof);
-        CASE_RELAY_MESSAGE(stream, version, fee_filter);
-        CASE_RELAY_MESSAGE(stream, version, filter_add);
-        CASE_RELAY_MESSAGE(stream, version, filter_clear);
-        CASE_RELAY_MESSAGE(stream, version, filter_load);
-        CASE_RELAY_MESSAGE(stream, version, get_address);
-        CASE_RELAY_MESSAGE(stream, version, get_blocks);
-        CASE_RELAY_MESSAGE(stream, version, get_block_transactions);
-        CASE_RELAY_MESSAGE(stream, version, get_data);
-        CASE_RELAY_MESSAGE(stream, version, get_headers);
-        CASE_RELAY_MESSAGE(stream, version, headers);
-        CASE_RELAY_MESSAGE(stream, version, inventory);
-        CASE_RELAY_MESSAGE(stream, version, memory_pool);
-        CASE_RELAY_MESSAGE(stream, version, merkle_block);
-        CASE_RELAY_MESSAGE(stream, version, not_found);
-        CASE_RELAY_MESSAGE(stream, version, ping);
-        CASE_RELAY_MESSAGE(stream, version, pong);
-        CASE_RELAY_MESSAGE(stream, version, reject);
-        CASE_RELAY_MESSAGE(stream, version, send_compact);
-        CASE_RELAY_MESSAGE(stream, version, send_headers);
-        CASE_HANDLE_MESSAGE(stream, version, transaction);
-        CASE_HANDLE_MESSAGE(stream, version, verack);
-        CASE_HANDLE_MESSAGE(stream, version, version);
-        CASE_HANDLE_MESSAGE(stream, version, xversion);
-        // CASE_HANDLE_MESSAGE(stream, version, xverack);
+        CASE_RELAY_MESSAGE(reader, version, address);
+        CASE_RELAY_MESSAGE(reader, version, alert);
+        CASE_HANDLE_MESSAGE(reader, version, block);
+        CASE_RELAY_MESSAGE(reader, version, block_transactions);
+        CASE_RELAY_MESSAGE(reader, version, compact_block);
+        CASE_RELAY_MESSAGE(reader, version, double_spend_proof);
+        CASE_RELAY_MESSAGE(reader, version, fee_filter);
+        CASE_RELAY_MESSAGE(reader, version, filter_add);
+        CASE_RELAY_MESSAGE(reader, version, filter_clear);
+        CASE_RELAY_MESSAGE(reader, version, filter_load);
+        CASE_RELAY_MESSAGE(reader, version, get_address);
+        CASE_RELAY_MESSAGE(reader, version, get_blocks);
+        CASE_RELAY_MESSAGE(reader, version, get_block_transactions);
+        CASE_RELAY_MESSAGE(reader, version, get_data);
+        CASE_RELAY_MESSAGE(reader, version, get_headers);
+        CASE_RELAY_MESSAGE(reader, version, headers);
+        CASE_RELAY_MESSAGE(reader, version, inventory);
+        CASE_RELAY_MESSAGE(reader, version, memory_pool);
+        CASE_RELAY_MESSAGE(reader, version, merkle_block);
+        CASE_RELAY_MESSAGE(reader, version, not_found);
+        CASE_RELAY_MESSAGE(reader, version, ping);
+        CASE_RELAY_MESSAGE(reader, version, pong);
+        CASE_RELAY_MESSAGE(reader, version, reject);
+        CASE_RELAY_MESSAGE(reader, version, send_compact);
+        CASE_RELAY_MESSAGE(reader, version, send_headers);
+        CASE_HANDLE_MESSAGE(reader, version, transaction);
+        CASE_HANDLE_MESSAGE(reader, version, verack);
+        CASE_HANDLE_MESSAGE(reader, version, version);
+        CASE_HANDLE_MESSAGE(reader, version, xversion);
+        // CASE_HANDLE_MESSAGE(reader, version, xverack);
         case message_type::unknown:
         default:
             return error::not_found;

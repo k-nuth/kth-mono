@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,10 +21,18 @@
 #include <kth/infrastructure/utility/assert.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 
+
+// TODO: move to a concepts file
+template <typename Op>
+concept bitwise_op = requires(Op op, uint8_t a, uint8_t b) {
+    { op(a, b) } -> std::same_as<uint8_t>;
+};
+
+
 namespace kth::domain::machine {
 
 static constexpr
-auto op_75 = static_cast<uint8_t>(opcode::push_size_75);
+auto op_75 = uint8_t(opcode::push_size_75);
 
 // Operations (shared).
 //-----------------------------------------------------------------------------
@@ -47,6 +55,7 @@ interpreter::result interpreter::op_reserved(opcode /*unused*/) {
 inline
 interpreter::result interpreter::op_push_number(program& program, uint8_t value) {
     program.push_move({value});
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -57,9 +66,12 @@ interpreter::result interpreter::op_push_size(program& program, operation const&
     }
 
     program.push_copy(op.data());
+    // metrics.TallyPushOp(stack.back().size());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
+// TODO: std::move the data chunk to the program
 inline
 interpreter::result interpreter::op_push_data(program& program, data_chunk const& data, uint32_t size_limit) {
     if (data.size() > size_limit) {
@@ -67,6 +79,7 @@ interpreter::result interpreter::op_push_data(program& program, data_chunk const
     }
 
     program.push_copy(data);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -76,6 +89,7 @@ interpreter::result interpreter::op_push_data(program& program, data_chunk const
 
 inline
 interpreter::result interpreter::op_if(program& program) {
+    //TODO: SCRIPT_VERIFY_MINIMALIF
     auto value = false;
 
     if (program.succeeded()) {
@@ -93,6 +107,7 @@ interpreter::result interpreter::op_if(program& program) {
 
 inline
 interpreter::result interpreter::op_notif(program& program) {
+    //TODO: SCRIPT_VERIFY_MINIMALNOTIF
     auto value = false;
 
     if (program.succeeded()) {
@@ -154,6 +169,7 @@ interpreter::result interpreter::op_to_alt_stack(program& program) {
     }
 
     program.push_alternate(program.pop());
+    // Intentional: no tallying is done to get_metrics().add_op_cost()
     return error::success;
 }
 
@@ -164,6 +180,8 @@ interpreter::result interpreter::op_from_alt_stack(program& program) {
     }
 
     program.push_move(program.pop_alternate());
+    // metrics.TallyPushOp(stack.back().size());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -188,7 +206,12 @@ interpreter::result interpreter::op_dup2(program& program) {
     auto item0 = program.item(0);
 
     program.push_move(std::move(item1));
+    // metrics.TallyPushOp(stack.back().size());
+    program.get_metrics().add_op_cost(program.top().size());
+
     program.push_move(std::move(item0));
+    // metrics.TallyPushOp(stack.back().size());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -203,8 +226,11 @@ interpreter::result interpreter::op_dup3(program& program) {
     auto item0 = program.item(0);
 
     program.push_move(std::move(item2));
+    program.get_metrics().add_op_cost(program.top().size());
     program.push_move(std::move(item1));
+    program.get_metrics().add_op_cost(program.top().size());
     program.push_move(std::move(item0));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -218,7 +244,9 @@ interpreter::result interpreter::op_over2(program& program) {
     auto item2 = program.item(2);
 
     program.push_move(std::move(item3));
+    program.get_metrics().add_op_cost(program.top().size());
     program.push_move(std::move(item2));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -236,7 +264,9 @@ interpreter::result interpreter::op_rot2(program& program) {
 
     program.erase(position_5, position_4 + 1);
     program.push_move(std::move(copy_5));
+    program.get_metrics().add_op_cost(program.top().size());
     program.push_move(std::move(copy_4));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -248,6 +278,7 @@ interpreter::result interpreter::op_swap2(program& program) {
 
     program.swap(3, 1);
     program.swap(2, 0);
+    // Intentional: no tallying is done to get_metrics().add_op_cost()
     return error::success;
 }
 
@@ -259,6 +290,7 @@ interpreter::result interpreter::op_if_dup(program& program) {
 
     if (program.stack_true(false)) {
         program.duplicate(0);
+        program.get_metrics().add_op_cost(program.top().size());
     }
 
     return error::success;
@@ -267,6 +299,7 @@ interpreter::result interpreter::op_if_dup(program& program) {
 inline
 interpreter::result interpreter::op_depth(program& program) {
     program.push_move(number(program.size()).data());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -277,6 +310,7 @@ interpreter::result interpreter::op_drop(program& program) {
     }
 
     program.pop();
+    // No metrics
     return error::success;
 }
 
@@ -287,6 +321,7 @@ interpreter::result interpreter::op_dup(program& program) {
     }
 
     program.duplicate(0);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -297,6 +332,7 @@ interpreter::result interpreter::op_nip(program& program) {
     }
 
     program.erase(program.position(1));
+    // No metrics
     return error::success;
 }
 
@@ -307,22 +343,26 @@ interpreter::result interpreter::op_over(program& program) {
     }
 
     program.duplicate(1);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_pick(program& program) {
+    // (xn ... x2 x1 x0 n - xn ... x2 x1 x0 xn)
     program::stack_iterator position;
     if ( ! program.pop_position(position)) {
         return error::op_pick;
     }
 
     program.push_copy(*position);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_roll(program& program) {
+    // (xn ... x2 x1 x0 n - ... x2 x1 x0 xn)
     program::stack_iterator position;
     if ( ! program.pop_position(position)) {
         return error::op_roll;
@@ -330,18 +370,25 @@ interpreter::result interpreter::op_roll(program& program) {
 
     auto copy = *position;
     program.erase(position);
+    // metrics.TallyOp(n); // erasing in the middle is linear with `n`
+    program.get_metrics().add_op_cost(program.index(position));
     program.push_move(std::move(copy));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_rot(program& program) {
+    // (x1 x2 x3 -- x2 x3 x1)
+    //  x2 x1 x3  after first swap
+    //  x2 x3 x1  after second swap
     if (program.size() < 3) {
         return error::op_rot;
     }
 
     program.swap(2, 1);
     program.swap(1, 0);
+    // Intentional: no tallying is done to get_metrics().add_op_cost()
     return error::success;
 }
 
@@ -352,25 +399,257 @@ interpreter::result interpreter::op_swap(program& program) {
     }
 
     program.swap(1, 0);
+    // Intentional: no tallying is done to get_metrics().add_op_cost()
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_tuck(program& program) {
+    // (x1 x2 -- x2 x1 x2)
     if (program.size() < 2) {
         return error::op_tuck;
     }
 
     auto first = program.pop();
     auto second = program.pop();
+    program.get_metrics().add_op_cost(first.size());
     program.push_copy(first);
     program.push_move(std::move(second));
     program.push_move(std::move(first));
     return error::success;
 }
 
+
+// case OP_CAT: {
+//     // (x1 x2 -- out)
+//     if (stack.size() < 2) {
+//         return set_error(serror, ScriptError::INVALID_STACK_OPERATION);
+//     }
+//     valtype &vch1 = stacktop(-2);
+//     const valtype &vch2 = stacktop(-1);
+//     if (vch1.size() + vch2.size() > maxScriptElementSize) {
+//         return set_error(serror, ScriptError::PUSH_SIZE);
+//     }
+//     vch1.insert(vch1.end(), vch2.begin(), vch2.end());
+//     popstack(stack);
+//     metrics.TallyPushOp(stack.back().size());
+// } break;
+
+inline
+interpreter::result interpreter::op_cat(program& program) {
+    // (x1 x2 -- out)
+    if (program.size() < 2) {
+        return error::op_cat;
+    }
+
+    auto last = program.pop();
+    auto& but_last = program.top();
+
+    if (but_last.size() + last.size() > program.max_script_element_size()) {
+        return error::invalid_push_data_size;
+    }
+
+    but_last.insert(but_last.end(), last.begin(), last.end());
+    program.get_metrics().add_op_cost(but_last.size());
+
+    return error::success;
+}
+
+
+// case OP_SPLIT: {
+//     // (in position -- x1 x2)
+//     if (stack.size() < 2) {
+//         return set_error(serror, ScriptError::INVALID_STACK_OPERATION);
+//     }
+
+//     const valtype &data = stacktop(-2);
+
+//     // Make sure the split point is appropriate.
+//     int64_t const position = CScriptNum(stacktop(-1), fRequireMinimal, maxIntegerSizeLegacy).getint64();
+//     if (position < 0 || uint64_t(position) > data.size()) {
+//         return set_error(serror, ScriptError::INVALID_SPLIT_RANGE);
+//     }
+
+//     // Prepare the results in their own buffer as `data` will be invalidated.
+//     valtype n1(data.begin(), data.begin() + position);
+//     valtype n2(data.begin() + position, data.end());
+
+//     // Replace existing stack values by the new values.
+//     const size_t totalSize = n1.size() + n2.size();
+//     stacktop(-2) = std::move(n1);
+//     stacktop(-1) = std::move(n2);
+//     metrics.TallyPushOp(totalSize);
+// } break;
+
+
+inline
+interpreter::result interpreter::op_split(program& program) {
+    if (program.size() < 2) {
+        return error::op_split;
+    }
+
+    auto& pos = program.item(0);  // last item
+    auto& data = program.item(1); // but last item
+
+    number position;
+    if ( ! position.set_data(pos, program.max_integer_size_legacy())) {
+        return error::op_split;
+    }
+    auto const pos64 = position.int64();
+
+    if (pos64 < 0 || size_t(pos64) > data.size()) {
+        return error::op_split;
+    }
+
+    auto n1 = data_chunk(data.begin(), data.begin() + pos64);
+    auto n2 = data_chunk(data.begin() + pos64, data.end());
+    size_t const total_size = n1.size() + n2.size();
+
+    data = std::move(n1);
+    pos = std::move(n2);
+
+    program.get_metrics().add_op_cost(total_size);
+
+    return error::success;
+}
+
+inline
+interpreter::result interpreter::op_reverse_bytes(program& program) {
+    return error::op_reverse_bytes;
+}
+
+
+// //
+// // Conversion operations
+// //
+// case OP_NUM2BIN: {
+//     // (in size -- out)
+//     if (stack.size() < 2) {
+//         return set_error(serror, ScriptError::INVALID_STACK_OPERATION);
+//     }
+
+//     uint64_t const size = CScriptNum(stacktop(-1), fRequireMinimal, maxIntegerSizeLegacy).getint64();
+//     if (size > maxScriptElementSize) {
+//         return set_error(serror, ScriptError::PUSH_SIZE);
+//     }
+
+//     popstack(stack);
+//     valtype &rawnum = stacktop(-1);
+
+//     // Try to see if we can fit that number in the number of byte requested.
+//     ScriptNumType::MinimallyEncode(rawnum);
+//     if (rawnum.size() > size) {
+//         // We definitively cannot.
+//         return set_error(serror, ScriptError::IMPOSSIBLE_ENCODING);
+//     }
+
+//     // We already have an element of the right size, we don't need to do anything.
+//     if (rawnum.size() == size) {
+//         metrics.TallyPushOp(rawnum.size());
+//         break;
+//     }
+
+//     uint8_t signbit = 0x00;
+//     if (rawnum.size() > 0) {
+//         signbit = rawnum.back() & 0x80;
+//         rawnum[rawnum.size() - 1] &= 0x7f;
+//     }
+
+//     rawnum.reserve(size);
+//     while (rawnum.size() < size - 1) {
+//         rawnum.push_back(0x00);
+//     }
+
+//     rawnum.push_back(signbit);
+//     metrics.TallyPushOp(rawnum.size());
+// } break;
+
+inline
+interpreter::result interpreter::op_num2bin(program& program) {
+    if (program.size() < 2) {
+        return error::op_num2bin;
+    }
+
+    number size;
+    if ( ! program.top(size, program.max_integer_size_legacy())) {
+        return error::op_num2bin_invalid_size;
+    }
+    auto const size64 = size.int64();
+    if (size64 < 0 || size_t(size64) > program.max_script_element_size()) {
+        return error::op_num2bin_size_exceeded;
+    }
+
+    auto& rawnum = program.item(1); // but last item
+    number::minimally_encode(rawnum);
+
+    // Check if the number can be adjusted to the desired size.
+    if (rawnum.size() > size64) {
+        return error::op_num2bin_impossible_encoding;
+    }
+
+    // If the size is already correct, no more is needed.
+    if (rawnum.size() == size64) {
+        program.get_metrics().add_op_cost(rawnum.size());
+        return error::success;
+    }
+
+    // Adjust the size of `rawnum` by adding padding zeros.
+    uint8_t signbit = 0x00;
+    if ( ! rawnum.empty() && (rawnum.back() & 0x80)) {
+        signbit = 0x80;
+        rawnum.back() &= 0x7f;
+    }
+
+    rawnum.reserve(size64);
+    while (rawnum.size() < size64 - 1) {
+        rawnum.push_back(0x00);
+    }
+
+    rawnum.push_back(signbit);
+
+    program.get_metrics().add_op_cost(rawnum.size());
+    return error::success;
+}
+
+
+// case OP_BIN2NUM: {
+//     // (in -- out)
+//     if (stack.size() < 1) {
+//         return set_error(serror, ScriptError::INVALID_STACK_OPERATION);
+//     }
+
+//     valtype &n = stacktop(-1);
+//     ScriptNumType::MinimallyEncode(n);
+//     metrics.TallyPushOp(n.size());
+
+//     // The resulting number must be a valid number.
+//     // Note: IsMinimallyEncoded() here is really just checking if the number is in range.
+//     if ( ! ScriptNumType::IsMinimallyEncoded(n, maxIntegerSize)) {
+//         return set_error(serror, invalidNumberRangeError);
+//     }
+// } break;
+
+inline
+interpreter::result interpreter::op_bin2num(program& program) {
+    // (in -- out)
+    if (program.empty()) {
+        return error::op_bin2num;
+    }
+
+    auto& n = program.top();
+    number::minimally_encode(n);
+    program.get_metrics().add_op_cost(n.size());
+
+    if ( ! number::is_minimally_encoded(n, program.max_integer_size_legacy())) {
+        return error::op_bin2num_invalid_number_range;
+    }
+
+    return error::success;
+}
+
 inline
 interpreter::result interpreter::op_size(program& program) {
+    // (in -- in size)
     if (program.empty()) {
         return error::op_size;
     }
@@ -379,68 +658,145 @@ interpreter::result interpreter::op_size(program& program) {
     auto const size = top.size();
     program.push_move(std::move(top));
     program.push_move(number(size).data());
+    program.get_metrics().add_op_cost(size);
+    return error::success;
+}
+
+// Disabled
+// inline
+// interpreter::result interpreter::op_invert(program& program) {
+// }
+
+
+template <bitwise_op Op>
+inline
+interpreter::result bitwise_operation_generic(program& program, error::error_code_t error, Op op) {
+    if (program.size() < 2) {
+        return error;
+    }
+
+    auto& vch1 = program.item(1);
+    auto& vch2 = program.item(0);
+
+    if (vch1.size() != vch2.size()) {
+        return error;
+    }
+
+    for (size_t i = 0; i < vch1.size(); ++i) {
+        vch1[i] = op(vch1[i], vch2[i]);
+    }
+
+    program.pop();
+    program.get_metrics().add_op_cost(vch1.size());
+
     return error::success;
 }
 
 inline
+interpreter::result interpreter::op_and(program& program) {
+    return bitwise_operation_generic(program,
+        error::op_and,
+        [](uint8_t a, uint8_t b) { return uint8_t(a & b); });
+}
+
+inline
+interpreter::result interpreter::op_or(program& program) {
+    return bitwise_operation_generic(program,
+        error::op_or,
+        [](uint8_t a, uint8_t b) { return uint8_t(a | b); });
+}
+
+inline
+interpreter::result interpreter::op_xor(program& program) {
+    return bitwise_operation_generic(program,
+        error::op_xor,
+        [](uint8_t a, uint8_t b) { return uint8_t(a ^ b); });
+}
+
+inline
 interpreter::result interpreter::op_equal(program& program) {
+    // (x1 x2 - bool)
     if (program.size() < 2) {
         return error::op_equal;
     }
 
     program.push(program.pop() == program.pop());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_equal_verify(program& program) {
+    // (x1 x2 - bool)
     if (program.size() < 2) {
         return error::op_equal_verify1;
     }
+    auto const res = program.pop() == program.pop(); //res is a bool
+    // program.get_metrics().add_op_cost(res.size());
 
-    return (program.pop() == program.pop()) ? error::success : error::op_equal_verify2;
+    // void program::push(bool value) {
+    //     push_move(value ? value_type{number::positive_1} : value_type{});
+    // }
+    program.get_metrics().add_op_cost(res ? 1 : 0);
+
+    return res ? error::success : error::op_equal_verify2;
 }
 
 inline
 interpreter::result interpreter::op_add1(program& program) {
+    constexpr auto push_cost_factor = 2;
     number number;
-    if ( ! program.pop(number)) {
+    if ( ! program.pop(number, program.max_integer_size_legacy())) {
         return error::op_add1;
     }
 
-    number += 1;
+    // number += 1;
+    bool const res = number.safe_add(1);
+    if ( ! res) {
+        return error::op_add_overflow;
+    }
+    program.get_metrics().add_op_cost(number.data().size() * push_cost_factor);
     program.push_move(number.data());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_sub1(program& program) {
+    constexpr auto push_cost_factor = 2;
     number number;
-    if ( ! program.pop(number)) {
+    if ( ! program.pop(number, program.max_integer_size_legacy())) {
         return error::op_sub1;
     }
 
-    number -= 1;
+    // number -= 1;
+    bool const res = number.safe_sub(1);
+    if ( ! res) {
+        return error::op_sub_underflow;
+    }
+    program.get_metrics().add_op_cost(number.data().size() * push_cost_factor);
     program.push_move(number.data());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_negate(program& program) {
+    constexpr auto push_cost_factor = 2;
     number number;
-    if ( ! program.pop(number)) {
+    if ( ! program.pop(number, program.max_integer_size_legacy())) {
         return error::op_negate;
     }
 
     number = -number;
+    program.get_metrics().add_op_cost(number.data().size() * push_cost_factor);
     program.push_move(number.data());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_abs(program& program) {
+    constexpr auto push_cost_factor = 2;
     number number;
-    if ( ! program.pop(number)) {
+    if ( ! program.pop(number, program.max_integer_size_legacy())) {
         return error::op_abs;
     }
 
@@ -448,6 +804,7 @@ interpreter::result interpreter::op_abs(program& program) {
         number = -number;
     }
 
+    program.get_metrics().add_op_cost(number.data().size() * push_cost_factor);
     program.push_move(number.data());
     return error::success;
 }
@@ -455,200 +812,310 @@ interpreter::result interpreter::op_abs(program& program) {
 inline
 interpreter::result interpreter::op_not(program& program) {
     number number;
-    if ( ! program.pop(number)) {
+    if ( ! program.pop(number, program.max_integer_size_legacy())) {
         return error::op_not;
     }
 
     program.push(number.is_false());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_nonzero(program& program) {
     number number;
-    if ( ! program.pop(number)) {
+    if ( ! program.pop(number, program.max_integer_size_legacy())) {
         return error::op_nonzero;
     }
 
     program.push(number.is_true());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_add(program& program) {
-    number first, second; //NOLINT
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_add;
     }
 
-    auto const result = first + second;
-    program.push_move(result.data());
+    // auto const result = first + second;
+    auto result = number::safe_add(first, second);
+    if ( ! result) {
+        return error::op_add_overflow;
+    }
+    program.get_metrics().add_op_cost(result->data().size() * push_cost_factor);
+    program.push_move(result->data());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_sub(program& program) {
-    number first, second; //NOLINT
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_sub;
     }
 
-    auto const result = second - first;
+    // auto const result = second - first;
+    auto result = number::safe_sub(second, first);
+    if ( ! result) {
+        return error::op_sub_underflow;
+    }
+    program.get_metrics().add_op_cost(result->data().size() * push_cost_factor);
+    program.push_move(result->data());
+    return error::success;
+}
+
+inline
+interpreter::result interpreter::op_mul(program& program) {
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
+    if ( ! program.pop_binary(first, second)) {
+        return error::op_mul;
+    }
+
+    // auto const result = first * second;
+    auto result = number::safe_mul(first, second);
+    if ( ! result) {
+        return error::op_mul_overflow;
+    }
+    uint32_t const quadratic_op_cost = first.data().size() * second.data().size();
+    program.get_metrics().add_op_cost(quadratic_op_cost);
+    program.get_metrics().add_op_cost(result->data().size() * push_cost_factor);
+    program.push_move(result->data());
+    return error::success;
+}
+
+inline
+interpreter::result interpreter::op_div(program& program) {
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
+    if ( ! program.pop_binary(first, second)) {
+        return error::op_div;
+    }
+
+    if (first == 0) {
+        return error::op_div_by_zero;
+    }
+
+    auto result = second / first;
+    uint32_t const quadratic_op_cost = first.data().size() * second.data().size();
+    program.get_metrics().add_op_cost(quadratic_op_cost);
     program.push_move(result.data());
+    program.get_metrics().add_op_cost(result.data().size() * push_cost_factor);
+    return error::success;
+}
+
+inline
+interpreter::result interpreter::op_mod(program& program) {
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
+    if ( ! program.pop_binary(first, second)) {
+        return error::op_mod;
+    }
+
+    if (first == 0) {
+        return error::op_mod_by_zero;
+    }
+
+    auto result = second % first;
+    uint32_t const quadratic_op_cost = first.data().size() * second.data().size();
+    program.get_metrics().add_op_cost(quadratic_op_cost);
+    program.push_move(result.data());
+    program.get_metrics().add_op_cost(result.data().size() * push_cost_factor);
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_bool_and(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_bool_and;
     }
 
     program.push(first.is_true() && second.is_true());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_bool_or(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_bool_or;
     }
 
     program.push(first.is_true() || second.is_true());
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_num_equal(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_num_equal;
     }
 
     program.push(first == second);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_num_equal_verify(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_num_equal_verify1;
     }
-
-    return (first == second) ? error::success : error::op_num_equal_verify2;
+    auto const res = first == second;
+    program.get_metrics().add_op_cost(1);
+    return res ? error::success : error::op_num_equal_verify2;
 }
 
 inline
 interpreter::result interpreter::op_num_not_equal(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_num_not_equal;
     }
 
     program.push(first != second);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_less_than(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_less_than;
     }
 
     program.push(second < first);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_greater_than(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_greater_than;
     }
 
     program.push(second > first);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_less_than_or_equal(program& program) {
-    number first, second; //NOLINT
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_less_than_or_equal;
     }
 
     program.push(second <= first);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
-interpreter::result interpreter::op_greater_than_or_equal(
-    program& program) {
-    number first, second; //NOLINT
+interpreter::result interpreter::op_greater_than_or_equal(program& program) {
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_greater_than_or_equal;
     }
 
     program.push(second >= first);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_min(program& program) {
-    number first, second; //NOLINT
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_min;
     }
 
     program.push_move(second < first ? second.data() : first.data());
+    program.get_metrics().add_op_cost(program.top().size() * push_cost_factor);
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_max(program& program) {
-    number first, second; //NOLINT
+    constexpr auto push_cost_factor = 2;
+    number first;
+    number second;
     if ( ! program.pop_binary(first, second)) {
         return error::op_max;
     }
 
     program.push_move(second > first ? second.data() : first.data());
+    program.get_metrics().add_op_cost(program.top().size() * push_cost_factor);
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_within(program& program) {
-    number first, second, third; //NOLINT
+    // (x min max -- out)
+    number first;
+    number second;
+    number third;
     if ( ! program.pop_ternary(first, second, third)) {
         return error::op_within;
     }
 
     program.push(second <= third && third < first);
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_ripemd160(program& program) {
+    // (in -- hash)
     if (program.empty()) {
         return error::op_ripemd160;
     }
-
+    program.get_metrics().add_hash_iterations(program.top().size(), false);
     program.push_move(ripemd160_hash_chunk(program.pop()));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
 interpreter::result interpreter::op_sha1(program& program) {
+    // (in -- hash)
     if (program.empty()) {
         return error::op_sha1;
     }
-
+    program.get_metrics().add_hash_iterations(program.top().size(), false);
     program.push_move(sha1_hash_chunk(program.pop()));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
-    }
+}
 
 inline
 interpreter::result interpreter::op_sha256(program& program) {
@@ -656,7 +1123,9 @@ interpreter::result interpreter::op_sha256(program& program) {
         return error::op_sha256;
     }
 
+    program.get_metrics().add_hash_iterations(program.top().size(), false);
     program.push_move(sha256_hash_chunk(program.pop()));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -666,7 +1135,9 @@ interpreter::result interpreter::op_hash160(program& program) {
         return error::op_hash160;
     }
 
+    program.get_metrics().add_hash_iterations(program.top().size(), true);
     program.push_move(ripemd160_hash_chunk(sha256_hash(program.pop())));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
@@ -676,32 +1147,29 @@ interpreter::result interpreter::op_hash256(program& program) {
         return error::op_hash256;
     }
 
+    program.get_metrics().add_hash_iterations(program.top().size(), true);
     program.push_move(sha256_hash_chunk(sha256_hash(program.pop())));
+    program.get_metrics().add_op_cost(program.top().size());
     return error::success;
 }
 
 inline
-interpreter::result interpreter::op_codeseparator(program& program,
-                                                         operation const& op) {
+interpreter::result interpreter::op_codeseparator(program& program, operation const& op) {
     return program.set_jump_register(op, +1) ? error::success : error::op_code_seperator;
 }
 
 inline
-interpreter::result interpreter::op_check_sig_verify(program& program) {
+std::pair<interpreter::result, size_t> op_check_sig_common(program& program, interpreter::result err) {
+    //TODO: SCRIPT_VERIFY_NULLFAIL
     if (program.size() < 2) {
-        return error::op_check_sig_verify1;
+        return {err, 0};
     }
 
     uint8_t sighash;
     ec_signature signature;
     der_signature distinguished;
-    auto bip66 = chain::script::is_enabled(program.forks(), rule_fork::bip66_rule);
-
-#if ! defined(KTH_CURRENCY_BCH)
-    auto bip143 = chain::script::is_enabled(program.forks(), bip143_rule);
-#else
-    auto bip143 = false;
-#endif
+    auto const bip66 = chain::script::is_enabled(program.forks(), rule_fork::bip66_rule);
+    auto const bip143 = false;
 
     auto const public_key = program.pop();
     auto endorsement = program.pop();
@@ -709,42 +1177,79 @@ interpreter::result interpreter::op_check_sig_verify(program& program) {
     // Create a subscript with endorsements stripped (sort of).
     chain::script script_code(program.subscript());
 
-    // BIP143: find and delete of the signature is not applied for v0.
-    if ( ! (bip143 && program.version() == script_version::zero)) {
-        script_code.find_and_delete({endorsement});
-    }
-
     // BIP62: An empty endorsement is not considered lax encoding.
     if ( ! parse_endorsement(sighash, distinguished, std::move(endorsement))) {
-        return error::invalid_signature_encoding;
+        return {error::invalid_signature_encoding, 0};
     }
 
     // Parse DER signature into an EC signature.
     if ( ! parse_signature(signature, distinguished, bip66)) {
-        return bip66 ? error::invalid_signature_lax_encoding : error::invalid_signature_encoding;
+        return {bip66 ? error::invalid_signature_lax_encoding : error::invalid_signature_encoding, 0};
     }
 
+#if ! defined(KTH_CURRENCY_BCH)
     // Version condition preserves independence of bip141 and bip143.
     auto version = bip143 ? program.version() : script_version::unversioned;
+#endif // ! KTH_CURRENCY_BCH
 
-    return chain::script::check_signature(signature, sighash, public_key,
-                                          script_code, program.transaction(), program.input_index(),
-                                          version, program.value())
-               ? error::success
-               : error::incorrect_signature;
+
+    auto const [res, size] = chain::script::check_signature(
+        signature,
+        sighash,
+        public_key,
+        script_code,
+        program.transaction(),
+        program.input_index(),
+        program.forks(),
+#if ! defined(KTH_CURRENCY_BCH)
+        version,
+#endif // ! KTH_CURRENCY_BCH
+        program.value()
+    );
+
+    return {res ? error::success : error::incorrect_signature, size};
 }
 
 inline
 interpreter::result interpreter::op_check_sig(program& program) {
-    auto const verified = op_check_sig_verify(program);
+    auto const [verified, size] = op_check_sig_common(program, error::op_check_sig);
 
     // BIP62: only lax encoding fails the operation.
     if (verified == error::invalid_signature_lax_encoding) {
         return error::op_check_sig;
+    }
+    program.push(verified == error::success);
+    if (verified == error::success) {
+        program.get_metrics().add_op_cost(program.top().size());
+        program.get_metrics().add_sig_checks(1);
+        program.get_metrics().add_hash_iterations(size, true);
+    }
+    return error::success;
 }
 
-    program.push(verified == error::success);
-    return error::success;
+inline
+interpreter::result interpreter::op_check_sig_verify(program& program) {
+    auto const [verified, size] = op_check_sig_common(program, error::op_check_sig_verify1);
+    program.get_metrics().add_op_cost(program.top().size());
+    program.get_metrics().add_sig_checks(1);
+    program.get_metrics().add_hash_iterations(size, true);
+    return verified;
+}
+
+inline
+interpreter::result op_check_data_common(program& program, bool verify, interpreter::result err) {
+    // TODO: implement it
+    return err;
+}
+
+inline
+interpreter::result interpreter::op_check_data_sig(program& program) {
+    return op_check_data_common(program, false, error::op_check_data_sig);
+}
+
+inline
+interpreter::result interpreter::op_check_data_sig_verify(program& program) {
+    return op_check_data_common(program, true, error::op_check_data_sig_verify);
 }
 
 inline
@@ -799,20 +1304,10 @@ interpreter::result interpreter::op_check_multisig_verify(program& program) {
     der_signature distinguished;
     auto public_key = public_keys.begin();
     auto bip66 = chain::script::is_enabled(program.forks(), rule_fork::bip66_rule);
-
-#if ! defined(KTH_CURRENCY_BCH)
-    auto bip143 = chain::script::is_enabled(program.forks(), bip143_rule);
-#else
     auto bip143 = false;
-#endif
 
     // Before looping create subscript with endorsements stripped (sort of).
     chain::script script_code(program.subscript());
-
-    // BIP143: find and delete of the signature is not applied for v0.
-    if ( ! (bip143 && program.version() == script_version::zero)) {
-        script_code.find_and_delete(endorsements);
-    }
 
     // The exact number of signatures are required and must be in order.
     // One key can validate more than one script. So we always advance
@@ -828,14 +1323,28 @@ interpreter::result interpreter::op_check_multisig_verify(program& program) {
             return bip66 ? error::invalid_signature_lax_encoding : error::invalid_signature_encoding;
         }
 
+#if ! defined(KTH_CURRENCY_BCH)
         // Version condition preserves independence of bip141 and bip143.
         auto version = bip143 ? program.version() : script_version::unversioned;
+#endif // ! KTH_CURRENCY_BCH
 
         while (true) {
             // Version condition preserves independence of bip141 and bip143.
-            if (chain::script::check_signature(signature, sighash, *public_key,
-                                               script_code, program.transaction(), program.input_index(),
-                                               version, program.value())) {
+            auto const [res, size] = chain::script::check_signature(
+                signature,
+                sighash,
+                *public_key,
+                script_code,
+                program.transaction(),
+                program.input_index(),
+                program.forks(),
+#if ! defined(KTH_CURRENCY_BCH)
+                version,
+#endif // ! KTH_CURRENCY_BCH
+                program.value()
+            );
+
+            if (res) {
                 break;
             }
 
@@ -862,8 +1371,7 @@ interpreter::result interpreter::op_check_multisig(program& program) {
 }
 
 inline
-interpreter::result interpreter::op_check_locktime_verify(
-    program& program) {
+interpreter::result interpreter::op_check_locktime_verify(program& program) {
     // BIP65: nop2 subsumed by checklocktimeverify when bip65 fork is active.
     if ( ! chain::script::is_enabled(program.forks(), rule_fork::bip65_rule)) {
         return op_nop(opcode::nop2);
@@ -894,7 +1402,7 @@ interpreter::result interpreter::op_check_locktime_verify(
     }
 
     // The top stack item is positive, so cast is safe.
-    auto const locktime = static_cast<uint64_t>(stack.int64());
+    auto const locktime = uint64_t(stack.int64());
 
     // BIP65: the stack locktime type differs from that of tx.
     if ((locktime < locktime_threshold) !=
@@ -907,8 +1415,7 @@ interpreter::result interpreter::op_check_locktime_verify(
 }
 
 inline
-interpreter::result interpreter::op_check_sequence_verify(
-    program& program) {
+interpreter::result interpreter::op_check_sequence_verify(program& program) {
     // BIP112: nop3 subsumed by checksequenceverify when bip112 fork is active.
     if ( ! chain::script::is_enabled(program.forks(), rule_fork::bip112_rule)) {
         return op_nop(opcode::nop3);
@@ -934,7 +1441,7 @@ interpreter::result interpreter::op_check_sequence_verify(
     }
 
     // The top stack item is positive, so cast is safe.
-    auto const sequence = static_cast<uint64_t>(stack.int64());
+    auto const sequence = uint64_t(stack.int64());
 
     // BIP112: the stack sequence is disabled, treat as nop3.
     if ((sequence & relative_locktime_disabled) != 0) {
@@ -966,14 +1473,117 @@ interpreter::result interpreter::op_check_sequence_verify(
                : error::success;
 }
 
+inline
+interpreter::result interpreter::op_input_index(program& program) {
+    return error::op_input_index;
+}
+
+inline
+interpreter::result interpreter::op_active_bytecode(program& program) {
+    return error::op_active_bytecode;
+}
+
+inline
+interpreter::result interpreter::op_tx_version(program& program) {
+    return error::op_tx_version;
+}
+
+inline
+interpreter::result interpreter::op_tx_input_count(program& program) {
+    return error::op_tx_input_count;
+}
+
+inline
+interpreter::result interpreter::op_tx_output_count(program& program) {
+    return error::op_tx_output_count;
+}
+
+inline
+interpreter::result interpreter::op_tx_locktime(program& program) {
+    return error::op_tx_locktime;
+}
+
+inline
+interpreter::result interpreter::op_utxo_value(program& program) {
+    return error::op_utxo_value;
+}
+
+inline
+interpreter::result interpreter::op_utxo_bytecode(program& program) {
+    return error::op_utxo_bytecode;
+}
+
+inline
+interpreter::result interpreter::op_outpoint_tx_hash(program& program) {
+    return error::op_outpoint_tx_hash;
+}
+
+inline
+interpreter::result interpreter::op_outpoint_index(program& program) {
+    return error::op_outpoint_index;
+}
+
+inline
+interpreter::result interpreter::op_input_bytecode(program& program) {
+    return error::op_input_bytecode;
+}
+
+inline
+interpreter::result interpreter::op_input_sequence_number(program& program) {
+    return error::op_input_sequence_number;
+}
+
+inline
+interpreter::result interpreter::op_output_value(program& program) {
+    return error::op_output_value;
+}
+
+inline
+interpreter::result interpreter::op_output_bytecode(program& program) {
+    return error::op_output_bytecode;
+}
+
+inline
+interpreter::result interpreter::op_utxo_token_category(program& program) {
+    return error::op_utxo_token_category;
+}
+
+inline
+interpreter::result interpreter::op_utxo_token_commitment(program& program) {
+    return error::op_utxo_token_commitment;
+}
+
+inline
+interpreter::result interpreter::op_utxo_token_amount(program& program) {
+    return error::op_utxo_token_amount;
+}
+
+inline
+interpreter::result interpreter::op_output_token_category(program& program) {
+    return error::op_output_token_category;
+}
+
+inline
+interpreter::result interpreter::op_output_token_commitment(program& program) {
+    return error::op_output_token_commitment;
+}
+
+inline
+interpreter::result interpreter::op_output_token_amount(program& program) {
+    return error::op_output_token_amount;
+}
+
+
 // It is expected that the compiler will produce a very efficient jump table.
 inline
-interpreter::result interpreter::run_op(operation const& op,
-                                               program& program) {
+interpreter::result interpreter::run_op(operation const& op, program& program) {
     auto const code = op.code();
     KTH_ASSERT(op.data().empty() || op.is_push());
 
+    program.get_metrics().add_op_cost(kth::may2025::opcode_cost);
+
     switch (op.code()) {
+    // push value
         case opcode::push_size_0:
         case opcode::push_size_1:
         case opcode::push_size_2:
@@ -1051,16 +1661,19 @@ interpreter::result interpreter::run_op(operation const& op,
         case opcode::push_size_74:
         case opcode::push_size_75:
             return op_push_size(program, op);
+
         case opcode::push_one_size:
             return op_push_data(program, op.data(), max_uint8);
         case opcode::push_two_size:
             return op_push_data(program, op.data(), max_uint16);
         case opcode::push_four_size:
             return op_push_data(program, op.data(), max_uint32);
-        case opcode::push_negative_1:
-            return op_push_number(program, number::negative_1);
+
         case opcode::reserved_80:
             return op_reserved(code);
+
+        case opcode::push_negative_1:
+            return op_push_number(program, number::negative_1);
         case opcode::push_positive_1:
             return op_push_number(program, number::positive_1);
         case opcode::push_positive_2:
@@ -1093,6 +1706,8 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_push_number(program, number::positive_15);
         case opcode::push_positive_16:
             return op_push_number(program, number::positive_16);
+
+    // control
         case opcode::nop:
             return op_nop(code);
         case opcode::reserved_98:
@@ -1113,6 +1728,8 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_verify(program);
         case opcode::return_:
             return op_return(program);
+
+    // stack ops
         case opcode::toaltstack:
             return op_to_alt_stack(program);
         case opcode::fromaltstack:
@@ -1151,24 +1768,92 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_swap(program);
         case opcode::tuck:
             return op_tuck(program);
-        case opcode::disabled_cat:
-            return op_disabled(code);
-        case opcode::disabled_substr:
-            return op_disabled(code);
-        case opcode::disabled_left:
-            return op_disabled(code);
-        case opcode::disabled_right:
-            return op_disabled(code);
+
+    // splice ops
+        case opcode::cat:
+            return op_cat(program);
+        case opcode::split:                 // after pythagoras/monolith upgrade (May 2018)
+            return op_split(program);
+        case opcode::reverse_bytes:
+            return op_reverse_bytes(program);
+        case opcode::num2bin:               // after pythagoras/monolith upgrade (May 2018)
+            return op_num2bin(program);
+        case opcode::bin2num:               // after pythagoras/monolith upgrade (May 2018)
+            return op_bin2num(program);
         case opcode::size:
             return op_size(program);
+
+    // Native Introspection opcodes (Nullary)
+        case opcode::input_index:
+            return op_input_index(program);
+        case opcode::active_bytecode:
+            return op_active_bytecode(program);
+        case opcode::tx_version:
+            return op_tx_version(program);
+        case opcode::tx_input_count:
+            return op_tx_input_count(program);
+        case opcode::tx_output_count:
+            return op_tx_output_count(program);
+        case opcode::tx_locktime:
+            return op_tx_locktime(program);
+
+    // Native Introspection opcodes (Unary)
+        // case OP_UTXOTOKENCATEGORY:
+        // case OP_UTXOTOKENCOMMITMENT:
+        // case OP_UTXOTOKENAMOUNT:
+        // case OP_OUTPUTTOKENCATEGORY:
+        // case OP_OUTPUTTOKENCOMMITMENT:
+        // case OP_OUTPUTTOKENAMOUNT:
+        //     // These require native tokens (upgrade9)
+        //     if ( ! nativeTokens) {
+        //         return set_error(serror, ScriptError::BAD_OPCODE);
+        //     }
+        //     [[fallthrough]];
+        // case OP_UTXOVALUE:
+        // case OP_UTXOBYTECODE:
+        // case OP_OUTPOINTTXHASH:
+        // case OP_OUTPOINTINDEX:
+        // case OP_INPUTBYTECODE:
+        // case OP_INPUTSEQUENCENUMBER:
+        // case OP_OUTPUTVALUE:
+        // case OP_OUTPUTBYTECODE: {
+
+        case opcode::utxo_token_category:
+            return op_utxo_token_category(program);
+        case opcode::utxo_token_commitment:
+            return op_utxo_token_commitment(program);
+        case opcode::utxo_token_amount:
+            return op_utxo_token_amount(program);
+        case opcode::output_token_category:
+            return op_output_token_category(program);
+        case opcode::output_token_commitment:
+            return op_output_token_commitment(program);
+        case opcode::utxo_value:
+            return op_utxo_value(program);
+        case opcode::utxo_bytecode:
+            return op_utxo_bytecode(program);
+        case opcode::outpoint_tx_hash:
+            return op_outpoint_tx_hash(program);
+        case opcode::outpoint_index:
+            return op_outpoint_index(program);
+        case opcode::input_bytecode:
+            return op_input_bytecode(program);
+        case opcode::input_sequence_number:
+            return op_input_sequence_number(program);
+        case opcode::output_value:
+            return op_output_value(program);
+        case opcode::output_bytecode:
+            return op_output_bytecode(program);
+
+    // bit logic
         case opcode::disabled_invert:
             return op_disabled(code);
-        case opcode::disabled_and:
-            return op_disabled(code);
-        case opcode::disabled_or:
-            return op_disabled(code);
-        case opcode::disabled_xor:
-            return op_disabled(code);
+        case opcode::and_:
+            return op_and(program);
+        case opcode::or_:
+            return op_or(program);
+        case opcode::xor_:
+            return op_xor(program);
         case opcode::equal:
             return op_equal(program);
         case opcode::equalverify:
@@ -1177,6 +1862,8 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_reserved(code);
         case opcode::reserved_138:
             return op_reserved(code);
+
+    // numeric
         case opcode::add1:
             return op_add1(program);
         case opcode::sub1:
@@ -1197,12 +1884,12 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_add(program);
         case opcode::sub:
             return op_sub(program);
-        case opcode::disabled_mul:
-            return op_disabled(code);
-        case opcode::disabled_div:
-            return op_disabled(code);
-        case opcode::disabled_mod:
-            return op_disabled(code);
+        case opcode::mul:
+            return op_mul(program);
+        case opcode::div:
+            return op_div(program);
+        case opcode::mod:
+            return op_mod(program);
         case opcode::disabled_lshift:
             return op_disabled(code);
         case opcode::disabled_rshift:
@@ -1229,8 +1916,11 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_min(program);
         case opcode::max:
             return op_max(program);
+
         case opcode::within:
             return op_within(program);
+
+    // crypto
         case opcode::ripemd160:
             return op_ripemd160(program);
         case opcode::sha1:
@@ -1247,10 +1937,18 @@ interpreter::result interpreter::run_op(operation const& op,
             return op_check_sig(program);
         case opcode::checksigverify:
             return op_check_sig_verify(program);
+
+        case opcode::checkdatasig:
+            return op_check_data_sig(program);
+        case opcode::checkdatasigverify:
+            return op_check_data_sig_verify(program);
+
         case opcode::checkmultisig:
             return op_check_multisig(program);
         case opcode::checkmultisigverify:
             return op_check_multisig_verify(program);
+
+    // expansion
         case opcode::nop1:
             return op_nop(code);
         case opcode::checklocktimeverify:
@@ -1264,36 +1962,12 @@ interpreter::result interpreter::run_op(operation const& op,
         case opcode::nop8:
         case opcode::nop9:
         case opcode::nop10:
+            //TODO: SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS
             return op_nop(code);
 
         //TODO(kth): Implement OP_CHECKDATASIG and OP_CHECKDATASIGVERIFY
 
-        case opcode::reserved_186:
-        case opcode::reserved_187:
-        case opcode::reserved_188:
-        case opcode::reserved_189:
-        case opcode::reserved_190:
-        case opcode::reserved_191:
-        case opcode::reserved_192:
-        case opcode::reserved_193:
-        case opcode::reserved_194:
-        case opcode::reserved_195:
-        case opcode::reserved_196:
-        case opcode::reserved_197:
-        case opcode::reserved_198:
-        case opcode::reserved_199:
-        case opcode::reserved_200:
-        case opcode::reserved_201:
-        case opcode::reserved_202:
-        case opcode::reserved_203:
-        case opcode::reserved_204:
-        case opcode::reserved_205:
-        case opcode::reserved_206:
-        case opcode::reserved_207:
-        case opcode::reserved_208:
-        case opcode::reserved_209:
-        case opcode::reserved_210:
-        case opcode::reserved_211:
+
         case opcode::reserved_212:
         case opcode::reserved_213:
         case opcode::reserved_214:

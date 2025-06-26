@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -23,9 +23,12 @@
 #include <kth/infrastructure/utility/thread.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
-#include <kth/domain/concepts.hpp>
+
+// #include <kth/domain/concepts.hpp>
+#include <kth/domain/deserialization.hpp>
+
 namespace kth::domain::chain {
+
 class KD_API header_basis {
 public:
     using list = std::vector<header_basis>;
@@ -52,21 +55,8 @@ public:
     // Deserialization.
     //-----------------------------------------------------------------------------
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool /*wire = true*/) {
-        version_ = source.read_4_bytes_little_endian();
-        previous_block_hash_ = source.read_hash();
-        merkle_ = source.read_hash();
-        timestamp_ = source.read_4_bytes_little_endian();
-        bits_ = source.read_4_bytes_little_endian();
-        nonce_ = source.read_4_bytes_little_endian();
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    kth::expect<header_basis> from_data(byte_reader& reader, bool /*wire*/ = true);
 
     [[nodiscard]]
     bool is_valid() const;
@@ -99,8 +89,12 @@ public:
 
     static constexpr
     size_t satoshi_fixed_size() {
-        return sizeof(version_) + hash_size + hash_size + sizeof(timestamp_) +
-            sizeof(bits_) + sizeof(nonce_);
+        return sizeof(version_) +
+            hash_size +
+            hash_size +
+            sizeof(timestamp_) +
+            sizeof(bits_) +
+            sizeof(nonce_);
     }
 
     [[nodiscard]]
@@ -158,7 +152,7 @@ public:
     code check(hash_digest const& hash, bool retarget = false) const;
 
     [[nodiscard]]
-    code accept(chain_state const& state, hash_digest const& hash) const;
+    code accept(::kth::domain::chain::chain_state const& state, hash_digest const& hash) const;
 
     void reset();
 
@@ -172,10 +166,6 @@ private:
 };
 
 hash_digest hash(header_basis const& header);
-
-#if defined(KTH_CURRENCY_LTC)
-hash_digest litecoin_proof_of_work_hash(header_basis const& header);
-#endif  //KTH_CURRENCY_LTC
 
 } // namespace kth::domain::chain
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -74,11 +74,6 @@ private:
     bool const headers_from_peer_;
     bool const compact_from_peer_;
     bool const blocks_from_peer_;
-
-#if ! defined(KTH_CURRENCY_BCH)
-    bool const require_witness_;
-    bool const peer_witness_;
-#endif
 
     // This is protected by mutex.
     hash_queue backlog_;

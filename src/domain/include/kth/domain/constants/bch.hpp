@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -86,8 +86,9 @@ const infrastructure::config::checkpoint chipnet_bip34_active_checkpoint {
 // enum class gauss_t : uint64_t {};
 // enum class descartes_t : uint64_t {};
 // enum class lobachevski_t : uint64_t {};
-enum class galois_t : uint64_t {};
+// enum class galois_t : uint64_t {};
 enum class leibniz_t : uint64_t {};
+enum class cantor_t : uint64_t {};
 enum class unnamed_t : uint64_t {}; //TODO(fernando): rename it
 
 // constexpr size_t         bch_activation_height = 478559 //478558;     // 2017-Aug-01 HF
@@ -102,8 +103,9 @@ enum class unnamed_t : uint64_t {}; //TODO(fernando): rename it
 // constexpr gauss_t        bch_gauss_activation_time{1652616000};       // 2022-May-15 HF
 // constexpr descartes_t    bch_descartes_activation_time{1684152000};   // 2023-May-15 HF
 // constexpr lobachevski_t  bch_lobachevski_activation_time{1715774400}; // 2024-May-15 HF
-constexpr galois_t       bch_galois_activation_time{1747310400};         // 2025-May-15 HF
+// constexpr galois_t       bch_galois_activation_time{1747310400};      // 2025-May-15 HF
 constexpr leibniz_t      bch_leibniz_activation_time{1778846400};        // 2026-May-15 HF
+constexpr cantor_t       bch_cantor_activation_time{1810382400};         // 2027-May-15 HF
 
 
 // Block height at which CSV (BIP68, BIP112 and BIP113) becomes active
@@ -209,24 +211,24 @@ constexpr size_t chipnet_gauss_activation_height = 95'465;
 
 //2023-May hard fork
 constexpr size_t mainnet_descartes_activation_height = 792'773;
-constexpr size_t testnet_descartes_activation_height = 1'500'206;   //FIXME(fernando): check this
-constexpr size_t testnet4_descartes_activation_height = 95'465;     //FIXME(fernando): check this
-constexpr size_t scalenet_descartes_activation_height = 10'007;     //FIXME(fernando): check this
-constexpr size_t chipnet_descartes_activation_height = 95'465;      //FIXME(fernando): check this
+constexpr size_t testnet_descartes_activation_height = 1'552'788;
+constexpr size_t testnet4_descartes_activation_height = 148'044;
+constexpr size_t scalenet_descartes_activation_height = 10'007;
+constexpr size_t chipnet_descartes_activation_height = 121'957;
 
 //2024-May hard fork
 constexpr size_t mainnet_lobachevski_activation_height = 845'891;
-constexpr size_t testnet_lobachevski_activation_height = 1'500'206;   //FIXME(fernando): check this
-constexpr size_t testnet4_lobachevski_activation_height = 95'465;     //FIXME(fernando): check this
-constexpr size_t scalenet_lobachevski_activation_height = 10'007;     //FIXME(fernando): check this
-constexpr size_t chipnet_lobachevski_activation_height = 95'465;      //FIXME(fernando): check this
+constexpr size_t testnet_lobachevski_activation_height = 1'605'521;
+constexpr size_t testnet4_lobachevski_activation_height = 200'741;
+constexpr size_t scalenet_lobachevski_activation_height = 10'007;
+constexpr size_t chipnet_lobachevski_activation_height = 174'520;
 
-// //2025-May hard fork
-// constexpr size_t mainnet_galois_activation_height = ???;
-// constexpr size_t testnet_galois_activation_height = ???;
-// constexpr size_t testnet4_galois_activation_height = ???;
-// constexpr size_t scalenet_galois_activation_height = ???;
-// constexpr size_t chipnet_galois_activation_height = ???;
+//2025-May hard fork
+constexpr size_t mainnet_galois_activation_height = 898'374;
+constexpr size_t testnet_galois_activation_height = 1'658'050;
+constexpr size_t testnet4_galois_activation_height = 253'319;
+constexpr size_t scalenet_galois_activation_height = 10'007;
+constexpr size_t chipnet_galois_activation_height = 227'229;
 
 // //2026-May hard fork
 // constexpr size_t mainnet_leibniz_activation_height = ???;
@@ -234,6 +236,13 @@ constexpr size_t chipnet_lobachevski_activation_height = 95'465;      //FIXME(fe
 // constexpr size_t testnet4_leibniz_activation_height = ???;
 // constexpr size_t scalenet_leibniz_activation_height = ???;
 // constexpr size_t chipnet_leibniz_activation_height = ???;
+
+// //2027-May hard fork
+// constexpr size_t mainnet_cantor_activation_height = ???;
+// constexpr size_t testnet_cantor_activation_height = ???;
+// constexpr size_t testnet4_cantor_activation_height = ???;
+// constexpr size_t scalenet_cantor_activation_height = ???;
+// constexpr size_t chipnet_cantor_activation_height = ???;
 
 } // namespace kth
 

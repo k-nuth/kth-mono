@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -160,11 +160,7 @@ bool internal_database_basis<Clock>::close() {
 
         //TODO(fernando): check sync
         //Force synchronous flush (use with KTH_DB_NOSYNC or MDB_NOMETASYNC, with other flags do nothing)
-#if defined(KTH_USE_LIBMDBX)
-        kth_db_env_sync(env_);
-#else
         kth_db_env_sync(env_, true);
-#endif
         kth_db_dbi_close(env_, dbi_block_header_);
         kth_db_dbi_close(env_, dbi_block_header_by_hash_);
         kth_db_dbi_close(env_, dbi_utxo_);
@@ -263,7 +259,7 @@ utxo_entry internal_database_basis<Clock>::get_utxo(domain::chain::output_point 
         return utxo_entry{};
     }
 
-    return domain::create<utxo_entry>(db_value_to_data_chunk(value));
+    return domain::create_old<utxo_entry>(db_value_to_data_chunk(value));
 }
 
 template <typename Clock>
@@ -411,13 +407,13 @@ domain::chain::header::list internal_database_basis<Clock>::get_headers(uint32_t
     }
 
     auto data = db_value_to_data_chunk(value);
-    list.push_back(domain::create<domain::chain::header>(data));
+    list.push_back(domain::create_old<domain::chain::header>(data));
 
     while ((rc = kth_db_cursor_get(cursor, &key, &value, KTH_DB_NEXT)) == KTH_DB_SUCCESS) {
         auto height = *static_cast<uint32_t*>(kth_db_get_data(key));
         if (height > to) break;
         auto data = db_value_to_data_chunk(value);
-        list.push_back(domain::create<domain::chain::header>(data));
+        list.push_back(domain::create_old<domain::chain::header>(data));
     }
 
     kth_db_cursor_close(cursor);
@@ -523,10 +519,10 @@ result_code internal_database_basis<Clock>::insert_reorg_into_pool(utxo_pool_t& 
     }
 
     auto entry_data = db_value_to_data_chunk(value);
-    auto entry = domain::create<utxo_entry>(entry_data);
+    auto entry = domain::create_old<utxo_entry>(entry_data);
 
     auto point_data = db_value_to_data_chunk(key_point);
-    auto point = domain::create<domain::chain::output_point>(point_data, KTH_INTERNAL_DB_WIRE);
+    auto point = domain::create_old<domain::chain::output_point>(point_data, KTH_INTERNAL_DB_WIRE);
     pool.insert({point, std::move(entry)});     //TODO(fernando): use emplace?
 
     return result_code::success;

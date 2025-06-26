@@ -159,7 +159,7 @@ public:
     virtual bool BatchWrite(CCoinsMap &mapCoins, const BlockHash &hashBlock);
 
     //! Get a cursor to iterate over the whole state
-    virtual CCoinsViewCursor *Cursor() const;
+    virtual CCoinsViewCursor *Cursor(bool snapshot = false) const;
 
     //! As we use CCoinsViews polymorphically, have a virtual destructor
     virtual ~CCoinsView() {}
@@ -181,7 +181,7 @@ public:
     std::vector<BlockHash> GetHeadBlocks() const override;
     void SetBackend(CCoinsView &viewIn);
     bool BatchWrite(CCoinsMap &mapCoins, const BlockHash &hashBlock) override;
-    CCoinsViewCursor *Cursor() const override;
+    CCoinsViewCursor *Cursor(bool snapshot = false) const override;
     size_t EstimateSize() const override;
 };
 
@@ -215,7 +215,7 @@ public:
     BlockHash GetBestBlock() const override;
     void SetBestBlock(const BlockHash &hashBlock);
     bool BatchWrite(CCoinsMap &mapCoins, const BlockHash &hashBlock) override;
-    CCoinsViewCursor *Cursor() const override {
+    CCoinsViewCursor *Cursor(bool snapshot = false) const override {
         throw std::logic_error(
             "CCoinsViewCache cursor iteration not supported.");
     }

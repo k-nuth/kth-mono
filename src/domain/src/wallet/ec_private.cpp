@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -35,38 +35,21 @@ uint8_t const ec_private::testnet_wif = 0xef;
 uint8_t const ec_private::testnet_p2kh = 0x6f;
 uint16_t const ec_private::testnet = to_version(testnet_p2kh, testnet_wif);
 
-ec_private::ec_private()
-    : secret_(null_hash)
+ec_private::ec_private(std::string const& wif, uint8_t version)
+    : ec_private(from_string(wif, version))
 {}
 
-// ec_private::ec_private(ec_private const& x)
-//     : valid_(x.valid_), compress_(x.compress_), version_(x.version_), secret_(x.secret_) {
-// }
-
-ec_private::ec_private(std::string const& wif, uint8_t version)
-    : ec_private(from_string(wif, version)) {
-}
-
 ec_private::ec_private(wif_compressed const& wif, uint8_t version)
-    : ec_private(from_compressed(wif, version)) {
-}
+    : ec_private(from_compressed(wif, version))
+{}
 
 ec_private::ec_private(const wif_uncompressed& wif, uint8_t version)
-    : ec_private(from_uncompressed(wif, version)) {
-}
+    : ec_private(from_uncompressed(wif, version))
+{}
 
 ec_private::ec_private(ec_secret const& secret, uint16_t version, bool compress)
-    : valid_(true), compress_(compress), version_(version), secret_(secret) {
-}
-
-// ec_private& ec_private::operator=(ec_private const& x) {
-//     valid_ = x.valid_;
-//     compress_ = x.compress_;
-//     version_ = x.version_;
-//     secret_ = x.secret_;
-//     return *this;
-// }
-
+    : valid_(true), compress_(compress), version_(version), secret_(secret)
+{}
 
 // Validators.
 // ----------------------------------------------------------------------------
@@ -182,7 +165,7 @@ ec_public ec_private::to_public() const {
 }
 
 payment_address ec_private::to_payment_address() const {
-    return {*this};
+    return payment_address{*this};
 }
 
 // Operators.

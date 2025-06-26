@@ -1,14 +1,14 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(node VERSION 0 LANGUAGES CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
@@ -17,10 +17,9 @@ option(WITH_TESTS "Compile with unit tests." ON)
 option(WITH_MEMPOOL "Mempool enabled." OFF)
 option(DB_READONLY_MODE "Readonly DB mode enabled." OFF)
 option(JUST_KTH_SOURCES "Just Knuth source code to be linted." OFF)
-option(USE_LIBMDBX "Uses libmdbx DB library." OFF)
 option(STATISTICS "Collect statistics." OFF)
 
-option(GLOBAL_BUILD "" OFF)
+option(GLOBAL_BUILD "" ON)
 
 if (WITH_MEMPOOL)
   message(STATUS "Knuth: Mempool enabled")
@@ -36,13 +35,12 @@ if (JUST_KTH_SOURCES)
   message(STATUS "Knuth: Just Knuth source code to be linted: enabled")
 endif()
 
-if (USE_LIBMDBX)
-  add_definitions(-DKTH_USE_LIBMDBX)
-endif()
-
 if (STATISTICS)
   add_definitions(-DKTH_STATISTICS_ENABLED)
 endif()
+
+# is it possible to get the current timestamp in cmake?
+add_definitions(-DKTH_BUILD_TIME="xxxxxxxxxxxx")
 
 add_definitions(-DKTH_MICROARCHITECTURE_STR="${MARCH_ID}")
 set(MARCH_ID "" CACHE STRING "Specify the Microarchitecture ID (x86_64|...).")
@@ -89,6 +87,12 @@ endif()
 
 message(STATUS "Knuth: Cryptocurrency: ${CURRENCY}")
 
+# --------------------------------------------------------------------------------
+string(TIMESTAMP KTK_NODE_BUILD_TIMESTAMP "%s" UTC)
+message(STATUS "KTK_NODE_BUILD_TIMESTAMP: ${KTK_NODE_BUILD_TIMESTAMP}")
+add_definitions(-DKTK_NODE_BUILD_TIMESTAMP=${KTK_NODE_BUILD_TIMESTAMP})
+# --------------------------------------------------------------------------------
+
 
 
 if (NOT GLOBAL_BUILD)
@@ -101,6 +105,12 @@ endif()
 include(CheckCXXCompilerFlag)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/ci_utils/cmake)
 include(KnuthTools)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -matomics -mbulk-memory")
+  _add_cxx_compile_flag(-matomics _has_matomics_flag)
+  _add_cxx_compile_flag(-mbulk-memory _has_mbulk_memory_flag)
+endif()
 
 if (NOT MSVC)
   _add_c_compile_flag(-Wall _has_all_warning_flag)
@@ -141,6 +151,7 @@ endif()
 
 set(kth_sources_just_legacy
   src/configuration.cpp
+  src/executor/executor_info.cpp
   src/parser.cpp
   src/settings.cpp
   src/version.cpp
@@ -194,6 +205,7 @@ set(kth_headers
   include/kth/node/configuration.hpp
   include/kth/node/user_agent.hpp
   include/kth/node/executor/executor.hpp
+  include/kth/node/executor/executor_info.hpp
   include/kth/node/define.hpp
 
   include/kth/node/utility/reservation.hpp
@@ -230,7 +242,7 @@ endif()
 
 add_library(${PROJECT_NAME} ${MODE} ${kth_sources} ${kth_headers})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 
 if (ENABLE_POSITION_INDEPENDENT_CODE)

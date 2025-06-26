@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -44,7 +44,7 @@ private:
     blockchain::safe_chain& chain_;
     std::atomic<uint64_t> minimum_peer_fee_;
     bool const relay_to_peer_;
-    bool const enable_witness_;
+    // bool const enable_witness_;
 };
 
 } // namespace kth::node

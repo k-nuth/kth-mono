@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -87,46 +87,45 @@ public:
     }
 
     /**
-     * Load a stream into a message instance and notify subscribers.
-     * @param[in]  stream      The stream from which to load the message.
+     * Load bytes into a message instance and notify subscribers.
+     * @param[in]  reader      The byte reader from which to load the message.
      * @param[in]  version     The peer protocol version.
      * @param[in]  subscriber  The subscriber for the message type.
      * @return                 Returns error::bad_stream if failed.
      */
     template <typename Message, typename Subscriber>
-    code relay(std::istream& stream, uint32_t version, Subscriber& subscriber) const {
-        auto const message = std::make_shared<Message>();
-
+    code relay(byte_reader& reader, uint32_t version, Subscriber& subscriber) const {
         // Subscribers are invoked only with stop and success codes.
-        if ( ! domain::entity_from_data(*message, stream, version)) {
+        auto msg = Message::from_data(reader, version);
+        if ( ! msg) {
             return error::bad_stream;
         }
+        auto const msg_ptr = std::make_shared<Message>(std::move(*msg));
 
-        ////auto const const_ptr = std::const_pointer_cast<const Message>(message);
-        subscriber->relay(error::success, message);
+        subscriber->relay(error::success, msg_ptr);
         return error::success;
     }
 
     /**
-     * Load a stream into a message instance and invoke subscribers.
-     * @param[in]  stream      The stream from which to load the message.
+     * Load bytes into a message instance and invoke subscribers.
+     * @param[in]  reader      The byte reader from which to load the message.
      * @param[in]  version     The peer protocol version.
      * @param[in]  subscriber  The subscriber for the message type.
      * @return                 Returns error::bad_stream if failed.
      */
     template <typename Message, typename Subscriber>
-    code handle(std::istream& stream, uint32_t version, Subscriber& subscriber) const {
-        auto const message = std::make_shared<Message>();
-
+    code handle(byte_reader& reader, uint32_t version, Subscriber& subscriber) const {
         // Subscribers are invoked only with stop and success codes.
-        if ( ! domain::entity_from_data(*message, stream, version)) {
+        auto msg = Message::from_data(reader, version);
+        if ( ! msg) {
             return error::bad_stream;
         }
+        auto const msg_ptr = std::make_shared<Message>(std::move(*msg));
 
-        ////auto const const_ptr = std::const_pointer_cast<const Message>(message);
-        subscriber->invoke(error::success, message);
+        subscriber->invoke(error::success, msg_ptr);
         return error::success;
     }
+
 
     /**
      * Broadcast a default message instance with the specified error code.
@@ -135,15 +134,15 @@ public:
     virtual void broadcast(code const& ec);
 
     /*
-     * Load a stream of the specified command type.
+     * Load bytes of the specified command type.
      * Creates an instance of the indicated message type.
      * Sends the message instance to each subscriber of the type.
      * @param[in]  type     The stream message type identifier.
      * @param[in]  version  The peer protocol version.
-     * @param[in]  stream   The stream from which to load the message.
+     * @param[in]  reader   The byte reader from which to load the message.
      * @return              Returns error::bad_stream if failed.
      */
-    virtual code load(domain::message::message_type type, uint32_t version, std::istream& stream) const;
+    virtual code load(domain::message::message_type type, uint32_t version, byte_reader& reader) const;
 
     /**
      * Start all subscribers so that they accept subscription.

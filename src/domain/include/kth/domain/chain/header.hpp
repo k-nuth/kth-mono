@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,11 +25,9 @@
 #include <kth/infrastructure/utility/thread.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
-
 namespace kth::domain::chain {
-
 class KD_API header : public header_basis, public hash_memoizer<header> {                                 // NOLINT(cppcoreguidelines-special-member-functions)
 public:
     using list = std::vector<header>;
@@ -49,36 +47,24 @@ public:
     using header_basis::header_basis; // inherit constructors from header_basis
 
     header() = default;
-    // header(header const& x, hash_digest const& hash);
+
+    explicit
+    header(header_basis const& basis)
+        : header_basis(basis)
+    {}
 
     /// This class is copy constructible and copy assignable.
     // Note(kth): Cannot be defaulted because the std::mutex data member.
     header(header const& x);
     header& operator=(header const& x);
 
-    // Operators.
-    //-----------------------------------------------------------------------------
-
-    // bool operator==(header const& x) const;
-    // bool operator!=(header const& x) const;
 
     // Deserialization.
     //-----------------------------------------------------------------------------
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool wire = true) {
-        header_basis::from_data(source, wire);
 
-        if ( ! wire) {
-            validation.median_time_past = source.read_4_bytes_little_endian();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<header> from_data(byte_reader& reader, bool wire = true);
 
     // Serialization.
     //-----------------------------------------------------------------------------

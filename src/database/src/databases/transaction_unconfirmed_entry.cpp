@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -45,15 +45,33 @@ bool transaction_unconfirmed_entry::is_valid() const {
 // constexpr
 //TODO(fernando): make this constexpr
 size_t transaction_unconfirmed_entry::serialized_size(domain::chain::transaction const& tx) {
-#if defined(KTH_CACHED_RPC_DATA)
-    return tx.serialized_size(false, true, true)
-#else
-    return tx.serialized_size(false, true)
-#endif
+    return tx.serialized_size(false)
          + sizeof(uint32_t) // arrival_time
          + sizeof(uint32_t); //height
 }
 
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<transaction_unconfirmed_entry> transaction_unconfirmed_entry::from_data(byte_reader& reader) {
+    auto tx = domain::chain::transaction::from_data(reader, false);
+    if ( ! tx) {
+        return make_unexpected(tx.error());
+    }
+
+    auto arrival_time = reader.read_little_endian<uint32_t>();
+    if ( ! arrival_time) {
+        return make_unexpected(arrival_time.error());
+    }
+
+    auto height = reader.read_little_endian<uint32_t>();
+    if ( ! height) {
+        return make_unexpected(height.error());
+    }
+
+    return transaction_unconfirmed_entry(std::move(*tx), *arrival_time, *height);
+}
 
 // Serialization.
 //-----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,13 +10,14 @@
 #include <kth/domain/chain/transaction.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -55,37 +56,9 @@ public:
     void set_transactions(chain::transaction::list const& x);
     void set_transactions(chain::transaction::list&& x);
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        reset();
 
-        block_hash_ = source.read_hash();
-        auto const count = source.read_size_little_endian();
-
-        // Guard against potential for arbitary memory allocation.
-        if (count > static_absolute_max_block_size()) {
-            source.invalidate();
-        } else {
-            transactions_.resize(count);
-        }
-
-        // Order is required.
-        for (auto& tx : transactions_) {
-            if ( ! entity_from_data(tx, source, true, witness_default())) {
-                break;
-            }
-        }
-
-        if (version < block_transactions::version_minimum) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<block_transactions> from_data(byte_reader& reader, uint32_t version);
 
     [[nodiscard]]
     data_chunk to_data(uint32_t version) const;
@@ -98,15 +71,10 @@ public:
         sink.write_variable_little_endian(transactions_.size());
 
         for (auto const& element : transactions_) {
-            element.to_data(sink, /*wire*/ true, witness_default()
-#ifdef KTH_CACHED_RPC_DATA
-                            , /*unconfirmed*/ false
-#endif
-                            );
+            element.to_data(sink, /*wire*/ true);
         }
     }
 
-    //void to_data(uint32_t version, writer& sink) const;
     [[nodiscard]]
     bool is_valid() const;
 

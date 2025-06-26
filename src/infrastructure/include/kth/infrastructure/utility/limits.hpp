@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,6 +14,7 @@
 #include <nonstd/expected.hpp>
 
 #include <kth/infrastructure/compat.hpp>
+#include <kth/infrastructure/error.hpp>
 #include <kth/infrastructure/utility/assert.hpp>
 
 namespace kth {
@@ -143,69 +144,69 @@ I floor_subtract(I left, I right) {
 // #else
 
 template <std::unsigned_integral I>
-expected<I, std::string> safe_add(I left, I right) {
+expected<I, code> safe_add(I left, I right) {
     static auto const maximum = std::numeric_limits<I>::max();
 
     if (left > maximum - right) {
-        return make_unexpected<std::string>("addition overflow");
+        return make_unexpected(error::overflow);
     }
     return left + right;
 }
 
 template <std::unsigned_integral I>
-expected<I, std::string> safe_subtract(I left, I right) {
+expected<I, code> safe_subtract(I left, I right) {
     static auto const minimum = (std::numeric_limits<I>::min)();
 
     if (left < minimum + right) {
-        return make_unexpected("subtraction underflow");
+        return make_unexpected(error::underflow);
     }
 
     return left - right;
 }
 
 template <std::signed_integral To, std::signed_integral From>
-expected<To, std::string> safe_signed(From signed_value) {
+expected<To, code> safe_signed(From signed_value) {
     static auto const signed_minimum = (std::numeric_limits<To>::min)();
     static auto const signed_maximum = (std::numeric_limits<To>::max)();
 
     if (signed_value < signed_minimum || signed_value > signed_maximum) {
-        return make_unexpected("signed assignment out of range");
+        return make_unexpected(error::out_of_range);
     }
 
     return static_cast<To>(signed_value);
 }
 
 template <std::unsigned_integral To, std::unsigned_integral From>
-expected<To, std::string> safe_unsigned(From unsigned_value) {
+expected<To, code> safe_unsigned(From unsigned_value) {
     static auto const unsigned_minimum = (std::numeric_limits<To>::min)();
     static auto const unsigned_maximum = (std::numeric_limits<To>::max)();
 
     if (unsigned_value < unsigned_minimum || unsigned_value > unsigned_maximum) {
-        return make_unexpected("unsigned assignment out of range");
+        return make_unexpected(error::out_of_range);
     }
 
     return static_cast<To>(unsigned_value);
 }
 
 template <std::signed_integral To, std::unsigned_integral From>
-expected<To, std::string> safe_to_signed(From unsigned_value) {
+expected<To, code> safe_to_signed(From unsigned_value) {
     static_assert(sizeof(uint64_t) >= sizeof(To), "safe assign out of range");
     static auto const signed_maximum = (std::numeric_limits<To>::max)();
 
     if (unsigned_value > static_cast<uint64_t>(signed_maximum)) {
-        return make_unexpected("to signed assignment out of range");
+        return make_unexpected(error::out_of_range);
     }
 
     return static_cast<To>(unsigned_value);
 }
 
 template <std::unsigned_integral To, std::signed_integral From>
-expected<To, std::string> safe_to_unsigned(From signed_value) {
+expected<To, code> safe_to_unsigned(From signed_value) {
     static_assert(sizeof(uint64_t) >= sizeof(To), "safe assign out of range");
     static auto const unsigned_maximum = (std::numeric_limits<To>::max());
 
     if (signed_value < 0 || static_cast<uint64_t>(signed_value) > unsigned_maximum) {
-        return make_unexpected("to unsigned assignment out of range");
+        return make_unexpected(error::out_of_range);
     }
 
     return static_cast<To>(signed_value);
@@ -213,17 +214,18 @@ expected<To, std::string> safe_to_unsigned(From signed_value) {
 
 // #endif // ! defined(__EMSCRIPTEN__)
 
-template <typename I>
-void safe_increment(I& value) {
-    static constexpr auto one = I{1};
-    value = safe_add(value, one);
-}
+// template <typename I>
+// void safe_increment(I& value) {
+//     static constexpr auto one = I{1};
+//     //TODO: how to return the expected value?
+//     value = *safe_add(value, one);
+// }
 
-template <typename I>
-void safe_decrement(I& value) {
-    static constexpr auto one = I{1};
-    value = safe_subtract(value, one);
-}
+// template <typename I>
+// void safe_decrement(I& value) {
+//     static constexpr auto one = I{1};
+//     value = *safe_subtract(value, one);
+// }
 
 /// Constrain a numeric value within a given type domain.
 template <typename To, typename From>

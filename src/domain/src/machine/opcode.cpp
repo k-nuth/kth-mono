@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -190,23 +190,23 @@ std::string opcode_to_string(opcode value, uint32_t active_forks) {
             return "swap";
         case opcode::tuck:
             return "tuck";
-        case opcode::disabled_cat:
+        case opcode::cat:
             return "cat";
-        case opcode::disabled_substr:
-            return "substr";
-        case opcode::disabled_left:
-            return "left";
-        case opcode::disabled_right:
-            return "right";
+        case opcode::split:
+            return "split";
+        case opcode::num2bin:
+            return "num2bin";
+        case opcode::bin2num:
+            return "bin2num";
         case opcode::size:
             return "size";
         case opcode::disabled_invert:
             return "invert";
-        case opcode::disabled_and:
+        case opcode::and_:
             return "and";
-        case opcode::disabled_or:
+        case opcode::or_:
             return "or";
-        case opcode::disabled_xor:
+        case opcode::xor_:
             return "xor";
         case opcode::equal:
             return "equal";
@@ -236,11 +236,11 @@ std::string opcode_to_string(opcode value, uint32_t active_forks) {
             return "add";
         case opcode::sub:
             return "sub";
-        case opcode::disabled_mul:
+        case opcode::mul:
             return "mul";
-        case opcode::disabled_div:
+        case opcode::div:
             return "div";
-        case opcode::disabled_mod:
+        case opcode::mod:
             return "mod";
         case opcode::disabled_lshift:
             return "lshift";
@@ -315,34 +315,61 @@ std::string opcode_to_string(opcode value, uint32_t active_forks) {
         case opcode::nop10:
             return "nop10";
 
-        //TODO(kth): Implement OP_CHECKDATASIG and OP_CHECKDATASIGVERIFY
+// more crypto
+        case opcode::checkdatasig:
+            return "checkdatasig";
+        case opcode::checkdatasigverify:
+            return "checkdatasigverify";
 
-        case opcode::reserved_186:
-        case opcode::reserved_187:
-        case opcode::reserved_188:
-        case opcode::reserved_189:
-        case opcode::reserved_190:
-        case opcode::reserved_191:
-        case opcode::reserved_192:
-        case opcode::reserved_193:
-        case opcode::reserved_194:
-        case opcode::reserved_195:
-        case opcode::reserved_196:
-        case opcode::reserved_197:
-        case opcode::reserved_198:
-        case opcode::reserved_199:
-        case opcode::reserved_200:
-        case opcode::reserved_201:
-        case opcode::reserved_202:
-        case opcode::reserved_203:
-        case opcode::reserved_204:
-        case opcode::reserved_205:
-        case opcode::reserved_206:
-        case opcode::reserved_207:
-        case opcode::reserved_208:
-        case opcode::reserved_209:
-        case opcode::reserved_210:
-        case opcode::reserved_211:
+// additional byte string operations
+        case opcode::reverse_bytes:
+            return "reverse_bytes";
+
+
+// Native Introspection opcodes
+        case opcode::input_index:
+            return "input_index";
+        case opcode::active_bytecode:
+            return "active_bytecode";
+        case opcode::tx_version:
+            return "tx_version";
+        case opcode::tx_input_count:
+            return "tx_input_count";
+        case opcode::tx_output_count:
+            return "tx_output_count";
+        case opcode::tx_locktime:
+            return "tx_locktime";
+        case opcode::utxo_value:
+            return "utxo_value";
+        case opcode::utxo_bytecode:
+            return "utxo_bytecode";
+        case opcode::outpoint_tx_hash:
+            return "outpoint_tx_hash";
+        case opcode::outpoint_index:
+            return "outpoint_index";
+        case opcode::input_bytecode:
+            return "input_bytecode";
+        case opcode::input_sequence_number:
+            return "input_sequence_number";
+        case opcode::output_value:
+            return "output_value";
+        case opcode::output_bytecode:
+            return "output_bytecode";
+
+// Native Introspection of tokens (SCRIPT_ENABLE_TOKENS must be set)
+        case opcode::utxo_token_category:
+            return "utxo_token_category";
+        case opcode::utxo_token_commitment:
+            return "utxo_token_commitment";
+        case opcode::utxo_token_amount:
+            return "utxo_token_amount";
+        case opcode::output_token_category:
+            return "output_token_category";
+        case opcode::output_token_commitment:
+            return "output_token_commitment";
+        case opcode::output_token_amount:
+            return "output_token_amount";
+
         case opcode::reserved_212:
         case opcode::reserved_213:
         case opcode::reserved_214:
@@ -394,9 +421,9 @@ std::string opcode_to_string(opcode value, uint32_t active_forks) {
 
 // This converts only names, not any data for push codes.
 bool opcode_from_string(opcode& out_code, std::string const& value) {       //NOLINT
+
     // Normalize to ASCII lower case.
     auto const norm = boost::algorithm::to_lower_copy(value);
-
     RETURN_IF_OPCODE("zero", push_size_0);
     RETURN_IF_OPCODE("push_0", push_size_0);
     RETURN_IF_OPCODE("push_1", push_size_1);
@@ -525,19 +552,22 @@ bool opcode_from_string(opcode& out_code, std::string const& value) {       //NO
     RETURN_IF_OPCODE("rot", rot);
     RETURN_IF_OPCODE("swap", swap);
     RETURN_IF_OPCODE("tuck", tuck);
-    RETURN_IF_OPCODE("cat", disabled_cat);
-    RETURN_IF_OPCODE("substr", disabled_substr);
-    RETURN_IF_OPCODE("left", disabled_left);
-    RETURN_IF_OPCODE("right", disabled_right);
+
+    RETURN_IF_OPCODE("cat", cat);
+    RETURN_IF_OPCODE("split", split);       // was called substr before (disabled and re-enabled after pythagoras/monolith upgrade, May 2018)
+    RETURN_IF_OPCODE("num2bin", num2bin);   // was called left before (disabled and re-enabled after pythagoras/monolith upgrade, May 2018)
+    RETURN_IF_OPCODE("bin2num", bin2num);   // was called right before (disabled and re-enabled after pythagoras/monolith upgrade, May 2018)
     RETURN_IF_OPCODE("size", size);
+
     RETURN_IF_OPCODE("invert", disabled_invert);
-    RETURN_IF_OPCODE("and", disabled_and);
-    RETURN_IF_OPCODE("or", disabled_or);
-    RETURN_IF_OPCODE("xor", disabled_xor);
+    RETURN_IF_OPCODE("and", and_);          // disabled and re-enabled after pythagoras/monolith upgrade, May 2018
+    RETURN_IF_OPCODE("or", or_);            // disabled and re-enabled after pythagoras/monolith upgrade, May 2018
+    RETURN_IF_OPCODE("xor", xor_);          // disabled and re-enabled after pythagoras/monolith upgrade, May 2018
     RETURN_IF_OPCODE("equal", equal);
     RETURN_IF_OPCODE("equalverify", equalverify);
     RETURN_IF_OPCODE_OR_ALIAS("reserved_137", "reserved1", reserved_137);
     RETURN_IF_OPCODE_OR_ALIAS("reserved_138", "reserved2", reserved_138);
+
     RETURN_IF_OPCODE_OR_ALIAS("add1", "1add", add1);
     RETURN_IF_OPCODE_OR_ALIAS("sub1", "1sub", sub1);
     RETURN_IF_OPCODE_OR_ALIAS("mul2", "2mul", disabled_mul2);
@@ -546,13 +576,15 @@ bool opcode_from_string(opcode& out_code, std::string const& value) {       //NO
     RETURN_IF_OPCODE("abs", abs);
     RETURN_IF_OPCODE("not", not_);
     RETURN_IF_OPCODE_OR_ALIAS("nonzero", "0notequal", nonzero);
+
     RETURN_IF_OPCODE("add", add);
     RETURN_IF_OPCODE("sub", sub);
-    RETURN_IF_OPCODE("mul", disabled_mul);
-    RETURN_IF_OPCODE("div", disabled_div);
-    RETURN_IF_OPCODE("mod", disabled_mod);
+    RETURN_IF_OPCODE("mul", mul);
+    RETURN_IF_OPCODE("div", div);
+    RETURN_IF_OPCODE("mod", mod);
     RETURN_IF_OPCODE("lshift", disabled_lshift);
     RETURN_IF_OPCODE("rshift", disabled_rshift);
+
     RETURN_IF_OPCODE("booland", booland);
     RETURN_IF_OPCODE("boolor", boolor);
     RETURN_IF_OPCODE("numequal", numequal);
@@ -564,17 +596,21 @@ bool opcode_from_string(opcode& out_code, std::string const& value) {       //NO
     RETURN_IF_OPCODE("greaterthanorequal", greaterthanorequal);
     RETURN_IF_OPCODE("min", min);
     RETURN_IF_OPCODE("max", max);
+
     RETURN_IF_OPCODE("within", within);
+
     RETURN_IF_OPCODE("ripemd160", ripemd160);
     RETURN_IF_OPCODE("sha1", sha1);
     RETURN_IF_OPCODE("sha256", sha256);
     RETURN_IF_OPCODE("hash160", hash160);
     RETURN_IF_OPCODE("hash256", hash256);
+
     RETURN_IF_OPCODE("codeseparator", codeseparator);
     RETURN_IF_OPCODE("checksig", checksig);
     RETURN_IF_OPCODE("checksigverify", checksigverify);
     RETURN_IF_OPCODE("checkmultisig", checkmultisig);
     RETURN_IF_OPCODE("checkmultisigverify", checkmultisigverify);
+
     RETURN_IF_OPCODE("nop1", nop1);
     RETURN_IF_OPCODE_OR_ALIAS("checklocktimeverify", "nop2", checklocktimeverify);
     RETURN_IF_OPCODE_OR_ALIAS("checksequenceverify", "nop3", checksequenceverify);
@@ -585,32 +621,38 @@ bool opcode_from_string(opcode& out_code, std::string const& value) {       //NO
     RETURN_IF_OPCODE("nop8", nop8);
     RETURN_IF_OPCODE("nop9", nop9);
     RETURN_IF_OPCODE("nop10", nop10);
-    RETURN_IF_OPCODE("reserved_186", reserved_186);
-    RETURN_IF_OPCODE("reserved_187", reserved_187);
-    RETURN_IF_OPCODE("reserved_188", reserved_188);
-    RETURN_IF_OPCODE("reserved_189", reserved_189);
-    RETURN_IF_OPCODE("reserved_190", reserved_190);
-    RETURN_IF_OPCODE("reserved_191", reserved_191);
-    RETURN_IF_OPCODE("reserved_192", reserved_192);
-    RETURN_IF_OPCODE("reserved_193", reserved_193);
-    RETURN_IF_OPCODE("reserved_194", reserved_194);
-    RETURN_IF_OPCODE("reserved_195", reserved_195);
-    RETURN_IF_OPCODE("reserved_196", reserved_196);
-    RETURN_IF_OPCODE("reserved_197", reserved_197);
-    RETURN_IF_OPCODE("reserved_198", reserved_198);
-    RETURN_IF_OPCODE("reserved_199", reserved_199);
-    RETURN_IF_OPCODE("reserved_200", reserved_200);
-    RETURN_IF_OPCODE("reserved_201", reserved_201);
-    RETURN_IF_OPCODE("reserved_202", reserved_202);
-    RETURN_IF_OPCODE("reserved_203", reserved_203);
-    RETURN_IF_OPCODE("reserved_204", reserved_204);
-    RETURN_IF_OPCODE("reserved_205", reserved_205);
-    RETURN_IF_OPCODE("reserved_206", reserved_206);
-    RETURN_IF_OPCODE("reserved_207", reserved_207);
-    RETURN_IF_OPCODE("reserved_208", reserved_208);
-    RETURN_IF_OPCODE("reserved_209", reserved_209);
-    RETURN_IF_OPCODE("reserved_210", reserved_210);
-    RETURN_IF_OPCODE("reserved_211", reserved_211);
+
+// more crypto
+    RETURN_IF_OPCODE("checkdatasig", checkdatasig);
+    RETURN_IF_OPCODE("checkdatasigverify", checkdatasigverify);
+
+// additional byte string operations
+    RETURN_IF_OPCODE("reverse_bytes", reverse_bytes);
+
+// Native Introspection opcodes
+    RETURN_IF_OPCODE("input_index", input_index);
+    RETURN_IF_OPCODE("active_bytecode", active_bytecode);
+    RETURN_IF_OPCODE("tx_version", tx_version);
+    RETURN_IF_OPCODE("tx_input_count", tx_input_count);
+    RETURN_IF_OPCODE("tx_output_count", tx_output_count);
+    RETURN_IF_OPCODE("tx_locktime", tx_locktime);
+    RETURN_IF_OPCODE("utxo_value", utxo_value);
+    RETURN_IF_OPCODE("utxo_bytecode", utxo_bytecode);
+    RETURN_IF_OPCODE("outpoint_tx_hash", outpoint_tx_hash);
+    RETURN_IF_OPCODE("outpoint_index", outpoint_index);
+    RETURN_IF_OPCODE("input_bytecode", input_bytecode);
+    RETURN_IF_OPCODE("input_sequence_number", input_sequence_number);
+    RETURN_IF_OPCODE("output_value", output_value);
+    RETURN_IF_OPCODE("output_bytecode", output_bytecode);
+
+// Native Introspection of tokens (SCRIPT_ENABLE_TOKENS must be set)
+    RETURN_IF_OPCODE("utxo_token_category", utxo_token_category);
+    RETURN_IF_OPCODE("utxo_token_commitment", utxo_token_commitment);
+    RETURN_IF_OPCODE("utxo_token_amount", utxo_token_amount);
+    RETURN_IF_OPCODE("output_token_category", output_token_category);
+    RETURN_IF_OPCODE("output_token_commitment", output_token_commitment);
+    RETURN_IF_OPCODE("output_token_amount", output_token_amount);
+
     RETURN_IF_OPCODE("reserved_212", reserved_212);
     RETURN_IF_OPCODE("reserved_213", reserved_213);
     RETURN_IF_OPCODE("reserved_214", reserved_214);

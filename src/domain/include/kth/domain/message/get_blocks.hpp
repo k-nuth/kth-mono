@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,14 +15,16 @@
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
 #include <kth/infrastructure/math/hash.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
+#include <kth/domain/deserialization.hpp>
 
 namespace kth::domain::message {
 
@@ -53,34 +55,8 @@ public:
 
     void set_stop_hash(hash_digest const& value);
 
-    template <typename R, KTH_IS_READER(R)>
-    /*virtual*/  //TODO(fernando): check if this function is used in a run-time-polymorphic way
-    bool from_data(R& source, uint32_t /*version*/) {
-        reset();
-
-        // Discard protocol version because it is stupid.
-        source.read_4_bytes_little_endian();
-        auto const count = source.read_size_little_endian();
-
-        // Guard against potential for arbitary memory allocation.
-        if (count > max_get_blocks) {
-            source.invalidate();
-        } else {
-            start_hashes_.reserve(count);
-        }
-
-        for (size_t hash = 0; hash < count && source; ++hash) {
-            start_hashes_.push_back(source.read_hash());
-        }
-
-        stop_hash_ = source.read_hash();
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<get_blocks> from_data(byte_reader& reader, uint32_t /*version*/);
 
     [[nodiscard]]
     data_chunk to_data(uint32_t version) const;

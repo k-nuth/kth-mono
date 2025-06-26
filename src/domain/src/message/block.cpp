@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -70,6 +70,21 @@ bool block::operator!=(block const& x) const {
     return !(*this == x);
 }
 
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<block> block::from_data(byte_reader& reader, uint32_t /*version*/) {
+    auto chain_block = chain::block::from_data(reader);
+    if ( ! chain_block) {
+        return make_unexpected(chain_block.error());
+    }
+    return block(std::move(*chain_block));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
+
 // Witness is always serialized if present.
 // NOTE: Witness on BCH is dissabled on the chain::block class
 data_chunk block::to_data(uint32_t /*unused*/) const {
@@ -77,13 +92,11 @@ data_chunk block::to_data(uint32_t /*unused*/) const {
 }
 
 void block::to_data(uint32_t /*version*/, data_sink& stream) const {
-    chain::block::to_data(stream, true);
+    chain::block::to_data(stream);
 }
 
-// Witness size is always counted if present.
-// NOTE: Witness on BCH is dissabled on the chain::block class
 size_t block::serialized_size(uint32_t /*unused*/) const {
-    return chain::block::serialized_size(true);
+    return chain::block::serialized_size();
 }
 
 // //TODO(fernando): check this family of functions: to_data_header_nonce

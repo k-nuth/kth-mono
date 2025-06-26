@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,10 +14,11 @@
 
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
-#include <kth/domain/multi_crypto_settings.hpp>
+#include <kth/domain/deserialization.hpp>
 
 #include <kth/domain/machine/operation.hpp>
 #include <kth/domain/machine/rule_fork.hpp>
+#include <kth/domain/wallet/ec_public.hpp>
 
 #include <kth/infrastructure/error.hpp>
 #include <kth/infrastructure/machine/script_pattern.hpp>
@@ -31,23 +32,19 @@
 #include <kth/infrastructure/utility/writer.hpp>
 
 
-#include <kth/domain/utils.hpp>
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::chain {
 
 class transaction;
-
-#if defined(KTH_SEGWIT_ENABLED)
-class witness;
-#endif
-
 class KD_API script_basis {
 public:
     using operation = machine::operation;
     using rule_fork = machine::rule_fork;
     using script_pattern = infrastructure::machine::script_pattern;
+#if ! defined(KTH_CURRENCY_BCH)
     using script_version = infrastructure::machine::script_version;
+#endif // ! KTH_CURRENCY_BCH
 
     // Constructors.
     //-------------------------------------------------------------------------
@@ -65,51 +62,11 @@ public:
     // Deserialization.
     //-------------------------------------------------------------------------
 
-    /// Deserialization invalidates the iterator.
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool prefix) {
-        reset();
-        valid_ = true;
+    static
+    expect<script_basis> from_data(byte_reader& reader, bool prefix);
 
-        if (prefix) {
-            auto const size = source.read_size_little_endian();
-
-            // The max_script_size constant limits evaluation, but not all scripts
-            // evaluate, so use max_block_size to guard memory allocation here.
-            if (size > static_absolute_max_block_size()) {
-                source.invalidate();
-            } else {
-                bytes_ = source.read_bytes(size);
-            }
-        } else {
-            bytes_ = source.read_bytes();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
-
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data_with_size(R& source, size_t size) {
-        reset();
-        valid_ = true;
-
-        // The max_script_size constant limits evaluation, but not all scripts evaluate, so use max_block_size to guard memory allocation here.
-        if (size > static_absolute_max_block_size()) {
-            source.invalidate();
-        } else {
-            bytes_ = source.read_bytes(size);
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<script_basis> from_data_with_size(byte_reader& reader, size_t size);
 
     /// Deserialization invalidates the iterator.
     void from_operations(operation::list const& ops);
@@ -169,14 +126,6 @@ public:
     static
     bool is_coinbase_pattern(operation::list const& ops, size_t height);
 
-#if defined(KTH_SEGWIT_ENABLED)
-    static
-    bool is_commitment_pattern(operation::list const& ops);
-
-    static
-    bool is_witness_program_pattern(operation::list const& ops);
-#endif
-
     /// Common output patterns (psh and pwsh are also consensus).
     static
     bool is_null_data_pattern(operation::list const& ops);
@@ -188,15 +137,13 @@ public:
     bool is_pay_public_key_pattern(operation::list const& ops);
 
     static
-    bool is_pay_key_hash_pattern(operation::list const& ops);
+    bool is_pay_public_key_hash_pattern(operation::list const& ops);
 
     static
     bool is_pay_script_hash_pattern(operation::list const& ops);
 
-#if defined(KTH_SEGWIT_ENABLED)
     static
-    bool is_pay_witness_script_hash_pattern(operation::list const& ops);
-#endif
+    bool is_pay_script_hash_32_pattern(operation::list const& ops);
 
     /// Common input patterns (skh is also consensus).
     static
@@ -206,7 +153,7 @@ public:
     bool is_sign_public_key_pattern(operation::list const& ops);
 
     static
-    bool is_sign_key_hash_pattern(operation::list const& ops);
+    bool is_sign_public_key_hash_pattern(operation::list const& ops);
 
     static
     bool is_sign_script_hash_pattern(operation::list const& ops);
@@ -219,10 +166,19 @@ public:
     operation::list to_pay_public_key_pattern(data_slice point);
 
     static
-    operation::list to_pay_key_hash_pattern(short_hash const& hash);
+    operation::list to_pay_public_key_hash_pattern(short_hash const& hash);
+
+    static
+    operation::list to_pay_public_key_hash_pattern_unlocking(endorsement const& end, wallet::ec_public const& public_key);
+
+    static
+    operation::list to_pay_public_key_hash_pattern_unlocking_placeholder(size_t endorsement_size, size_t pubkey_size);
 
     static
     operation::list to_pay_script_hash_pattern(short_hash const& hash);
+
+    static
+    operation::list to_pay_script_hash_32_pattern(hash_digest const& hash);
 
     static
     operation::list to_pay_multisig_pattern(uint8_t signatures, point_list const& points);
@@ -234,15 +190,6 @@ public:
     //-------------------------------------------------------------------------
 
     /// Common pattern detection.
-
-#if defined(KTH_SEGWIT_ENABLED)
-    [[nodiscard]]
-    data_chunk witness_program() const;
-#endif
-
-    [[nodiscard]]
-    script_version version() const;
-
     [[nodiscard]]
     script_pattern pattern() const;
 
@@ -256,8 +203,6 @@ public:
     [[nodiscard]]
     size_t sigops(bool accurate) const;
 
-    void find_and_delete(data_stack const& endorsements);
-
     [[nodiscard]]
     bool is_unspendable() const;
 
@@ -265,18 +210,19 @@ public:
 
 // protected:
 
-#if defined(KTH_SEGWIT_ENABLED)
-    [[nodiscard]]
-    bool is_pay_to_witness(uint32_t forks) const;
-#endif
+    //TODO: implement is_pay_to_public_key_hash
+
 
     [[nodiscard]]
     bool is_pay_to_script_hash(uint32_t forks) const;
 
+    [[nodiscard]]
+    bool is_pay_to_script_hash_32(uint32_t forks) const;
+
 // private:
     static
     size_t serialized_size(operation::list const& ops);
-private:
+protected:
     static
     data_chunk operations_to_data(operation::list const& ops);
 
@@ -284,15 +230,21 @@ private:
     // hash_digest generate_unversioned_signature_hash(transaction const& tx, uint32_t input_index, script_basis const& script_code, uint8_t sighash_type);
 
     static
-    hash_digest generate_version_0_signature_hash(transaction const& tx, uint32_t input_index, script_basis const& script_code, uint64_t value, uint8_t sighash_type);
-
-    void find_and_delete_(data_chunk const& endorsement);
+    std::pair<hash_digest, size_t> generate_version_0_signature_hash(
+        transaction const& tx,
+        uint32_t input_index,
+        script_basis const& script_code,
+        uint64_t value,
+        uint8_t sighash_type,
+        uint32_t active_forks
+    );
 
     data_chunk bytes_;
     bool valid_{false};
 };
 
 machine::operation::list operations(script_basis const& script);
+machine::operation first_operation(script_basis const& script);
 
 } // namespace kth::domain::chain
 

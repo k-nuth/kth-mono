@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,10 +9,10 @@
 
 // #include <boost/thread/latch.hpp>
 
-#include <kth/domain/message/block.hpp>
-#include <kth/domain/message/header.hpp>
+#include <kth/domain/chain/block.hpp>
+#include <kth/domain/chain/header.hpp>
 #include <kth/domain/message/merkle_block.hpp>
-#include <kth/domain/message/transaction.hpp>
+#include <kth/domain/chain/transaction.hpp>
 #include <kth/blockchain/interface/safe_chain.hpp>
 
 #include <kth/capi/chain/block_list.h>
@@ -28,7 +28,7 @@ kth::blockchain::safe_chain& safe_chain(kth_chain_t chain) {
 
 inline
 kth::domain::message::transaction::const_ptr tx_shared(kth_transaction_t tx) {
-    auto const& tx_ref = *static_cast<kth::domain::message::transaction const*>(tx);
+    auto const& tx_ref = *static_cast<kth::domain::chain::transaction const*>(tx);
     auto* tx_new = new kth::domain::message::transaction(tx_ref);
     return kth::domain::message::transaction::const_ptr(tx_new);
 }
@@ -42,7 +42,7 @@ kth::domain::message::transaction::const_ptr tx_shared(kth_transaction_t tx) {
 
 inline
 kth::domain::message::block::const_ptr block_shared(kth_block_t block) {
-    auto const& block_ref = *static_cast<kth::domain::message::block const*>(block);
+    auto const& block_ref = *static_cast<kth::domain::chain::block const*>(block);
     auto* block_new = new kth::domain::message::block(block_ref);
     return kth::domain::message::block::const_ptr(block_new);
 }
@@ -67,27 +67,27 @@ void kth_chain_async_block_height(kth_chain_t chain, void* ctx, kth_hash_t hash,
 }
 
 void kth_chain_async_block_header_by_height(kth_chain_t chain, void* ctx, kth_size_t height, kth_block_header_fetch_handler_t handler) {
-    safe_chain(chain).fetch_block_header(height, [chain, ctx, handler](std::error_code const& ec, kth::domain::message::header::ptr header, size_t h) {
+    safe_chain(chain).fetch_block_header(height, [chain, ctx, handler](std::error_code const& ec, kth::domain::chain::header::ptr header, size_t h) {
         handler(chain, ctx, kth::to_c_err(ec), kth::leak_if_success(header, ec), h);
     });
 }
 
 void kth_chain_async_block_header_by_hash(kth_chain_t chain, void* ctx, kth_hash_t hash, kth_block_header_fetch_handler_t handler) {
     auto hash_cpp = kth::to_array(hash.hash);
-    safe_chain(chain).fetch_block_header(hash_cpp, [chain, ctx, handler](std::error_code const& ec, kth::domain::message::header::ptr header, size_t h) {
+    safe_chain(chain).fetch_block_header(hash_cpp, [chain, ctx, handler](std::error_code const& ec, kth::domain::chain::header::ptr header, size_t h) {
         handler(chain, ctx, kth::to_c_err(ec), kth::leak_if_success(header, ec), h);
     });
 }
 
 void kth_chain_async_block_by_height(kth_chain_t chain, void* ctx, kth_size_t height, kth_block_fetch_handler_t handler) {
-    safe_chain(chain).fetch_block(height, kth::witness(), [chain, ctx, handler](std::error_code const& ec, kth::domain::message::block::const_ptr block, size_t h) {
+    safe_chain(chain).fetch_block(height, [chain, ctx, handler](std::error_code const& ec, kth::domain::message::block::const_ptr block, size_t h) {
         handler(chain, ctx, kth::to_c_err(ec), kth::leak_if_success(block, ec), h);
     });
 }
 
 void kth_chain_async_block_by_hash(kth_chain_t chain, void* ctx, kth_hash_t hash, kth_block_fetch_handler_t handler) {
     auto hash_cpp = kth::to_array(hash.hash);
-    safe_chain(chain).fetch_block(hash_cpp, kth::witness(), [chain, ctx, handler](std::error_code const& ec, kth::domain::message::block::const_ptr block, size_t h) {
+    safe_chain(chain).fetch_block(hash_cpp, [chain, ctx, handler](std::error_code const& ec, kth::domain::message::block::const_ptr block, size_t h) {
         handler(chain, ctx, kth::to_c_err(ec), kth::leak_if_success(block, ec), h);
     });
 }
@@ -140,7 +140,7 @@ void kth_chain_async_block_by_height_timestamp(kth_chain_t chain, void* ctx, kth
 void kth_chain_async_transaction(kth_chain_t chain, void* ctx, kth_hash_t hash, kth_bool_t require_confirmed, kth_transaction_fetch_handler_t handler) {
     //precondition:  [hash, 32] is a valid range
     auto hash_cpp = kth::to_array(hash.hash);
-    safe_chain(chain).fetch_transaction(hash_cpp, kth::int_to_bool(require_confirmed), kth::witness(), [chain, ctx, handler](std::error_code const& ec, kth::domain::message::transaction::const_ptr transaction, size_t i, size_t h) {
+    safe_chain(chain).fetch_transaction(hash_cpp, kth::int_to_bool(require_confirmed), [chain, ctx, handler](std::error_code const& ec, kth::domain::message::transaction::const_ptr transaction, size_t i, size_t h) {
         handler(chain, ctx, kth::to_c_err(ec), kth::leak_if_success(transaction, ec), i, h);
     });
 }

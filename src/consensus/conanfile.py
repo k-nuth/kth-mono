@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2025 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,6 +18,7 @@ class KnuthConsensusConan(KnuthConanFileV2):
     url = "https://github.com/k-nuth/consensus"
     description = "Bitcoin Consensus Library"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "library"
 
     options = {"shared": [True, False],
                "fPIC": [True, False],
@@ -47,11 +48,12 @@ class KnuthConsensusConan(KnuthConanFileV2):
 
     def build_requirements(self):
         if self.options.tests:
-            self.test_requires("catch2/3.6.0")
+            self.test_requires("catch2/3.7.1")
 
     def requirements(self):
         self.requires("boost/1.86.0", transitive_headers=True, transitive_libs=True)
-        self.requires("secp256k1/0.19.0", transitive_headers=True, transitive_libs=True)
+        self.requires("openssl/3.4.1", transitive_headers=True, transitive_libs=True)
+        self.requires("secp256k1/0.22.0", transitive_headers=True, transitive_libs=True)
 
         if self.settings.compiler == "msvc" and self.options.currency == 'BCH':
             self.requires("safeint/3.0.28", transitive_headers=True, transitive_libs=True)
@@ -59,7 +61,7 @@ class KnuthConsensusConan(KnuthConanFileV2):
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
     def config_options(self):
         KnuthConanFileV2.config_options(self)

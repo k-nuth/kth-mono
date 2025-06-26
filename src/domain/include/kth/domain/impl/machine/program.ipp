@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,7 +20,21 @@
 
 namespace kth::domain::machine {
 
+#if ! defined(KTH_CURRENCY_BCH)
 using script_version = ::kth::infrastructure::machine::script_version;
+#endif // ! KTH_CURRENCY_BCH
+
+// Metrics
+//-----------------------------------------------------------------------------
+inline
+metrics& program::get_metrics() {
+    return metrics_;
+}
+
+inline
+metrics const& program::get_metrics() const {
+    return metrics_;
+}
 
 // Constant registers.
 //-----------------------------------------------------------------------------
@@ -37,6 +51,23 @@ uint32_t program::forks() const {
 }
 
 inline
+size_t program::max_script_element_size() const {
+    auto const galois_enabled = chain::script::is_enabled(forks(), rule_fork::bch_galois);
+    return galois_enabled ? ::kth::may2025::max_push_data_size : max_push_data_size_legacy;
+}
+
+inline
+size_t program::max_integer_size_legacy() const {
+    auto const gauss_enabled = chain::script::is_enabled(forks(), rule_fork::bch_gauss);
+    return gauss_enabled ? max_number_size_64_bits : max_number_size_32_bits;
+}
+
+inline
+bool program::is_chip_vm_limits_enabled() const {
+    return chain::script::is_enabled(forks(), rule_fork::bch_galois);
+}
+
+inline
 uint32_t program::input_index() const {
     return input_index_;
 }
@@ -46,10 +77,12 @@ uint64_t program::value() const {
     return value_;
 }
 
+#if ! defined(KTH_CURRENCY_BCH)
 inline
 script_version program::version() const {
     return version_;
 }
+#endif // ! KTH_CURRENCY_BCH
 
 inline
 chain::transaction const& program::transaction() const {
@@ -99,7 +132,7 @@ bool program::increment_operation_count(operation const& op) {
 
 inline
 bool program::increment_operation_count(int32_t public_keys) {
-    static auto const max_keys = static_cast<int32_t>(max_script_public_keys);
+    static auto const max_keys = int32_t(max_script_public_keys);
 
     // bit.ly/2d1bsdB
     if (public_keys < 0 || public_keys > max_keys) {
@@ -162,9 +195,10 @@ void program::push_copy(value_type const& item) {
 //-----------------------------------------------------------------------------
 
 // This must be guarded.
-inline data_chunk program::pop() {
+inline
+data_chunk program::pop() {
     KTH_ASSERT( ! empty());
-    auto const value = primary_.back();
+    auto value = std::move(primary_.back());
     primary_.pop_back();
     return value;
 }
@@ -172,29 +206,38 @@ inline data_chunk program::pop() {
 inline
 bool program::pop(int32_t& out_value) {
     number value;
-    if ( ! pop(value)) {
+    if ( ! pop(value, max_integer_size_legacy())) {
         return false;
-}
-
+    }
     out_value = value.int32();
     return true;
 }
 
 inline
-bool program::pop(number& out_number, size_t maxiumum_size) {
-    return !empty() && out_number.set_data(pop(), maxiumum_size);
+bool program::pop(int64_t& out_value) {
+    number value;
+    if ( ! pop(value, max_integer_size_legacy())) {
+        return false;
+    }
+    out_value = value.int64();
+    return true;
+}
+
+inline
+bool program::pop(number& out_number, size_t maximum_size) {
+    return !empty() && out_number.set_data(pop(), maximum_size);
 }
 
 inline
 bool program::pop_binary(number& first, number& second) {
     // The right hand side number is at the top of the stack.
-    return pop(first) && pop(second);
+    return pop(first, max_integer_size_legacy()) && pop(second, max_integer_size_legacy());
 }
 
 inline
 bool program::pop_ternary(number& first, number& second, number& third) {
     // The upper bound is at stack top, lower bound next, value next.
-    return pop(first) && pop(second) && pop(third);
+    return pop(first, max_integer_size_legacy()) && pop(second, max_integer_size_legacy()) && pop(third, max_integer_size_legacy());
 }
 
 // Determines if popped value is valid post-pop stack index and returns index.
@@ -211,7 +254,7 @@ bool program::pop_position(stack_iterator& out_position) {
         return false;
     }
 
-    auto const index = static_cast<uint32_t>(signed_index);
+    auto const index = uint32_t(signed_index);
 
     if (index >= size()) {
         return false;
@@ -226,11 +269,11 @@ inline
 bool program::pop(data_stack& section, size_t count) {
     if (size() < count) {
         return false;
-}
+    }
 
     for (size_t i = 0; i < count; ++i) {
         section.push_back(pop());
-}
+    }
 
     return true;
 }
@@ -264,8 +307,7 @@ void program::erase(const stack_iterator& position) {
 
 // pop1/pop2/.../pop[i]/pop[first]/.../pop[last]/push[i]/.../push2/push1
 inline
-void program::erase(const stack_iterator& first,
-                           const stack_iterator& last) {
+void program::erase(const stack_iterator& first, const stack_iterator& last) {
     primary_.erase(first, last);
 }
 
@@ -332,10 +374,24 @@ data_stack::value_type& program::item(size_t index) {
     return *position(index);
 }
 
+// This must be guarded.
 inline
-bool program::top(number& out_number, size_t maxiumum_size) const {
-    return !empty() && out_number.set_data(item(0), maxiumum_size);
+data_chunk& program::top() {
+    KTH_ASSERT( ! empty());
+    return primary_.back();
 }
+
+inline
+data_chunk const& program::top() const {
+    KTH_ASSERT( ! empty());
+    return primary_.back();
+}
+
+inline
+bool program::top(number& out_number, size_t maximum_size) const {
+    return !empty() && out_number.set_data(item(0), maximum_size);
+}
+
 
 inline
 program::stack_iterator program::position(size_t index) const {
@@ -349,6 +405,11 @@ program::stack_mutable_iterator program::position(size_t index) {
     // Subtracting 1 makes the stack indexes zero-based (unlike satoshi).
     KTH_ASSERT(index < size());
     return (primary_.end() - 1) - index;
+}
+
+inline
+size_t program::index(stack_iterator const& position) const {
+    return size() - (position - primary_.begin());
 }
 
 // Pop jump-to-end, push all back, use to construct a script.
@@ -367,6 +428,12 @@ inline
 size_t program::size() const {
     return primary_.size();
 }
+
+inline
+size_t program::conditional_stack_size() const {
+    return condition_.size();
+}
+
 
 // Alternate stack.
 //-----------------------------------------------------------------------------
@@ -437,6 +504,12 @@ bool program::succeeded() const {
     // Optimized above to avoid succeeded loop.
     ////auto const is_true = [](bool value) { return value; };
     ////return std::all_of(condition_.begin(), condition_.end(), true);
+}
+
+//TODO: temp:
+inline
+chain::script const& program::get_script() const {
+    return script_;
 }
 
 } // namespace kth::domain::machine

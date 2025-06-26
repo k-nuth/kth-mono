@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -143,8 +143,9 @@ public:
                 // , gauss_t gauss_activation_time
                 // , descartes_t descartes_activation_time
                 // , lobachevski_t lobachevski_activation_time
-                , galois_t galois_activation_time
+                // , galois_t galois_activation_time
                 , leibniz_t leibniz_activation_time
+                , cantor_t cantor_activation_time
 #endif  //KTH_CURRENCY_BCH
     );
 
@@ -224,11 +225,15 @@ public:
     // [[nodiscard]]
     // lobachevski_t lobachevski_activation_time() const;
 
-    [[nodiscard]]
-    galois_t galois_activation_time() const;
+    // [[nodiscard]]
+    // galois_t galois_activation_time() const;
 
     [[nodiscard]]
     leibniz_t leibniz_activation_time() const;
+
+    [[nodiscard]]
+    cantor_t cantor_activation_time() const;
+
 #endif  //KTH_CURRENCY_BCH
 
     /// Construction with zero height or any empty array causes invalid state.
@@ -294,6 +299,8 @@ public:
     [[nodiscard]]
     bool is_leibniz_enabled() const;
 
+    [[nodiscard]]
+    bool is_cantor_enabled() const;
 #endif  //KTH_CURRENCY_BCH
 
     static
@@ -320,8 +327,9 @@ protected:
             // , gauss_t gauss_activation_time
             // , descartes_t descartes_activation_time
             // , lobachevski_t lobachevski_activation_time
-            , galois_t galois_activation_time
+            // , galois_t galois_activation_time
             , leibniz_t leibniz_activation_time
+            , cantor_t cantor_activation_time
 #endif  //KTH_CURRENCY_BCH
     );
 
@@ -332,8 +340,9 @@ protected:
                             // , gauss_t gauss_activation_time
                             // , descartes_t descartes_activation_time
                             // , lobachevski_t lobachevski_activation_time
-                            , galois_t galois_activation_time
+                            // , galois_t galois_activation_time
                             , leibniz_t leibniz_activation_time
+                            , cantor_t cantor_activation_time
                             , assert_anchor_block_info_t const& assert_anchor_block_info
                             , uint32_t asert_half_life
 #endif
@@ -417,11 +426,14 @@ public:
     static
     bool is_lobachevski_enabled(size_t height, config::network network);
 
-    // static
-    // bool is_galois_enabled(size_t height, config::network network);
+    static
+    bool is_galois_enabled(size_t height, config::network network);
 
     // static
     // bool is_leibniz_enabled(size_t height, config::network network);
+
+    // static
+    // bool is_cantor_enabled(size_t height, config::network network);
 
 #endif // KTH_CURRENCY_BCH
     // ------------------------------------------------------------------------
@@ -508,8 +520,9 @@ private:
     // gauss_t const gauss_activation_time_;
     // descartes_t const descartes_activation_time_;
     // lobachevski_t const lobachevski_activation_time_;
-    galois_t const galois_activation_time_;
+    // galois_t const galois_activation_time_;
     leibniz_t const leibniz_activation_time_;
+    cantor_t const cantor_activation_time_;
 #endif  //KTH_CURRENCY_BCH
 };
 

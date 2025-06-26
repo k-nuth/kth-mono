@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -52,30 +52,6 @@ kth_chain_t kth_node_get_chain(kth_node_t node);
 
 KTH_EXPORT
 kth_p2p_t kth_node_get_p2p(kth_node_t node);
-
-KTH_EXPORT
-void kth_node_print_thread_id();
-
-KTH_EXPORT
-char const* kth_node_capi_version(void);
-
-KTH_EXPORT
-char const* kth_node_cppapi_version(void);
-
-KTH_EXPORT
-char const* kth_node_microarchitecture(void);
-
-KTH_EXPORT
-char const* kth_node_march_names(void);
-
-KTH_EXPORT
-char const* kth_node_currency_symbol(void);
-
-KTH_EXPORT
-char const* kth_node_currency(void);
-
-KTH_EXPORT
-char const* kth_node_db_type(kth_db_mode_t mode);
 
 
 #ifdef __cplusplus

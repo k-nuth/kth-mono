@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,12 +13,13 @@
 #include <kth/domain/define.hpp>
 #include <kth/domain/message/block.hpp>
 #include <kth/domain/message/transaction.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -60,18 +61,10 @@ public:
     using const_ptr = std::shared_ptr<const reject>;
 
     reject();
-
     reject(reason_code code, std::string const& message, std::string const& reason);
     reject(reason_code code, std::string&& message, std::string&& reason);
-
     reject(reason_code code, std::string const& message, std::string const& reason, hash_digest const& data);
     reject(reason_code code, std::string&& message, std::string&& reason, hash_digest const& data);
-
-    // reject(reject const& x) = default;
-    // reject(reject&& x) = default;
-    // // This class is move assignable but not copy assignable.
-    // reject& operator=(reject&& x) = default;
-    // reject& operator=(reject const&) = default;
 
     bool operator==(reject const& x) const;
     bool operator!=(reject const& x) const;
@@ -105,35 +98,8 @@ public:
 
     void set_data(hash_digest const& value);
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        reset();
-
-        message_ = source.read_string();
-        code_ = reason_from_byte(source.read_byte());
-        reason_ = source.read_string();
-
-        if ((message_ == block::command) ||
-            (message_ == transaction::command)) {
-            // Some nodes do not follow the documented convention of supplying hash
-            // for tx and block rejects. Use this to prevent error on empty stream.
-            auto const bytes = source.read_bytes();
-
-            if (bytes.size() == hash_size) {
-                build_array(data_, {bytes});
-            }
-        }
-
-        if (version < reject::version_minimum) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<reject> from_data(byte_reader& reader, uint32_t version);
 
     [[nodiscard]]
     data_chunk to_data(uint32_t version) const;

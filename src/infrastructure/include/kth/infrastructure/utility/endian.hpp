@@ -1,10 +1,11 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef KTH_INFRASTRUCTURE_ENDIAN_HPP
 #define KTH_INFRASTRUCTURE_ENDIAN_HPP
 
+#include <bit>
 #include <istream>
 
 #include <kth/infrastructure/define.hpp>
@@ -41,6 +42,15 @@ byte_array<sizeof(Integer)> to_big_endian(Integer value);
 
 template <typename Integer>
 byte_array<sizeof(Integer)> to_little_endian(Integer value);
+
+constexpr 
+uint32_t to_big_endian_int(uint32_t value) {
+    if constexpr (std::endian::native == std::endian::little) {
+        return std::byteswap(value);  // C++23
+    } else {
+        return value;
+    }
+}
 
 } // namespace kth
 

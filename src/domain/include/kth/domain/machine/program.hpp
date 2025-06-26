@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,6 +11,7 @@
 #include <kth/domain/chain/transaction.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
+#include <kth/domain/machine/metrics.hpp>
 #include <kth/domain/machine/opcode.hpp>
 #include <kth/domain/machine/operation.hpp>
 #include <kth/infrastructure/machine/number.hpp>
@@ -20,7 +21,11 @@
 namespace kth::domain::machine {
 
 using operation = ::kth::domain::machine::operation;        //TODO(fernando): why this?
+
+#if ! defined(KTH_CURRENCY_BCH)
 using script_version = ::kth::infrastructure::machine::script_version;
+#endif // ! KTH_CURRENCY_BCH
+
 using number = ::kth::infrastructure::machine::number;
 
 class KD_API program {
@@ -28,12 +33,6 @@ public:
     using value_type = data_stack::value_type;
     using op_iterator = operation::iterator;
 
-    //TODO(fernando): check this comment
-    // Older libstdc++ does not allow erase with const iterator.
-    // This is a bug that requires we up the minimum compiler version.
-    // So presently stack_iterator is a non-const iterator.
-    ////using stack_iterator = data_stack::const_iterator;
-    // using stack_iterator = data_stack::iterator;
     using stack_iterator = data_stack::const_iterator;
     using stack_mutable_iterator = data_stack::iterator;
 
@@ -51,13 +50,26 @@ public:
     program(chain::script const& script, chain::transaction const& transaction, uint32_t input_index, uint32_t forks);
 
     /// Create an instance with initialized stack (witness run, v0 by default).
-    program(chain::script const& script, chain::transaction const& transaction, uint32_t input_index, uint32_t forks, data_stack&& stack, uint64_t value, script_version version = script_version::zero);
+    program(
+        chain::script const& script
+        , chain::transaction const& transaction
+        , uint32_t input_index
+        , uint32_t forks
+        , data_stack&& stack
+        , uint64_t value
+#if ! defined(KTH_CURRENCY_BCH)
+        , script_version version = script_version::zero
+#endif // ! KTH_CURRENCY_BCH
+    );
 
     /// Create using copied tx, input, forks, value, stack (prevout run).
     program(chain::script const& script, const program& x);
 
     /// Create using copied tx, input, forks, value and moved stack (p2sh run).
     program(chain::script const& script, program&& x, bool move);
+
+    metrics& get_metrics();
+    metrics const& get_metrics() const;
 
     /// Constant registers.
     [[nodiscard]]
@@ -67,13 +79,24 @@ public:
     uint32_t forks() const;
 
     [[nodiscard]]
+    size_t max_script_element_size() const;
+
+    [[nodiscard]]
+    size_t max_integer_size_legacy() const;
+
+    [[nodiscard]]
+    bool is_chip_vm_limits_enabled() const;
+
+    [[nodiscard]]
     uint32_t input_index() const;
 
     [[nodiscard]]
     uint64_t value() const;
 
+#if ! defined(KTH_CURRENCY_BCH)
     [[nodiscard]]
     script_version version() const;
+#endif // ! KTH_CURRENCY_BCH
 
     [[nodiscard]]
     chain::transaction const& transaction() const;
@@ -109,7 +132,8 @@ public:
     /// Primary pop.
     data_chunk pop();
     bool pop(int32_t& out_value);
-    bool pop(number& out_number, size_t maxiumum_size = max_number_size);
+    bool pop(int64_t& out_value);
+    bool pop(number& out_number, size_t maximum_size);
     bool pop_binary(number& first, number& second);
     bool pop_ternary(number& first, number& second, number& third);
     bool pop_position(stack_iterator& out_position);
@@ -145,7 +169,9 @@ public:
 
     value_type& item(size_t index);
 
-    bool top(number& out_number, size_t maxiumum_size = max_number_size) const;
+    data_chunk const& top() const;
+    data_chunk& top();
+    bool top(number& out_number, size_t maximum_size) const;
 
     [[nodiscard]]
     stack_iterator position(size_t index) const;
@@ -153,10 +179,16 @@ public:
     stack_mutable_iterator position(size_t index);
 
     [[nodiscard]]
+    size_t index(stack_iterator const& position) const;
+
+    [[nodiscard]]
     operation::list subscript() const;
 
     [[nodiscard]]
     size_t size() const;
+
+    [[nodiscard]]
+    size_t conditional_stack_size() const;
 
     // Alternate stack.
     //-------------------------------------------------------------------------
@@ -180,6 +212,12 @@ public:
     [[nodiscard]]
     bool succeeded() const;
 
+
+// TODO: temp:
+    [[nodiscard]]
+    chain::script const& get_script() const;
+
+
 private:
     // A space-efficient dynamic bitset (specialized).
     using bool_stack = std::vector<bool>;
@@ -195,13 +233,18 @@ private:
     uint32_t const forks_{0};
     uint64_t const value_{0};
 
+#if ! defined(KTH_CURRENCY_BCH)
     script_version version_{script_version::unversioned};
+#endif // ! KTH_CURRENCY_BCH
+
     size_t negative_count_{0};
     size_t operation_count_{0};
     op_iterator jump_;
     data_stack primary_;
     data_stack alternate_;
     bool_stack condition_;
+
+    metrics metrics_;
 };
 
 } // namespace kth::domain::machine

@@ -8,6 +8,7 @@
 
 #include <tinyformat.h>
 
+const std::string CURRENCY_UNIT = "BCH";
 
 std::string Amount::ToString(bool trimTrailingZeros, bool trimTrailingDecimalPoint) const {
     std::string result{strprintf("%d", amount)};

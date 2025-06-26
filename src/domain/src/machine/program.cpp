@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -67,13 +67,25 @@ program::program(script const& script, chain::transaction const& transaction, ui
 }
 
 // Condition, alternate, jump and operation_count are not copied.
-program::program(script const& script, chain::transaction const& transaction, uint32_t input_index, uint32_t forks, data_stack&& stack, uint64_t value, script_version version)
+program::program(
+  script const& script
+  , chain::transaction const& transaction
+  , uint32_t input_index
+  , uint32_t forks
+  , data_stack&& stack
+  , uint64_t value
+#if ! defined(KTH_CURRENCY_BCH)
+  , script_version version
+#endif // ! KTH_CURRENCY_BCH
+)
     : script_(script),
       transaction_(transaction),
       input_index_(input_index),
       forks_(forks),
       value_(value),
+#if ! defined(KTH_CURRENCY_BCH)
       version_(version),
+#endif // ! KTH_CURRENCY_BCH
       jump_(script_.begin()),
       primary_(std::move(stack)) {
     reserve_stacks();

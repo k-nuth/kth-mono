@@ -1,9 +1,9 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef KTH_INFRASTRUCTURE_PSEUDO_RANDOM_HPP
-#define KTH_INFRASTRUCTURE_PSEUDO_RANDOM_HPP
+#ifndef KTH_INFRASTRUCTURE_PSEUDO_RANDOM_BROKEN_DO_NOT_USE_HPP
+#define KTH_INFRASTRUCTURE_PSEUDO_RANDOM_BROKEN_DO_NOT_USE_HPP
 
 #include <cstdint>
 #include <random>
@@ -96,4 +96,4 @@ KI_API asio::duration pseudo_randomize(asio::duration const& expiration, uint8_t
 
 } // namespace kth
 
-#endif
+#endif // KTH_INFRASTRUCTURE_PSEUDO_RANDOM_BROKEN_DO_NOT_USE_HPP

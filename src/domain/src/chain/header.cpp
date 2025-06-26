@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -35,6 +35,28 @@ header& header::operator=(header const& x) {
 void header::reset() {
     header_basis::reset();
     invalidate();
+}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<header> header::from_data(byte_reader& reader, bool wire) {
+    auto const basis = header_basis::from_data(reader, wire);
+    if ( ! basis) {
+        return make_unexpected(basis.error());
+    }
+    header hdr {*basis};
+
+    if ( ! wire) {
+        auto const mtp = reader.read_little_endian<uint32_t>();
+        if ( ! mtp) {
+            return make_unexpected(mtp.error());
+        }
+        hdr.validation.median_time_past = *mtp;
+    }
+
+    return hdr;
 }
 
 // Serialization.

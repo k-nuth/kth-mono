@@ -1,7 +1,0 @@
-name: "Setup KthBuild"
-description: "Install and configure the KthBuild client for use in the model project"
-runs:
-  using: "composite"
-  steps:
-    - run: python3 -m pip install kthbuild --upgrade
-      shell: bash

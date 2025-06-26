@@ -1,3 +1,0 @@
-conancenter https://center.conan.io true
-kth https://packages.kth.cash/api/ true
-

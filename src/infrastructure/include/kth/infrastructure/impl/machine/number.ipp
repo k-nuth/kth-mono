@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -232,6 +232,23 @@ number number::operator-() const {
 }
 
 inline
+number number::operator*(number const& x) const {
+    return number(value_ * x.value_);
+}
+
+inline
+number number::operator/(number const& x) const {
+    KTH_ASSERT_MSG(x.value_ != 0, "division by zero");
+    return number(value_ / x.value_);
+}
+
+inline
+number number::operator%(number const& x) const {
+    KTH_ASSERT_MSG(x.value_ != 0, "division by zero");
+    return number(value_ % x.value_);
+}
+
+inline
 number& number::operator+=(number const& x) {
     return operator+=(x.value_);
 }
@@ -260,6 +277,264 @@ number& number::operator-=(int64_t value) {
     value_ -= value;
     return *this;
 }
+
+inline
+number& number::operator*=(number const& x) {
+    value_ *= x.value_;
+    return *this;
+}
+
+inline
+number& number::operator/=(number const& x) {
+    KTH_ASSERT_MSG(x.value_ != 0, "division by zero");
+    value_ /= x.value_;
+    return *this;
+}
+
+inline
+number& number::operator%=(number const& x) {
+    KTH_ASSERT_MSG(x.value_ != 0, "division by zero");
+    value_ %= x.value_;
+    return *this;
+}
+
+inline
+bool number::safe_add(number const& x) {
+    int64_t val;
+    bool const res = __builtin_add_overflow(value_, x.value_, &val);
+    if (res) {
+        return false;
+    }
+    value_ = val;
+    return true;
+}
+
+inline
+bool number::safe_add(int64_t x) {
+    int64_t val;
+    bool const res = __builtin_add_overflow(value_, x, &val);
+    if (res) {
+        return false;
+    }
+    value_ = val;
+    return true;
+}
+
+inline
+bool number::safe_sub(number const& x) {
+    int64_t val;
+    bool const res = __builtin_sub_overflow(value_, x.value_, &val);
+    if (res) {
+        return false;
+    }
+    value_ = val;
+    return true;
+}
+
+inline
+bool number::safe_sub(int64_t x) {
+    int64_t val;
+    bool const res = __builtin_sub_overflow(value_, x, &val);
+    if (res) {
+        return false;
+    }
+    value_ = val;
+    return true;
+}
+
+inline
+bool number::safe_mul(number const& x) {
+    int64_t val;
+    bool const res = __builtin_mul_overflow(value_, x.value_, &val);
+    if (res) {
+        return false;
+    }
+    value_ = val;
+    return true;
+}
+
+inline
+bool number::safe_mul(int64_t x) {
+    int64_t val;
+    bool const res = __builtin_mul_overflow(value_, x, &val);
+    if (res) {
+        return false;
+    }
+    value_ = val;
+    return true;
+}
+
+// static
+inline
+nonstd::expected<number, code> number::safe_add(number const& x, number const& y) {
+    int64_t val;
+    bool const res = __builtin_add_overflow(x.value_, y.value_, &val);
+    if (res) {
+        return make_unexpected(error::overflow);
+    }
+    return number(val);
+}
+
+// static
+inline
+nonstd::expected<number, code> number::safe_sub(number const& x, number const& y) {
+    int64_t val;
+    bool const res = __builtin_sub_overflow(x.value_, y.value_, &val);
+    if (res) {
+        return make_unexpected(error::overflow);
+    }
+    return number(val);
+}
+
+inline
+nonstd::expected<number, code> number::safe_mul(number const& x, number const& y) {
+    int64_t val;
+    bool const res = __builtin_mul_overflow(x.value_, y.value_, &val);
+    if (res) {
+        return make_unexpected(error::overflow);
+    }
+    return number(val);
+}
+
+
+
+// Minimally encoded
+//-----------------------------------------------------------------------------
+
+// bool ScriptNumEncoding::IsMinimallyEncoded(const std::vector<uint8_t> &vch, size_t maxIntegerSize) {
+//     if (vch.size() > maxIntegerSize) {
+//         return false;
+//     }
+
+//     if (vch.size() > 0) {
+//         // Check that the number is encoded with the minimum possible number
+//         // of bytes.
+//         //
+//         // If the most-significant-byte - excluding the sign bit - is zero
+//         // then we're not minimal. Note how this test also rejects the
+//         // negative-zero encoding, 0x80.
+//         if ((vch.back() & 0x7f) == 0) {
+//             // One exception: if there's more than one byte and the most
+//             // significant bit of the second-most-significant-byte is set it
+//             // would conflict with the sign bit. An example of this case is
+//             // +-255, which encode to 0xff00 and 0xff80 respectively.
+//             // (big-endian).
+//             if (vch.size() <= 1 || (vch[vch.size() - 2] & 0x80) == 0) {
+//                 return false;
+//             }
+//         }
+//     }
+
+//     return true;
+// }
+
+inline
+bool number::is_minimally_encoded(data_chunk const& data, size_t max_integer_size) {
+    if (data.size() > max_integer_size) {
+        return false;
+    }
+
+    return data.empty() ||
+        (data.back() & 0x7f) != 0 ||
+        (data.size() > 1 && (data[data.size() - 2] & 0x80) != 0);
+
+
+    // if ( ! data.empty()) {
+    //     // Check if the number is encoded with the minimum possible number of bytes.
+    //     if ((data.back() & 0x7f) == 0) {
+    //         if (data.size() <= 1 || (data[data.size() - 2] & 0x80) == 0) {
+    //             return false;
+    //         }
+    //     }
+    // }
+
+    // return true;
+}
+
+
+
+// bool ScriptNumEncoding::MinimallyEncode(std::vector<uint8_t> &data) {
+//     if (data.size() == 0) {
+//         return false;
+//     }
+
+//     // If the last byte is not 0x00 or 0x80, we are minimally encoded.
+//     uint8_t const last = data.back();
+//     if (last & 0x7f) {
+//         return false;
+//     }
+
+//     // If the script is one byte long, then we have a zero, which encodes as an
+//     // empty array.
+//     if (data.size() == 1) {
+//         data = {};
+//         return true;
+//     }
+
+//     // If the next byte has it sign bit set, then we are minimaly encoded.
+//     if (data[data.size() - 2] & 0x80) {
+//         return false;
+//     }
+
+//     // We are not minimally encoded, we need to figure out how much to trim.
+//     for (size_t i = data.size() - 1; i > 0; i--) {
+//         // We found a non zero byte, time to encode.
+//         if (data[i - 1] != 0) {
+//             if (data[i - 1] & 0x80) {
+//                 // We found a byte with it sign bit set so we need one more
+//                 // byte.
+//                 data[i++] = last;
+//             } else {
+//                 // the sign bit is clear, we can use it.
+//                 data[i - 1] |= last;
+//             }
+
+//             data.resize(i);
+//             return true;
+//         }
+//     }
+
+//     // If we the whole thing is zeros, then we have a zero.
+//     data = {};
+//     return true;
+// }
+
+inline
+bool number::minimally_encode(data_chunk& data) {
+    if (data.empty()) {
+        return false;
+    }
+
+    uint8_t const last = data.back();
+    if ((last & 0x7f) == 0) {
+        return false;  // Already minimally encoded.
+    }
+
+    if (data.size() == 1) {
+        data.clear();
+        return true;  // Zero, encoded as an empty array.
+    }
+
+    if ((data[data.size() - 2] & 0x80) == 0) {
+        return false;  // Already minimally encoded.
+    }
+
+    for (size_t i = data.size() - 1; i > 0; --i) {
+        if (data[i - 1] != 0) {
+            if ((data[i - 1] & 0x80) == 0) {
+                data[i++] = last;  // Need one more byte.
+            } else {
+                data[i - 1] |= last;  // Use the available sign bit.
+            }
+            data.resize(i);
+            return true;
+        }
+    }
+
+    data.clear();  // All bytes are zeros, represents the number zero.
+    return true;
+}
+
 
 } // namespace kth::infrastructure::machine
 

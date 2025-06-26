@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -57,20 +57,31 @@ bool transaction::operator!=(transaction const& x) const {
     return !(*this == x);
 }
 
-// Witness is always serialized if present.
-// NOTE: Witness on BCH is dissabled on the chain::block class
-data_chunk transaction::to_data(uint32_t /*version*/, bool witness) const {
-    return chain::transaction::to_data(true, witness);
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<transaction> transaction::from_data(byte_reader& reader, uint32_t version) {
+    auto chain = chain::transaction::from_data(reader, true);
+    if ( ! chain) {
+        return make_unexpected(chain.error());
+    }
+    return transaction(std::move(*chain));
 }
 
-void transaction::to_data(uint32_t /*version*/, data_sink& stream, bool witness) const {
-    chain::transaction::to_data(stream, true, witness);
+// Serialization.
+//-----------------------------------------------------------------------------
+
+data_chunk transaction::to_data(uint32_t /*version*/) const {
+    return chain::transaction::to_data(true);
 }
 
-// Witness size is always counted if present.
-// NOTE: Witness on BCH is dissabled on the chain::block class
+void transaction::to_data(uint32_t /*version*/, data_sink& stream) const {
+    chain::transaction::to_data(stream, true);
+}
+
 size_t transaction::serialized_size(uint32_t /*unused*/) const {
-    return chain::transaction::serialized_size(true, true);
+    return chain::transaction::serialized_size(true);
 }
 
 } // namespace kth::domain::message

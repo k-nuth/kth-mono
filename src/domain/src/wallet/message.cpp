@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -129,8 +129,7 @@ bool verify_message(data_slice message, payment_address const& address, message_
     short_hash hash;
     auto const message_digest = hash_message(message);
     return recover(hash, compressed, compact, recovery_id, message_digest) &&
-           std::equal(hash.begin(), hash.end(), address.hash20().begin());
-        //    (hash == address.hash20());
+           hash == address.hash20();
 }
 
 } // namespace kth::domain::wallet

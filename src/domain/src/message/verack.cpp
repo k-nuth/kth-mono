@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,6 +21,17 @@ bool verack::is_valid() const {
 }
 
 void verack::reset() {}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<verack> verack::from_data(byte_reader& /*reader*/, uint32_t /*version*/) {
+    return verack();
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk verack::to_data(uint32_t version) const {
     data_chunk data;

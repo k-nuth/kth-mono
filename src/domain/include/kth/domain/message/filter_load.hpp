@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,13 +11,14 @@
 
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -57,37 +58,8 @@ public:
 
     void set_flags(uint8_t value);
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        reset();
-
-        auto const size = source.read_size_little_endian();
-
-        if (size > max_filter_load) {
-            source.invalidate();
-        } else {
-            filter_ = source.read_bytes(size);
-        }
-
-        hash_functions_ = source.read_4_bytes_little_endian();
-
-        if (hash_functions_ > max_filter_functions) {
-            source.invalidate();
-        }
-
-        tweak_ = source.read_4_bytes_little_endian();
-        flags_ = source.read_byte();
-
-        if (version < filter_load::version_minimum) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<filter_load> from_data(byte_reader& reader, uint32_t version);
 
     [[nodiscard]]
     data_chunk to_data(uint32_t version) const;

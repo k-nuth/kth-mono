@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,6 +11,7 @@ KTH_LIST_DEFINE_CONVERTERS(core, kth_hash_list_t, kth::hash_digest, hash_list)
 KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP(core, kth_hash_list_t, kth::hash_digest, hash_list)
 
 // ---------------------------------------------------------------------------
+
 extern "C" {
 
 kth_hash_list_t kth_core_hash_list_construct_default() {

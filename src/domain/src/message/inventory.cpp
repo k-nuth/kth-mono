@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -62,6 +62,34 @@ void inventory::reset() {
     inventories_.clear();
     inventories_.shrink_to_fit();
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<inventory> inventory::from_data(byte_reader& reader, uint32_t version) {
+    auto const count = reader.read_variable_little_endian();
+    if ( ! count) {
+        return make_unexpected(count.error());
+    }
+    // Guard against potential for arbitary memory allocation.
+    if (*count > max_inventory) {
+        return make_unexpected(error::bad_inventory_count);
+    }
+    inventory_vector::list inventories;
+    inventories.reserve(*count);
+    for (size_t i = 0; i < *count; ++i) {
+        auto const inventory = inventory_vector::from_data(reader, version);
+        if ( ! inventory) {
+            return make_unexpected(inventory.error());
+        }
+        inventories.emplace_back(std::move(*inventory));
+    }
+    return inventory(std::move(inventories));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk inventory::to_data(uint32_t version) const {
     data_chunk data;

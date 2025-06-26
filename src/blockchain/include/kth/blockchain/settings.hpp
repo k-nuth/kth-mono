@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -61,10 +61,12 @@ public:
     bool bch_gauss = true;           // 2022-May
     bool bch_descartes = true;       // 2023-May
     bool bch_lobachevski = true;     // 2024-May
-    // bool bch_galois = false;      // 2025-May
-    // bool bch_leibniz = false;     // 2026-May
+    bool bch_galois = true;          // 2025-May
 
-    // bool bch_unnamed = false;     // 2027-May
+    // Those are post-upgrade constants, change them to true when the time comes
+    // bool bch_leibniz = false;     // 2026-May
+    // bool bch_cantor = false;      // 2027-May
+    // bool bch_unnamed = false;     // ????-May
 
     ////2017-Aug-01 hard fork, defaults to 478559 (Mainnet)
     // size_t uahf_height = 478559;
@@ -85,30 +87,33 @@ public:
     // uint64_t mersenne_activation_time = bch_mersenne_activation_time;
 
     // //2020-May-15 hard fork, defaults to 1589544000: May 15, 2020 12:00:00 UTC protocol upgrade
-    // uint64_t fermat_activation_time = to_underlying(bch_fermat_activation_time);
+    // uint64_t fermat_activation_time = std::to_underlying(bch_fermat_activation_time);
 
     // //2020-Nov-15 hard fork, defaults to 1605441600: Nov 15, 2020 12:00:00 UTC protocol upgrade
-    // uint64_t euler_activation_time = to_underlying(bch_euler_activation_time);
+    // uint64_t euler_activation_time = std::to_underlying(bch_euler_activation_time);
 
     // 2021-May-15: No hard fork on May 15, 2021.
 
     // //2022-May-15 hard fork, defaults to 1652616000: May 15, 2022 12:00:00 UTC protocol upgrade
-    // uint64_t gauss_activation_time = to_underlying(bch_gauss_activation_time);
+    // uint64_t gauss_activation_time = std::to_underlying(bch_gauss_activation_time);
 
     // //2023-May-15 hard fork, defaults to 1684152000: May 15, 2023 12:00:00 UTC protocol upgrade
-    // uint64_t descartes_activation_time = to_underlying(bch_descartes_activation_time);
+    // uint64_t descartes_activation_time = std::to_underlying(bch_descartes_activation_time);
 
     // //2024-May-15 hard fork, defaults to 1715774400: May 15, 2024 12:00:00 UTC protocol upgrade
-    // uint64_t lobachevski_activation_time = to_underlying(bch_lobachevski_activation_time);
+    // uint64_t lobachevski_activation_time = std::to_underlying(bch_lobachevski_activation_time);
 
-    //2025-May-15 hard fork, defaults to 1747310400: May 15, 2025 12:00:00 UTC protocol upgrade
-    uint64_t galois_activation_time = to_underlying(bch_galois_activation_time);
+    // // 2025-May-15 hard fork, defaults to 1747310400: May 15, 2025 12:00:00 UTC protocol upgrade
+    // uint64_t galois_activation_time = std::to_underlying(bch_galois_activation_time);
 
     // 2026-May-15 hard fork, defaults to 1778846400: May 15, 2026 12:00:00 UTC protocol upgrade
-    uint64_t leibniz_activation_time = to_underlying(bch_leibniz_activation_time);
+    uint64_t leibniz_activation_time = std::to_underlying(bch_leibniz_activation_time);
+
+    // 2027-May-15 hard fork, defaults to xxxxxxxxxx: May 15, 2027 12:00:00 UTC protocol upgrade
+    uint64_t cantor_activation_time = std::to_underlying(bch_cantor_activation_time);
 
     // //????-???-?? hard fork, defaults to 9999999999: ??? ??, ???? 12:00:00 UTC protocol upgrade
-    // uint64_t unnamed_activation_time = to_underlying(bch_unnamed_activation_time);
+    // uint64_t unnamed_activation_time = std::to_underlying(bch_unnamed_activation_time);
 
     // The half life for the ASERTi3-2d DAA. For every (asert_half_life) seconds behind schedule the blockchain gets, difficulty is cut in half.
     // Doubled if blocks are ahead of schedule.

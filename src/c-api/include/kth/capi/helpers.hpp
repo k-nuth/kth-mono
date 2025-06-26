@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,9 +12,24 @@
 #include <utility>
 
 #include <kth/domain/config/network.hpp>
+#include <kth/domain/machine/opcode.hpp>
+#include <kth/domain/wallet/wallet_manager.hpp>
+
 #include <kth/infrastructure/math/hash.hpp>
 #include <kth/infrastructure/error.hpp>
+#include <kth/infrastructure/machine/script_version.hpp>
+
+#include <kth/capi/chain/coin_selection_algorithm.h>
+#include <kth/capi/chain/opcode.h>
+#include <kth/capi/chain/rule_fork.h>
+#include <kth/capi/chain/script_pattern.h>
+#include <kth/capi/chain/script_version.h>
+#include <kth/capi/chain/token_capability.h>
+
+// #ifndef __EMSCRIPTEN__
 #include <kth/node/full_node.hpp>
+// #endif
+
 
 namespace kth {
 namespace detail {
@@ -69,6 +84,28 @@ std::array<std::remove_cv_t<T>, 32> to_array(T (&x)[32]) {
         x[24], x[25], x[26], x[27], x[28], x[29], x[30], x[31]}};
 }
 
+template <typename T>
+constexpr
+std::array<std::remove_cv_t<T>, 96> to_array(T (&x)[96]) {
+    // return detail::to_array_impl(x, std::make_index_sequence<N>{});
+    // return std::array<std::remove_cv_t<T>, 32> {{
+
+    return {{
+        x[0],  x[1],  x[2],  x[3],  x[4],  x[5],  x[6], x[7],
+        x[8],  x[9],  x[10], x[11], x[12], x[13], x[14], x[15],
+        x[16], x[17], x[18], x[19], x[20], x[21], x[22], x[23],
+        x[24], x[25], x[26], x[27], x[28], x[29], x[30], x[31],
+        x[32], x[33], x[34], x[35], x[36], x[37], x[38], x[39],
+        x[40], x[41], x[42], x[43], x[44], x[45], x[46], x[47],
+        x[48], x[49], x[50], x[51], x[52], x[53], x[54], x[55],
+        x[56], x[57], x[58], x[59], x[60], x[61], x[62], x[63],
+        x[64], x[65], x[66], x[67], x[68], x[69], x[70], x[71],
+        x[72], x[73], x[74], x[75], x[76], x[77], x[78], x[79],
+        x[80], x[81], x[82], x[83], x[84], x[85], x[86], x[87],
+        x[88], x[89], x[90], x[91], x[92], x[93], x[94], x[95]
+    }};
+}
+
 inline
 kth_hash_t to_hash_t(kth::hash_digest const& x) {
     // return to_c_array<kth_hash_t>(x);
@@ -99,6 +136,22 @@ kth_longhash_t to_longhash_t(kth::long_hash const& x) {
               x[48], x[49], x[50], x[51], x[52], x[53], x[54], x[55],
               x[56], x[57], x[58], x[59], x[60], x[61], x[62], x[63]} };
 
+}
+
+inline
+kth_encrypted_seed_t to_encrypted_seed_t(kth::domain::wallet::encrypted_seed_t const& x) {
+    return { {x[0],  x[1],  x[2],  x[3],  x[4],  x[5],  x[6], x[7],
+              x[8],  x[9],  x[10], x[11], x[12], x[13], x[14], x[15],
+              x[16], x[17], x[18], x[19], x[20], x[21], x[22], x[23],
+              x[24], x[25], x[26], x[27], x[28], x[29], x[30], x[31],
+              x[32], x[33], x[34], x[35], x[36], x[37], x[38], x[39],
+              x[40], x[41], x[42], x[43], x[44], x[45], x[46], x[47],
+              x[48], x[49], x[50], x[51], x[52], x[53], x[54], x[55],
+              x[56], x[57], x[58], x[59], x[60], x[61], x[62], x[63],
+              x[64], x[65], x[66], x[67], x[68], x[69], x[70], x[71],
+              x[72], x[73], x[74], x[75], x[76], x[77], x[78], x[79],
+              x[80], x[81], x[82], x[83], x[84], x[85], x[86], x[87],
+              x[88], x[89], x[90], x[91], x[92], x[93], x[94], x[95]} };
 }
 
 // inline
@@ -226,6 +279,98 @@ bool witness(int x = 1) {
 #endif
 }
 
+// template <typename E1, typename E2>
+// E1 c_enum_to_cpp_enum(E2 e) {
+//     return static_cast<E1>(e);
+// }
+
+inline
+kth::domain::machine::opcode opcode_to_cpp(kth_opcode_t op) {
+    return static_cast<kth::domain::machine::opcode>(op);
+}
+
+inline
+kth_opcode_t opcode_to_c(kth::domain::machine::opcode op) {
+    return static_cast<kth_opcode_t>(op);
+}
+
+// Rule Fork -----------------------------------------------------------
+
+inline
+kth_rule_fork_t rule_fork_to_c(kth::domain::machine::rule_fork fork) {
+    return static_cast<kth_rule_fork_t>(fork);
+}
+
+inline
+kth::domain::machine::rule_fork rule_fork_to_cpp(kth_rule_fork_t fork) {
+    return static_cast<kth::domain::machine::rule_fork>(fork);
+}
+
+// Script Pattern -----------------------------------------------------
+
+inline
+kth_script_pattern_t script_pattern_to_c(kth::infrastructure::machine::script_pattern pattern) {
+    return static_cast<kth_script_pattern_t>(pattern);
+}
+
+inline
+kth::infrastructure::machine::script_pattern script_pattern_to_cpp(kth_script_pattern_t pattern) {
+    return static_cast<kth::infrastructure::machine::script_pattern>(pattern);
+}
+
+// Script Version -----------------------------------------------------
+
+#if ! defined(KTH_CURRENCY_BCH)
+inline
+kth::infrastructure::machine::script_version script_version_to_cpp(kth_script_version_t version) {
+    return static_cast<kth::infrastructure::machine::script_version>(version);
+}
+
+inline
+kth_script_version_t script_version_to_c(kth::infrastructure::machine::script_version version) {
+    return static_cast<kth_script_version_t>(version);
+}
+#endif // ! KTH_CURRENCY_BCH
+// Coin Selection -----------------------------------------------------
+
+inline
+kth::domain::chain::coin_selection_algorithm coin_selection_algorithm_to_cpp(kth_coin_selection_algorithm_t algo) {
+    return static_cast<kth::domain::chain::coin_selection_algorithm>(algo);
+}
+
+inline
+kth_coin_selection_algorithm_t coin_selection_algorithm_to_c(kth::domain::chain::coin_selection_algorithm algo) {
+    return static_cast<kth_coin_selection_algorithm_t>(algo);
+}
+
+// Cash Tokens -----------------------------------------------------
+
+inline
+kth::domain::chain::capability_t token_capability_to_cpp(kth_token_capability_t capability) {
+    return static_cast<kth::domain::chain::capability_t>(capability);
+}
+
+inline
+kth_token_capability_t token_capability_to_c(kth::domain::chain::capability_t capability) {
+    return static_cast<kth_token_capability_t>(capability);
+}
+
+
+// Endorsement -------------------------------------------------------------
+
+inline
+kth::domain::chain::endorsement_type endorsement_type_to_cpp(kth_endorsement_type_t type) {
+    return static_cast<kth::domain::chain::endorsement_type>(type);
+}
+
+inline
+kth_endorsement_type_t endorsement_type_to_c(kth::domain::chain::endorsement_type type) {
+    return static_cast<kth_endorsement_type_t>(type);
+}
+
+
+// Other -------------------------------------------------------------
+
 inline
 kth::domain::config::network network_to_cpp(kth_network_t net) {
     switch (net) {
@@ -268,6 +413,7 @@ kth_network_t network_to_c(kth::domain::config::network net) {
     }
 }
 
+// #ifndef __EMSCRIPTEN__
 inline
 kth::node::start_modules start_modules_to_cpp(kth_start_modules_t mods) {
     switch (mods) {
@@ -281,6 +427,7 @@ kth::node::start_modules start_modules_to_cpp(kth_start_modules_t mods) {
 
     return kth::node::start_modules::all;
 }
+// #endif
 
 template <typename T>
 inline
@@ -316,8 +463,6 @@ T* leak(T const& ptr) {
     return leaked;
 }
 
-
-
 template <typename T>
 inline
 std::remove_const_t<T>* leak_if(std::shared_ptr<T> const& ptr, bool leak = true) {
@@ -329,6 +474,18 @@ std::remove_const_t<T>* leak_if(std::shared_ptr<T> const& ptr, bool leak = true)
         return leaked;
     }
     return *ptr;
+}
+
+template <typename T>
+inline
+T* ref_to_c(T& x) {
+    return &x;
+}
+
+template <typename T>
+inline
+T const* ref_to_c(T const& x) {
+    return &x;
 }
 
 } // namespace kth

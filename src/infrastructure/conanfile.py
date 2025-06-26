@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,6 +16,7 @@ class KnuthInfrastructureConan(KnuthConanFileV2):
     url = "https://github.com/knuth/infrastructure"
     description = "Multicrypto Cross-Platform C++ Development Toolkit"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "library"
 
     options = {
         "shared": [True, False],
@@ -58,19 +59,19 @@ class KnuthInfrastructureConan(KnuthConanFileV2):
 
     def build_requirements(self):
         if self.options.tests:
-            self.test_requires("catch2/3.6.0")
+            self.test_requires("catch2/3.7.1")
 
     def requirements(self):
-        self.requires("secp256k1/0.19.0", transitive_headers=True, transitive_libs=True)
+        self.requires("secp256k1/0.22.0", transitive_headers=True, transitive_libs=True)
         self.requires("boost/1.86.0", transitive_headers=True, transitive_libs=True)
-        self.requires("fmt/10.2.1", transitive_headers=True, transitive_libs=True)
+        self.requires("fmt/11.1.3", transitive_headers=True, transitive_libs=True)
         self.requires("expected-lite/0.8.0", transitive_headers=True, transitive_libs=True)
         self.requires("ctre/3.9.0", transitive_headers=True, transitive_libs=True)
 
         if self.options.log == "binlog":
             self.requires("binlog/2020.02.29@kth/stable", transitive_headers=True, transitive_libs=True)
         elif self.options.log == "spdlog":
-            self.requires("spdlog/1.14.1", transitive_headers=True, transitive_libs=True)
+            self.requires("spdlog/1.15.1", transitive_headers=True, transitive_libs=True)
 
         if self.options.with_png:
             self.requires("libpng/1.6.40", transitive_headers=True, transitive_libs=True)
@@ -81,10 +82,13 @@ class KnuthInfrastructureConan(KnuthConanFileV2):
         if self.options.asio_standalone:
             self.requires("asio/1.28.1", transitive_headers=True, transitive_libs=True)
 
+        if self.options.with_icu:
+            self.requires("icu/76.1", transitive_headers=True, transitive_libs=True)
+
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
     def config_options(self):
         KnuthConanFileV2.config_options(self)

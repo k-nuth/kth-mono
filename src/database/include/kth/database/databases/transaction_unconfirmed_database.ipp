@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -37,7 +37,7 @@ transaction_unconfirmed_entry internal_database_basis<Clock>::get_transaction_un
     }
 
     auto data = db_value_to_data_chunk(value);
-    auto res = domain::create<transaction_unconfirmed_entry>(data);
+    auto res = domain::create_old<transaction_unconfirmed_entry>(data);
 
     return res;
 }
@@ -68,12 +68,12 @@ std::vector<transaction_unconfirmed_entry> internal_database_basis<Clock>::get_a
     if ((rc = kth_db_cursor_get(cursor, &key, &value, KTH_DB_NEXT)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto res = domain::create<transaction_unconfirmed_entry>(data);
+        auto res = domain::create_old<transaction_unconfirmed_entry>(data);
         result.push_back(res);
 
         while ((rc = kth_db_cursor_get(cursor, &key, &value, KTH_DB_NEXT)) == 0) {
             auto data = db_value_to_data_chunk(value);
-            auto res = domain::create<transaction_unconfirmed_entry>(data);
+            auto res = domain::create_old<transaction_unconfirmed_entry>(data);
             result.push_back(res);
         }
     }

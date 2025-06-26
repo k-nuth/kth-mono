@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -188,7 +188,23 @@ enum error_code_t {
     op_rot,
     op_swap,
     op_tuck,
+
+    op_cat,
+    op_split,
+    op_reverse_bytes,
+    op_num2bin,
+    op_num2bin_invalid_size,
+    op_num2bin_size_exceeded,
+    op_num2bin_impossible_encoding,
+    op_bin2num,
+    op_bin2num_invalid_number_range,
+
     op_size,
+
+    op_and,
+    op_or,
+    op_xor,
+
     op_equal,
     op_equal_verify1,
     op_equal_verify2,
@@ -198,8 +214,18 @@ enum error_code_t {
     op_abs,
     op_not,
     op_nonzero,
+
     op_add,
+    op_add_overflow,
     op_sub,
+    op_sub_underflow,
+    op_mul,
+    op_mul_overflow,
+    op_div,
+    op_div_by_zero,
+    op_mod,
+    op_mod_by_zero,
+
     op_bool_and,
     op_bool_or,
     op_num_equal,
@@ -219,8 +245,13 @@ enum error_code_t {
     op_hash160,
     op_hash256,
     op_code_seperator,
-    op_check_sig_verify1,
+
     op_check_sig,
+    op_check_sig_verify1,
+
+    op_check_data_sig,
+    op_check_data_sig_verify,
+
     op_check_multisig_verify1,
     op_check_multisig_verify2,
     op_check_multisig_verify3,
@@ -242,6 +273,28 @@ enum error_code_t {
     op_check_sequence_verify5,
     op_check_sequence_verify6,
     op_check_sequence_verify7,
+
+    // Native Introspection Opcodes
+    op_input_index,
+    op_active_bytecode,
+    op_tx_version,
+    op_tx_input_count,
+    op_tx_output_count,
+    op_tx_locktime,
+    op_utxo_value,
+    op_utxo_bytecode,
+    op_outpoint_tx_hash,
+    op_outpoint_index,
+    op_input_bytecode,
+    op_input_sequence_number,
+    op_output_value,
+    op_output_bytecode,
+    op_utxo_token_category,
+    op_utxo_token_commitment,
+    op_utxo_token_amount,
+    op_output_token_category,
+    op_output_token_commitment,
+    op_output_token_amount,
 
     operation_failed_0,
     operation_failed_1,
@@ -279,7 +332,6 @@ enum error_code_t {
     // Added out of order (bip147).
     op_check_multisig_verify8,
 
-
     // TX creation
     invalid_output,
     lock_time_conflict,
@@ -290,7 +342,54 @@ enum error_code_t {
     low_benefit_transaction,
     duplicate_transaction,
     double_spend_mempool,
-    double_spend_blockchain
+    double_spend_blockchain,
+
+    // Numeric operations
+    overflow,
+    underflow,
+    out_of_range,
+
+    // Chip VM limits
+    too_many_hash_iters,
+    conditional_stack_depth,
+
+    // Create transaction template
+    insufficient_amount,
+    empty_utxo_list,
+    invalid_change,
+
+    //TODO: check C-API error codes, add the new ones there
+    //TODO: see the error to string functions
+
+    // Cash Tokens
+    invalid_bitfield,
+
+    // Domain object serialization/deserialization
+    read_past_end_of_buffer,
+    skip_past_end_of_buffer,
+    invalid_size,
+    invalid_script_type,
+    script_not_push_only,
+    script_invalid_size,
+    invalid_address_count,
+    bad_inventory_count,
+    version_too_low,
+    version_too_new,
+    invalid_compact_block,
+    unsupported_version,
+    invalid_filter_add,
+    invalid_filter_load,
+    bad_merkle_block_count,
+    illegal_value,
+
+    // Database cache
+    height_not_found,
+    hash_not_found,
+    empty_cache,
+    utxo_not_found,
+
+    // Last error code.
+    last_error_code
 };
 
 enum error_condition_t {};

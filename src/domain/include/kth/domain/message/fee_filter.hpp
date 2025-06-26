@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,12 +11,13 @@
 #include <string>
 
 #include <kth/domain/define.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -32,12 +33,6 @@ public:
     fee_filter() = default;
     fee_filter(uint64_t minimum);
 
-    // fee_filter(fee_filter const& x) = default;
-    // fee_filter(fee_filter&& x) = default;
-    // // This class is move assignable but not copy assignable.
-    // fee_filter& operator=(fee_filter&& x) = default;
-    // fee_filter& operator=(fee_filter const&) = default;
-
     bool operator==(fee_filter const& x) const;
     bool operator!=(fee_filter const& x) const;
 
@@ -46,25 +41,8 @@ public:
 
     void set_minimum_fee(uint64_t value);
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        reset();
-
-        // Initialize as valid from deserialization.
-        insufficient_version_ = false;
-
-        minimum_fee_ = source.read_8_bytes_little_endian();
-
-        if (version < fee_filter::version_minimum) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<fee_filter> from_data(byte_reader& reader, uint32_t /*version*/);
 
     [[nodiscard]]
     data_chunk to_data(uint32_t version) const;

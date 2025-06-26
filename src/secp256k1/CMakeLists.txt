@@ -1,8 +1,8 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(secp256k1 VERSION 0 LANGUAGES C)
 
@@ -85,6 +85,7 @@ if (ENABLE_ECMULT_STATIC_PRECOMPUTATION)
 	add_custom_command(
 		OUTPUT ecmult_static_context.h
 		COMMAND gen_context
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 
 	# target_sources(${PROJECT_NAME} PRIVATE ecmult_static_context.h)

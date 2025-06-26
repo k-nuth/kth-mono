@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,11 +18,10 @@
 #include <kth/domain/chain/header.hpp>
 #include <kth/domain/chain/transaction.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
-#include <kth/domain/multi_crypto_settings.hpp>
 
 #include <kth/infrastructure/error.hpp>
 #include <kth/infrastructure/math/hash.hpp>
@@ -70,6 +69,16 @@ public:
     block(chain::header const& header, transaction::list&& transactions);
     block(chain::header const& header, transaction::list const& transactions);
 
+    explicit
+    block(block_basis const& basis)
+        : block_basis(basis)
+    {}
+
+    explicit
+    block(block_basis&& basis)
+        : block_basis(std::move(basis))
+    {}
+
     //Note(kth): cannot be defaulted because of the mutex data member.
     block(block const& x);
     block(block&& x) noexcept;
@@ -79,25 +88,19 @@ public:
 
     // Deserialization.
     //-------------------------------------------------------------------------
-
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool witness = false) {
-        validation.start_deserialize = asio::steady_clock::now();
-        block_basis::from_data(source, witness);
-        validation.end_deserialize = asio::steady_clock::now();
-        return source;
-    }
+    static
+    expect<block> from_data(byte_reader& reader, bool wire = true);
 
     // Serialization.
     //-------------------------------------------------------------------------
 
     using block_basis::to_data;
-    data_chunk to_data(bool witness = false) const;
+    data_chunk to_data() const;
 
     // Properties (size, accessors, cache).
     //-------------------------------------------------------------------------
 
-    size_t serialized_size(bool witness = false) const;
+    size_t serialized_size() const;
 
     // void set_header(chain::header const& value);
     void set_transactions(transaction::list const& value);
@@ -132,11 +135,6 @@ public:
     static
     indexes locator_heights(size_t top);
 
-#if defined(KTH_SEGWIT_ENABLED)
-    /// Clear witness from all inputs (does not change default hash).
-    void strip_witness();
-#endif
-
     // Validation.
     //-------------------------------------------------------------------------
 
@@ -145,11 +143,6 @@ public:
     using block_basis::signature_operations;
 
     size_t total_inputs(bool with_coinbase = true) const;
-
-#if defined(KTH_SEGWIT_ENABLED)
-    size_t weight() const;
-    bool is_segregated() const;
-#endif
 
     code check() const;
     code accept(bool transactions = true) const;
@@ -160,14 +153,8 @@ public:
     mutable validation_t validation{};
 
 private:
-    // These share a mutex as they are not expected to contend.
-#if defined(KTH_SEGWIT_ENABLED)
-    mutable std::optional<bool> segregated_;
-#endif
-
     mutable std::optional<size_t> total_inputs_;
-    mutable std::optional<size_t> base_size_;
-    mutable std::optional<size_t> total_size_;
+    mutable std::optional<size_t> base_size_;   // total size
 
 #if ! defined(__EMSCRIPTEN__)
     mutable upgrade_mutex mutex_;

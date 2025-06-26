@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -106,7 +106,7 @@ domain::chain::block internal_database_basis<Clock>::get_block(uint32_t height, 
         }
 
         auto data = db_value_to_data_chunk(value);
-        auto res = domain::create<domain::chain::block>(data);
+        auto res = domain::create_old<domain::chain::block>(data);
         return res;
     }
     // db_mode_ == db_mode_type::pruned {

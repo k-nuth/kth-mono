@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -177,7 +177,23 @@ std::string error_category_impl::message(int ev) const noexcept {
         { error::op_rot, "op_rot" },
         { error::op_swap, "op_swap" },
         { error::op_tuck, "op_tuck" },
+
+        { error::op_cat, "op_cat" },
+        { error::op_split, "op_split" },
+        { error::op_reverse_bytes, "op_reverse_bytes" },
+        { error::op_num2bin, "op_num2bin" },
+        { error::op_num2bin_invalid_size, "op_num2bin_invalid_size" },
+        { error::op_num2bin_size_exceeded, "op_num2bin_size_exceeded" },
+        { error::op_num2bin_impossible_encoding, "op_num2bin_impossible_encoding" },
+        { error::op_bin2num, "op_bin2num" },
+        { error::op_bin2num_invalid_number_range, "op_bin2num_invalid_number_range" },
+
         { error::op_size, "op_size" },
+
+        { error::op_and, "op_and" },
+        { error::op_or, "op_or" },
+        { error::op_xor, "op_xor" },
+
         { error::op_equal, "op_equal" },
         { error::op_equal_verify1, "op_equal_verify1" },
         { error::op_equal_verify2, "op_equal_verify2" },
@@ -187,8 +203,19 @@ std::string error_category_impl::message(int ev) const noexcept {
         { error::op_abs, "op_abs" },
         { error::op_not, "op_not" },
         { error::op_nonzero, "op_nonzero" },
+
         { error::op_add, "op_add" },
+        { error::op_add_overflow, "op_add_overflow" },
+
         { error::op_sub, "op_sub" },
+        { error::op_sub_underflow, "op_sub_underflow" },
+        { error::op_mul, "op_mul" },
+        { error::op_mul_overflow, "op_mul_overflow" },
+        { error::op_div, "op_div" },
+        { error::op_div_by_zero, "op_div_by_zero" },
+        { error::op_mod, "op_mod" },
+        { error::op_mod_by_zero, "op_mod_by_zero" },
+
         { error::op_bool_and, "op_bool_and" },
         { error::op_bool_or, "op_bool_or" },
         { error::op_num_equal, "op_num_equal" },
@@ -208,8 +235,13 @@ std::string error_category_impl::message(int ev) const noexcept {
         { error::op_hash160, "op_hash160" },
         { error::op_hash256, "op_hash256" },
         { error::op_code_seperator, "op_code_seperator" },
-        { error::op_check_sig_verify1, "op_check_sig_verify1" },
+
         { error::op_check_sig, "op_check_sig" },
+        { error::op_check_sig_verify1, "op_check_sig_verify1" },
+
+        { error::op_check_data_sig, "op_check_data_sig" },
+        { error::op_check_data_sig_verify, "op_check_data_sig_verify" },
+
         { error::op_check_multisig_verify1, "op_check_multisig_verify1" },
         { error::op_check_multisig_verify2, "op_check_multisig_verify2" },
         { error::op_check_multisig_verify3, "op_check_multisig_verify3" },
@@ -231,6 +263,28 @@ std::string error_category_impl::message(int ev) const noexcept {
         { error::op_check_sequence_verify5, "op_check_sequence_verify5" },
         { error::op_check_sequence_verify6, "op_check_sequence_verify6" },
         { error::op_check_sequence_verify7, "op_check_sequence_verify7" },
+
+    // Native Introspection Opcodes
+        { error::op_input_index, "op_input_index" },
+        { error::op_active_bytecode, "op_active_bytecode" },
+        { error::op_tx_version, "op_tx_version" },
+        { error::op_tx_input_count, "op_tx_input_count" },
+        { error::op_tx_output_count, "op_tx_output_count" },
+        { error::op_tx_locktime, "op_tx_locktime" },
+        { error::op_utxo_value, "op_utxo_value" },
+        { error::op_utxo_bytecode, "op_utxo_bytecode" },
+        { error::op_outpoint_tx_hash, "op_outpoint_tx_hash" },
+        { error::op_outpoint_index, "op_outpoint_index" },
+        { error::op_input_bytecode, "op_input_bytecode" },
+        { error::op_input_sequence_number, "op_input_sequence_number" },
+        { error::op_output_value, "op_output_value" },
+        { error::op_output_bytecode, "op_output_bytecode" },
+        { error::op_utxo_token_category, "op_utxo_token_category" },
+        { error::op_utxo_token_commitment, "op_utxo_token_commitment" },
+        { error::op_utxo_token_amount, "op_utxo_token_amount" },
+        { error::op_output_token_category, "op_output_token_category" },
+        { error::op_output_token_commitment, "op_output_token_commitment" },
+        { error::op_output_token_amount, "op_output_token_amount" },
 
         { error::operation_failed_0, "operation failed 0" },
         { error::operation_failed_1, "operation failed 1" },
@@ -267,6 +321,27 @@ std::string error_category_impl::message(int ev) const noexcept {
         { error::operation_failed_30, "operation failed 30" },
         // Added out of order (bip147).
         { error::op_check_multisig_verify8, "op_check_multisig_verify8" },
+
+        // TX creation
+        { error::invalid_output, "invalid output" },
+        { error::lock_time_conflict, "lock time conflict" },
+        { error::input_index_out_of_range, "input index out of range" },
+        { error::input_sign_failed, "input sign failed" },
+
+        // Mining
+        { error::low_benefit_transaction, "low benefit transaction" },
+        { error::duplicate_transaction, "duplicate transaction" },
+        { error::double_spend_mempool, "double spend mempool" },
+        { error::double_spend_blockchain, "double spend blockchain" },
+
+        // Numeric operations
+        { error::overflow, "overflow" },
+        { error::underflow, "underflow" },
+        { error::out_of_range, "out of range" },
+
+        // Chip VM limits
+        { error::too_many_hash_iters, "too many hash iters" },
+        { error::conditional_stack_depth, "conditional stack depth" }
     };
 
     auto const message = messages.find(ev);

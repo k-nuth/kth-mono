@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -161,7 +161,7 @@ domain::chain::history_compact::list internal_database_basis<Clock>::get_history
     if ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_SET)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto entry = domain::create<history_entry>(data);
+        auto entry = domain::create_old<history_entry>(data);
 
         if (from_height == 0 || entry.height() >= from_height) {
             result.push_back(history_entry_to_history_compact(entry));
@@ -174,7 +174,7 @@ domain::chain::history_compact::list internal_database_basis<Clock>::get_history
             }
 
             auto data = db_value_to_data_chunk(value);
-            auto entry = domain::create<history_entry>(data);
+            auto entry = domain::create_old<history_entry>(data);
 
             if (from_height == 0 || entry.height() >= from_height) {
                 result.push_back(history_entry_to_history_compact(entry));
@@ -220,7 +220,7 @@ std::vector<hash_digest> internal_database_basis<Clock>::get_history_txns(short_
     if ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_SET)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto entry = domain::create<history_entry>(data);
+        auto entry = domain::create_old<history_entry>(data);
 
         if (from_height == 0 || entry.height() >= from_height) {
             // Avoid inserting the same tx
@@ -238,7 +238,7 @@ std::vector<hash_digest> internal_database_basis<Clock>::get_history_txns(short_
             }
 
             auto data = db_value_to_data_chunk(value);
-            auto entry = domain::create<history_entry>(data);
+            auto entry = domain::create_old<history_entry>(data);
 
             if (from_height == 0 || entry.height() >= from_height) {
                 // Avoid inserting the same tx
@@ -333,7 +333,7 @@ result_code internal_database_basis<Clock>::remove_history_db(short_hash const& 
     if ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_SET)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto entry = domain::create<history_entry>(data);
+        auto entry = domain::create_old<history_entry>(data);
 
         if (entry.height() == height) {
 
@@ -346,7 +346,7 @@ result_code internal_database_basis<Clock>::remove_history_db(short_hash const& 
         while ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_NEXT_DUP)) == 0) {
 
             auto data = db_value_to_data_chunk(value);
-            auto entry = domain::create<history_entry>(data);
+            auto entry = domain::create_old<history_entry>(data);
 
             if (entry.height() == height) {
                 if (kth_db_cursor_del(cursor, 0) != KTH_DB_SUCCESS) {

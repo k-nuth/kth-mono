@@ -1,13 +1,13 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <kth/domain/machine/operation.hpp>
 
+#include <charconv>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
 
 // #include <kth/domain/constants.hpp>
 #include <kth/domain/machine/opcode.hpp>
@@ -74,14 +74,14 @@ bool opcode_from_data_prefix(opcode& out_code,
 }
 
 static
-bool data_from_number_token(data_chunk& out_data,
-                                   std::string const& token) {
-    try {
-        out_data = number(boost::lexical_cast<int64_t>(token)).data();
-        return true;
-    } catch (const boost::bad_lexical_cast&) {
+bool data_from_number_token(data_chunk& out_data, std::string const& token) {
+    int64_t value;
+    auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value);
+    if (ec != std::errc()) {
         return false;
     }
+    out_data = number(value).data();
+    return true;
 }
 
 // The removal of spaces in v3 data is a compatability break with our v2.
@@ -135,6 +135,27 @@ void operation::reset() {
     code_ = invalid_code;
     data_.clear();
     valid_ = false;
+}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<operation> operation::from_data(byte_reader& reader) {
+    auto code_exp = reader.read_byte();
+    if ( ! code_exp) {
+        return make_unexpected(code_exp.error());
+    }
+    auto code = opcode(*code_exp);
+    auto const size = read_data_size(code, reader);
+    if ( ! size) {
+        return make_unexpected(size.error());
+    }
+    auto data = reader.read_bytes(*size);
+    if ( ! data) {
+        return make_unexpected(data.error());
+    }
+    return operation(data_chunk(data->begin(), data->end()), false);
 }
 
 // Serialization.

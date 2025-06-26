@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,9 +25,29 @@ std::vector<cpp_elem_t>& kth_##api##_##list_name##_cpp(list_t l) {              
 #define KTH_LIST_DECLARE_CONSTRUCT_FROM_CPP(api, list_t, cpp_elem_t, list_name)  \
 list_t kth_##api##_##list_name##_construct_from_cpp(std::vector<cpp_elem_t>& l);
 
-#define KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP(api, list_t, cpp_elem_t, list_name)  \
-list_t kth_##api##_##list_name##_construct_from_cpp(std::vector<cpp_elem_t>& l) {         \
-    return &l;                                                                      \
+#define KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP(api, list_t, cpp_elem_t, list_name)     \
+list_t kth_##api##_##list_name##_construct_from_cpp(std::vector<cpp_elem_t>& l) {  \
+    return &l;                                                                     \
+}
+
+#define KTH_LIST_DECLARE_CONSTRUCT_FROM_CPP_CONST(api, list_t, cpp_elem_t, list_name)  \
+void const* kth_##api##_##list_name##_construct_from_cpp(std::vector<cpp_elem_t> const& l);
+
+#define KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP_CONST(api, list_t, cpp_elem_t, list_name)    \
+void const* kth_##api##_##list_name##_construct_from_cpp(std::vector<cpp_elem_t> const& l) { \
+    return &l;                                                                          \
+}
+
+#define KTH_LIST_DECLARE_CONSTRUCT_FROM_CPP_BOTH(api, list_t, cpp_elem_t, list_name)  \
+KTH_LIST_DECLARE_CONSTRUCT_FROM_CPP(api, list_t, cpp_elem_t, list_name) \
+KTH_LIST_DECLARE_CONSTRUCT_FROM_CPP_CONST(api, list_t, cpp_elem_t, list_name) \
+void const* kth_##api##_##list_name##_construct_from_cpp_const(std::vector<cpp_elem_t> const& l);
+
+#define KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP_BOTH(api, list_t, cpp_elem_t, list_name)    \
+KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP(api, list_t, cpp_elem_t, list_name) \
+KTH_LIST_DEFINE_CONSTRUCT_FROM_CPP_CONST(api, list_t, cpp_elem_t, list_name) \
+void const* kth_##api##_##list_name##_construct_from_cpp_const(std::vector<cpp_elem_t> const& l) { \
+    return &l;                                                                          \
 }
 
 #define KTH_LIST_DECLARE(api, list_t, elem_t, list_name)                \

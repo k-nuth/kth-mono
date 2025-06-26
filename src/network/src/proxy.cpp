@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -34,8 +34,8 @@ static size_t const invalid_payload_dump_size = 1024;
 proxy::proxy(threadpool& pool, socket::ptr socket, settings const& settings)
     : authority_(socket->authority())
     , heading_buffer_(heading::maximum_size())
-    , payload_buffer_(heading::maximum_payload_size(settings.protocol_maximum, false, settings.identifier, settings.inbound_port == 48333))
-    , maximum_payload_(heading::maximum_payload_size(settings.protocol_maximum, (settings.services & version::service::node_witness) != 0, settings.identifier, settings.inbound_port == 48333))
+    , payload_buffer_(heading::maximum_payload_size(settings.protocol_maximum, settings.identifier, settings.inbound_port == 48333))
+    , maximum_payload_(heading::maximum_payload_size(settings.protocol_maximum, settings.identifier, settings.inbound_port == 48333))
     , socket_(socket)
     , stopped_(true)
     , protocol_magic_(settings.identifier)
@@ -118,7 +118,9 @@ void proxy::handle_read_heading(boost_code const& ec, size_t) {
         return;
     }
 
-    auto const head = domain::create<heading>(heading_buffer_);
+    // Using domain::create_old instead of domain::create because the 'old' variant
+    // supports an additional parameter for offset initialization, which is required here.
+    auto const head = domain::create_old<heading>(heading_buffer_, 0);
 
     if ( ! head.is_valid()) {
         LOG_WARNING(LOG_NETWORK, "Invalid heading from [", authority(), "]");
@@ -154,7 +156,7 @@ void proxy::handle_read_heading(boost_code const& ec, size_t) {
     read_payload(head);
 }
 
-void proxy::read_payload(const heading& head) {
+void proxy::read_payload(heading const& head) {
     if (stopped()) {
         return;
     }
@@ -165,8 +167,7 @@ void proxy::read_payload(const heading& head) {
     async_read(socket_->get(), buffer(payload_buffer_), std::bind(&proxy::handle_read_payload, shared_from_this(), _1, _2, head));
 }
 
-void proxy::handle_read_payload(boost_code const& ec, size_t payload_size, const heading& head) {
-    //LOG_INFO(LOG_NETWORK, "proxy::handle_read_payload()");
+void proxy::handle_read_payload(boost_code const& ec, size_t payload_size, heading const& head) {
     if (stopped()) return;
 
     if (ec) {
@@ -189,12 +190,11 @@ void proxy::handle_read_payload(boost_code const& ec, size_t payload_size, const
        , "] (", payload_size, " bytes). Now parsing ...");
 
     // Notify subscribers of the new message.
-    payload_source source(payload_buffer_);
-    payload_stream istream(source);
+    byte_reader reader(payload_buffer_);
 
     // Failures are not forwarded to subscribers and channel is stopped below.
-    auto const code = message_subscriber_.load(head.type(), version_, istream);
-    auto const consumed = istream.peek() == std::istream::traits_type::eof();
+    auto const code = message_subscriber_.load(head.type(), version_, reader);
+    auto const consumed = reader.is_exhausted();
 
     if (verbose_ && code) {
         auto const size = std::min(payload_size, invalid_payload_dump_size);
@@ -206,13 +206,13 @@ void proxy::handle_read_payload(boost_code const& ec, size_t payload_size, const
     }
 
     if (code) {
-        LOG_WARNING(LOG_NETWORK, "Invalid ", head.command(), " payload from [", authority(), "] ", code.message());
+        LOG_VERBOSE(LOG_NETWORK, "Invalid ", head.command(), " payload from [", authority(), "] ", code.message());
         stop(code);
         return;
     }
 
     if ( ! consumed) {
-        LOG_WARNING(LOG_NETWORK, "Invalid ", head.command(), " payload from [", authority(), "] trailing bytes.");
+        LOG_VERBOSE(LOG_NETWORK, "Invalid ", head.command(), " payload from [", authority(), "] trailing bytes.");
         stop(error::bad_stream);
         return;
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -29,6 +29,21 @@ bool filter_clear::is_valid() const {
 void filter_clear::reset() {
     insufficient_version_ = true;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<filter_clear> filter_clear::from_data(byte_reader& reader, uint32_t version) {
+    auto const insufficient_version = false;
+    if (version < filter_clear::version_minimum) {
+        return make_unexpected(error::version_too_low);
+    }
+    return filter_clear(insufficient_version);
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk filter_clear::to_data(uint32_t version) const {
     data_chunk data;

@@ -115,14 +115,14 @@ struct SafeAmount : ScriptIntBase<SafeAmount> {
     }
 
     // overrides base class, does additonal checks to disallow negative values
-    static constexpr std::optional<SafeAmount> fromInt(int64_t x) noexcept {
+    static std::optional<SafeAmount> fromInt(int64_t x) noexcept {
         auto ret = Base::fromInt(x);
         if (ret && *ret < 0LL) ret.reset(); // all negative values are disallowed with this factory method
         return ret;
     }
 
 private:
-    explicit constexpr SafeAmount(int64_t x) noexcept : Base(x) {}
+    explicit SafeAmount(int64_t x) noexcept : Base(x) {}
 };
 
 /// Data that gets serialized/deserialized to/from a scriptPubKey in a transaction output prefixed with PREFIX_BYTE

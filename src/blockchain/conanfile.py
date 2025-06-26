@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,7 @@ class KnuthBlockchainConan(KnuthConanFileV2):
     url = "https://github.com/k-nuth/blockchain/blob/conan-build/conanfile.py"
     description = "Knuth Blockchain Library"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "library"
 
     options = {
         "shared": [True, False],
@@ -35,7 +36,6 @@ class KnuthBlockchainConan(KnuthConanFileV2):
         "cflags": ["ANY"],
         "cmake_export_compile_commands": [True, False],
         "log": ["boost", "spdlog", "binlog"],
-        "use_libmdbx": [True, False],
     }
 
     default_options = {
@@ -65,14 +65,14 @@ class KnuthBlockchainConan(KnuthConanFileV2):
             self.test_requires("catch2/3.6.0")
 
     def requirements(self):
-        self.requires("database/0.43.0", transitive_headers=True, transitive_libs=True)
+        self.requires("database/0.51.0", transitive_headers=True, transitive_libs=True)
         if self.options.consensus:
-            self.requires("consensus/0.32.0", transitive_headers=True, transitive_libs=True)
+            self.requires("consensus/0.38.0", transitive_headers=True, transitive_libs=True)
 
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
 
     def config_options(self):

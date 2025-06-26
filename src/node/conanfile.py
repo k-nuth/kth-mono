@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,7 @@ class KnuthNodeConan(KnuthConanFileV2):
     url = "https://github.com/k-nuth/node"
     description = "Crypto full node"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "library"
 
     options = {
         "shared": [True, False],
@@ -61,17 +62,17 @@ class KnuthNodeConan(KnuthConanFileV2):
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
     def build_requirements(self):
         if self.options.tests:
-            self.test_requires("catch2/3.6.0")
+            self.test_requires("catch2/3.7.1")
 
     def requirements(self):
-        self.requires("blockchain/0.41.0", transitive_headers=True, transitive_libs=True)
+        self.requires("blockchain/0.51.0", transitive_headers=True, transitive_libs=True)
 
         if self.settings.os != "Emscripten":
-            self.requires("network/0.44.0", transitive_headers=True, transitive_libs=True)
+            self.requires("network/0.54.0", transitive_headers=True, transitive_libs=True)
 
         if self.options.statistics:
             self.requires("tabulate/1.0@", transitive_headers=True, transitive_libs=True)

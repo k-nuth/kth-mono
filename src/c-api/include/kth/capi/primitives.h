@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,7 @@ extern "C" {
 #define KTH_BITCOIN_SHORT_HASH_SIZE 20
 #define KTH_BITCOIN_HASH_SIZE 32
 #define KTH_BITCOIN_LONG_HASH_SIZE 64
+#define KTH_BITCOIN_ENCRYPTED_SEED_SIZE 96
 
 #define KTH_BITCOIN_MINIMUM_SEED_BITS 128
 #define KTH_BITCOIN_BYTE_BITS 8
@@ -28,7 +29,12 @@ extern "C" {
 #define KTH_WALLET_HD_PRIVATE_TESTNET 303293221666392015
 
 typedef int kth_bool_t;
-typedef uint64_t kth_size_t;    // It is std::size_t in the C++ code.
+
+#if defined(__EMSCRIPTEN__)
+typedef uint32_t kth_size_t;    // It is std::size_t in the C++ code.
+#else
+typedef uint64_t kth_size_t;
+#endif
 
 #if defined(_WIN32)
 typedef wchar_t kth_char_t;
@@ -61,17 +67,26 @@ typedef void* kth_history_compact_t;
 typedef void* kth_history_compact_list_t;
 typedef void* kth_input_t;
 typedef void* kth_input_list_t;
+typedef void* kth_utxo_list_t;
 typedef void* kth_inputpoint_t;
 typedef void* kth_merkleblock_t;
 typedef void* kth_script_t;
 typedef void* kth_token_data_t;
-typedef void* kth_output_t;
+typedef void const* kth_token_data_const_t;
+
+typedef void* kth_operation_list_t;
+typedef void const* kth_operation_list_const_t;
+typedef void* kth_operation_t;
+
 typedef void* kth_output_list_t;
+typedef void* kth_output_t;
 typedef void* kth_outputpoint_t;
+typedef void* kth_utxo_t;
 typedef void const* kth_outputpoint_const_t;
 typedef void* kth_point_t;
 typedef void* kth_point_list_t;
 typedef void* kth_transaction_t;
+typedef void const* kth_transaction_const_t;
 typedef void* kth_transaction_list_t;
 typedef void* kth_mempool_transaction_t;
 typedef void* kth_mempool_transaction_list_t;
@@ -81,6 +96,7 @@ typedef void* kth_get_headers_t;
 typedef void* kth_get_headers_ptr_t;
 typedef void* kth_payment_address_t;
 typedef void* kth_payment_address_list_t;
+typedef void const* kth_payment_address_list_const_t;
 typedef void* kth_binary_t;
 typedef void* kth_stealth_compact_t;
 typedef void* kth_stealth_compact_list_t;
@@ -88,6 +104,23 @@ typedef void* kth_hash_list_t;
 typedef void* kth_raw_output_t;
 typedef void* kth_raw_output_list_t;
 typedef void* kth_string_list_t;
+typedef void* kth_double_list_t;
+typedef void* kth_u32_list_t;
+typedef void* kth_u64_list_t;
+
+typedef void* kth_wallet_data_t;
+
+typedef void* kth_ec_compressed_list_t;
+
+
+// VM
+typedef void* kth_metrics_t;
+typedef void* kth_program_t;
+
+typedef void const* kth_program_const_t;
+
+
+// helper functions
 
 typedef struct kth_shorthash_t {
     uint8_t hash[KTH_BITCOIN_SHORT_HASH_SIZE];  //kth::hash_size
@@ -100,6 +133,12 @@ typedef struct kth_hash_t {
 typedef struct kth_longhash_t {
     uint8_t hash[KTH_BITCOIN_LONG_HASH_SIZE];   //kth::long_hash_size
 } kth_longhash_t;
+
+typedef struct kth_encrypted_seed_t {
+    uint8_t hash[KTH_BITCOIN_ENCRYPTED_SEED_SIZE];
+} kth_encrypted_seed_t;
+
+
 
 // Currencies --------------------------------------------------------
 
@@ -136,6 +175,13 @@ typedef enum {
     kth_db_mode_normal = 1,
     kth_db_mode_full_indexed = 2
 } kth_db_mode_t;
+
+
+// Endorsement type ----------------------------------------------------
+typedef enum {
+    kth_endorsement_type_ecdsa = 0,
+    kth_endorsement_type_schnorr = 1
+} kth_endorsement_type_t;
 
 
 // Callback signatures ------------------------------------------------

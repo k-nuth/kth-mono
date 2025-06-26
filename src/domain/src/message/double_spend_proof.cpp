@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -40,6 +40,74 @@ void double_spend_proof::reset() {
     spender1_.reset();
     spender2_.reset();
 }
+
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<double_spend_proof::spender> double_spend_proof::spender::from_data(byte_reader& reader, uint32_t /*version*/) {
+    auto const version = reader.read_little_endian<uint32_t>();
+    if ( ! version) {
+        return make_unexpected(version.error());
+    }
+    auto const out_sequence = reader.read_little_endian<uint32_t>();
+    if ( ! out_sequence) {
+        return make_unexpected(out_sequence.error());
+    }
+    auto const locktime = reader.read_little_endian<uint32_t>();
+    if ( ! locktime) {
+        return make_unexpected(locktime.error());
+    }
+    auto const prev_outs_hash = read_hash(reader);
+    if ( ! prev_outs_hash) {
+        return make_unexpected(prev_outs_hash.error());
+    }
+    auto const sequence_hash = read_hash(reader);
+    if ( ! sequence_hash) {
+        return make_unexpected(sequence_hash.error());
+    }
+    auto const outputs_hash = read_hash(reader);
+    if ( ! outputs_hash) {
+        return make_unexpected(outputs_hash.error());
+    }
+    auto const push_data = reader.read_remaining_bytes();
+    if ( ! push_data) {
+        return make_unexpected(push_data.error());
+    }
+
+    return spender {
+        *version,
+        *out_sequence,
+        *locktime,
+        *prev_outs_hash,
+        *sequence_hash,
+        *outputs_hash,
+        data_chunk(push_data->begin(), push_data->end())
+    };
+}
+
+// static
+expect<double_spend_proof> double_spend_proof::from_data(byte_reader& reader, uint32_t /*version*/) {
+    auto const out_point = chain::output_point::from_data(reader, true);
+    if ( ! out_point) {
+        return make_unexpected(out_point.error());
+    }
+    auto const spender1 = spender::from_data(reader, 0);
+    if ( ! spender1) {
+        return make_unexpected(spender1.error());
+    }
+
+    auto const spender2 = spender::from_data(reader, 0);
+    if ( ! spender2) {
+        return make_unexpected(spender2.error());
+    }
+
+    return double_spend_proof(*out_point, *spender1, *spender2);
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk double_spend_proof::to_data(size_t version) const {
     data_chunk data;

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2022 The Bitcoin developers
+// Copyright (c) 2017-2024 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -89,6 +89,14 @@ enum class ScriptError {
     LIMITED_CONTEXT_NO_SIBLING_INFO,
     INVALID_TX_INPUT_INDEX,
     INVALID_TX_OUTPUT_INDEX,
+
+    /* Targeted VM Limits Chip */
+    OP_COST,
+    TOO_MANY_HASH_ITERS,
+    CONDITIONAL_STACK_DEPTH,
+
+    /* Big Integers */
+    INVALID_NUMBER_RANGE_BIG_INT,
 
     ERROR_COUNT,
 };

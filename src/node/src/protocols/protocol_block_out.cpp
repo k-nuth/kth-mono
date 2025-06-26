@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -31,15 +31,6 @@ using namespace kth::network;
 using namespace boost::adaptors;
 using namespace std::placeholders;
 
-constexpr
-bool is_witness(uint64_t services) {
-#if defined(KTH_CURRENCY_BCH)
-    return false;
-#else
-    return (services & version::service::node_witness) != 0;
-#endif
-}
-
 protocol_block_out::protocol_block_out(full_node& node, channel::ptr channel, safe_chain& chain)
   : protocol_events(node, channel, NAME),
     node_(node),
@@ -57,8 +48,6 @@ protocol_block_out::protocol_block_out(full_node& node, channel::ptr channel, sa
     // TODO: move send_headers to a derived class protocol_block_out_70012.
     headers_to_peer_(false),
 
-    // Witness requests must be allowed if advertising the service.
-    enable_witness_(is_witness(node.network_settings().services)),
     CONSTRUCT_TRACK(protocol_block_out)
 {}
 
@@ -181,17 +170,12 @@ void protocol_block_out::handle_fetch_locator_headers(code const& ec, headers_pt
 }
 
 bool protocol_block_out::handle_receive_get_block_transactions(code const& ec, get_block_transactions_const_ptr message) {
-#if defined(KTH_CURRENCY_BCH)
-    bool witness = false;
-#else
-    bool witness = true;
-#endif
     if (stopped(ec))
         return false;
 
     auto block_hash = message->block_hash();
 
-    chain_.fetch_block(block_hash, witness, [this, message](code const& ec, block_const_ptr block, uint64_t) {
+    chain_.fetch_block(block_hash, [this, message](code const& ec, block_const_ptr block, uint64_t) {
 
         if (ec == error::success) {
 
@@ -358,19 +342,8 @@ void protocol_block_out::send_next_data(inventory_ptr inventory) {
     auto const& entry = inventory->inventories().back();
 
     switch (entry.type()) {
-#if defined(KTH_SEGWIT_ENABLED)
-        case inventory::type_id::witness_block: {
-            if ( ! enable_witness_) {
-                stop(error::channel_stopped);
-                return;
-            }
-            chain_.fetch_block(entry.hash(), true, BIND4(send_block, _1, _2, _3, inventory));
-            break;
-        }
-#endif // #if defined(KTH_SEGWIT_ENABLED)
-
         case inventory::type_id::block: {
-            chain_.fetch_block(entry.hash(), false, BIND4(send_block, _1, _2, _3, inventory));
+            chain_.fetch_block(entry.hash(), BIND4(send_block, _1, _2, _3, inventory));
             break;
         } case inventory::type_id::filtered_block: {
             chain_.fetch_merkle_block(entry.hash(), BIND4(send_merkle_block, _1, _2, _3, inventory));
@@ -540,17 +513,7 @@ bool protocol_block_out::handle_reorganized(code ec, size_t fork_height, block_c
 
         for (auto const block: *incoming) {
             if (block->validation.originator != nonce()) {
-#if defined(KTH_CURRENCY_BCH)
                 announce.inventories().push_back({ inventory::type_id::block, block->header().hash() });
-#else
-        // TODO: the witness flag should only be set if the block is segregated?
-        //// block->is_segregated() ? inventory::type_id::witness_block : inventory::type_id::block
-                if (enable_witness_){
-                    announce.inventories().push_back({ inventory::type_id::witness_block, block->header().hash() });
-                } else {
-                    announce.inventories().push_back({ inventory::type_id::block, block->header().hash() });
-                }
-#endif
             }
         }
 

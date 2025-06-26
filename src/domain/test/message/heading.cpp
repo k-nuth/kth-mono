@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -301,18 +301,5 @@ TEST_CASE("heading type all cases match expected", "[heading]") {
 TEST_CASE("heading  maximum size  always  matches satoshi fixed size", "[heading]") {
     REQUIRE(heading::satoshi_fixed_size() == heading::maximum_size());
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-// TODO(kth): This test is broken for networks bigger than 4Mbs
-//TEST_CASE("heading  maximum payload size  non witness  matches expected", "[None]")
-//{
-//    static size_t const expected = 3u + (sizeof(uint32_t) + hash_size) * 50000u;
-//    REQUIRE(expected == heading::maximum_payload_size(0u, false));
-//}
-
-TEST_CASE("heading  maximum payload size  witness  matches expected", "[heading]") {
-    REQUIRE(max_block_weight == heading::maximum_payload_size(0u, true, btc_mainnet));
-}
-#endif
 
 // End Test Suite

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -75,7 +75,7 @@ std::string bitcoin_uri::r() const {
 }
 
 payment_address bitcoin_uri::payment() const {
-    return {address_};
+    return payment_address{address_};
 }
 
 stealth_address bitcoin_uri::stealth() const {

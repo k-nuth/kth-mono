@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,11 +8,6 @@
 #include <sstream>
 
 #include <kth/domain/chain/script.hpp>
-
-#if defined(KTH_SEGWIT_ENABLED)
-#include <kth/domain/chain/witness.hpp>
-#endif
-
 #include <kth/domain/constants.hpp>
 #include <kth/domain/wallet/payment_address.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
@@ -27,6 +22,14 @@ using namespace kth::domain::machine;
 
 // Constructors.
 //-----------------------------------------------------------------------------
+
+input::input(input_basis const& x)
+    : input_basis(x)
+{}
+
+input::input(input_basis&& x) noexcept
+    : input_basis(std::move(x))
+{}
 
 // Private cache access for copy/move construction.
 input::addresses_ptr input::addresses_cache() const {
@@ -63,6 +66,22 @@ input& input::operator=(input&& x) noexcept {
     return *this;
 }
 
+void input::reset() {
+    input_basis::reset();
+    addresses_.reset();
+}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<input> input::from_data(byte_reader& reader, bool wire) {
+    auto basis = input_basis::from_data(reader, wire);
+    if ( ! basis) {
+        return make_unexpected(basis.error());
+    }
+    return input(std::move(*basis));
+}
 
 // Accessors.
 //-----------------------------------------------------------------------------
@@ -76,18 +95,6 @@ void input::set_script(chain::script&& value) {
     input_basis::set_script(std::move(value));
     invalidate_cache();
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-void input::set_witness(chain::witness const& value) {
-    input_basis::set_witness(value);
-    invalidate_cache();
-}
-
-void input::set_witness(chain::witness&& value) {
-    input_basis::set_witness(std::move(value));
-    invalidate_cache();
-}
-#endif // KTH_CURRENCY_BCH
 
 // protected
 void input::invalidate_cache() const {

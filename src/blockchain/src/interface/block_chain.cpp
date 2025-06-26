@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -435,11 +435,8 @@ block_chain::~block_chain() {
 // Blocks are and transactions returned const because they don't change and
 // this eliminates the need to copy the cached items.
 
-void block_chain::fetch_block(size_t height, bool witness,
+void block_chain::fetch_block(size_t height,
     block_fetch_handler handler) const {
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
     if (stopped()) {
         handler(error::service_stopped, nullptr, 0);
         return;
@@ -466,11 +463,8 @@ void block_chain::fetch_block(size_t height, bool witness,
     handler(error::success, result, height);
 }
 
-void block_chain::fetch_block(hash_digest const& hash, bool witness,
+void block_chain::fetch_block(hash_digest const& hash,
     block_fetch_handler handler) const {
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
     if (stopped()) {
         handler(error::service_stopped, nullptr, 0);
         return;
@@ -564,17 +558,12 @@ void block_chain::fetch_compact_block(size_t height, compact_block_fetch_handler
 }
 
 void block_chain::fetch_compact_block(hash_digest const& hash, compact_block_fetch_handler handler) const {
-#if defined(KTH_CURRENCY_BCH)
-    bool witness = false;
-#else
-    bool witness = true;
-#endif
     if (stopped()) {
         handler(error::service_stopped, {},0);
         return;
     }
 
-    fetch_block(hash, witness,[&handler](code const& ec, block_const_ptr message, size_t height) {
+    fetch_block(hash,[&handler](code const& ec, block_const_ptr message, size_t height) {
         if (ec == error::success) {
             auto blk_ptr = std::make_shared<compact_block>(compact_block::factory_from_block(*message));
             handler(error::success, blk_ptr, height);
@@ -666,10 +655,7 @@ void block_chain::fetch_ds_proof(hash_digest const& hash, ds_proof_fetch_handler
     transaction_organizer_.fetch_ds_proof(hash, handler);
 }
 
-void block_chain::fetch_transaction(hash_digest const& hash, bool require_confirmed, bool witness, transaction_fetch_handler handler) const {
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
+void block_chain::fetch_transaction(hash_digest const& hash, bool require_confirmed, transaction_fetch_handler handler) const {
     if (stopped()) {
         handler(error::service_stopped, nullptr, 0, 0);
         return;
@@ -780,7 +766,7 @@ std::tuple<uint8_t, uint8_t> get_address_versions(bool use_testnet_rules) {
 } // anonymous namespace
 
 //TODO(fernando): refactor!!!
-std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::vector<std::string> const& payment_addresses, bool use_testnet_rules, bool witness) const {
+std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::vector<std::string> const& payment_addresses, bool use_testnet_rules) const {
 /*          "    \"address\"  (string) The base58check encoded address\n"
             "    \"txid\"  (string) The related txid\n"
             "    \"index\"  (number) The related input or output index\n"
@@ -790,9 +776,6 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
             "    \"prevout\"  (string) The previous transaction output index (if spending)\n"
 */
 
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
     auto const [encoding_p2kh, encoding_p2sh] = get_address_versions(use_testnet_rules);
 
     std::vector<kth::blockchain::mempool_transaction_summary> ret;
@@ -831,7 +814,7 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
             for(auto const tx_address : tx_addresses)
             if (tx_address && addrs.find(tx_address) != addrs.end()) {
                 std::latch latch(1);
-                fetch_transaction(input.previous_output().hash(), false, witness,
+                fetch_transaction(input.previous_output().hash(), false,
                                   [&](const kth::code &ec,
                                       kth::transaction_const_ptr tx_ptr, size_t index,
                                       size_t height) {
@@ -857,11 +840,7 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
 }
 
 // Precondition: valid payment addresses
-std::vector<domain::chain::transaction> block_chain::get_mempool_transactions_from_wallets(std::vector<domain::wallet::payment_address> const& payment_addresses, bool use_testnet_rules, bool witness) const {
-
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
+std::vector<domain::chain::transaction> block_chain::get_mempool_transactions_from_wallets(std::vector<domain::wallet::payment_address> const& payment_addresses, bool use_testnet_rules) const {
     auto const [encoding_p2kh, encoding_p2sh] = get_address_versions(use_testnet_rules);
 
     std::vector<domain::chain::transaction> ret;
@@ -922,12 +901,7 @@ void block_chain::fill_tx_list_from_mempool(domain::message::compact_block const
     for (auto const& tx_res : result) {
         auto const& tx = tx_res.transaction();
 
-#if defined(KTH_CURRENCY_BCH)
-        bool witness = false;
-#else
-        bool witness = true;
-#endif
-        uint64_t shortid = sip_hash_uint256(k0, k1, tx.hash(witness)) & uint64_t(0xffffffffffff);
+        uint64_t shortid = sip_hash_uint256(k0, k1, tx.hash()) & uint64_t(0xffffffffffff);
 
         auto idit = shorttxids.find(shortid);
         if (idit != shorttxids.end()) {
@@ -962,12 +936,6 @@ void block_chain::fill_tx_list_from_mempool(domain::message::compact_block const
 }
 
 safe_chain::mempool_mini_hash_map block_chain::get_mempool_mini_hash_map(domain::message::compact_block const& block) const {
-#if defined(KTH_CURRENCY_BCH)
-     bool witness = false;
-#else
-     bool witness = true;
-#endif
-
     if (stopped()) {
         return safe_chain::mempool_mini_hash_map();
     }
@@ -985,7 +953,7 @@ safe_chain::mempool_mini_hash_map block_chain::get_mempool_mini_hash_map(domain:
     for (auto const& tx_res : result) {
         auto const& tx = tx_res.transaction();
 
-        auto sh = sip_hash_uint256(k0, k1, tx.hash(witness));
+        auto sh = sip_hash_uint256(k0, k1, tx.hash());
 
        /* to_little_endian()
         uint64_t pepe = 4564564;
@@ -1002,9 +970,9 @@ safe_chain::mempool_mini_hash_map block_chain::get_mempool_mini_hash_map(domain:
     return mempool;
 }
 
-std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::string const& payment_address, bool use_testnet_rules, bool witness) const{
+std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::string const& payment_address, bool use_testnet_rules) const{
     std::vector<std::string> addresses = {payment_address};
-    return get_mempool_transactions(addresses, use_testnet_rules, witness);
+    return get_mempool_transactions(addresses, use_testnet_rules);
 }
 
 
@@ -1029,7 +997,7 @@ void block_chain::fetch_unconfirmed_transaction(hash_digest const& hash, transac
 
 #ifdef KTH_DB_TRANSACTION_UNCONFIRMED
 //TODO(fernando): refactor!!!
-std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::vector<std::string> const& payment_addresses, bool use_testnet_rules, bool witness) const {
+std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::vector<std::string> const& payment_addresses, bool use_testnet_rules) const {
 /*          "    \"address\"  (string) The base58check encoded address\n"
             "    \"txid\"  (string) The related txid\n"
             "    \"index\"  (number) The related input or output index\n"
@@ -1039,9 +1007,6 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
             "    \"prevout\"  (string) The previous transaction output index (if spending)\n"
 */
 
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
     auto const [encoding_p2kh, encoding_p2sh] = get_address_versions(use_testnet_rules);
 
     std::vector<kth::blockchain::mempool_transaction_summary> ret;
@@ -1054,7 +1019,7 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
     }
 
     database_.transactions_unconfirmed().for_each_result([&](kth::database::transaction_unconfirmed_result const &tx_res) {
-        auto tx = tx_res.transaction(witness);
+        auto tx = tx_res.transaction();
         tx.recompute_hash();
         size_t i = 0;
         for (auto const& output : tx.outputs()) {
@@ -1077,7 +1042,7 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
             for(auto const tx_address : tx_addresses)
             if (tx_address && addrs.find(tx_address) != addrs.end()) {
                 std::latch latch(1);
-                fetch_transaction(input.previous_output().hash(), false, witness,
+                fetch_transaction(input.previous_output().hash(), false,
                                   [&](const kth::code &ec,
                                       kth::transaction_const_ptr tx_ptr, size_t index,
                                       size_t height) {
@@ -1104,17 +1069,13 @@ std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempo
 }
 
 // Precondition: valid payment addresses
-std::vector<domain::chain::transaction> block_chain::get_mempool_transactions_from_wallets(std::vector<domain::wallet::payment_address> const& payment_addresses, bool use_testnet_rules, bool witness) const {
-
-#if defined(KTH_CURRENCY_BCH)
-    witness = false;
-#endif
+std::vector<domain::chain::transaction> block_chain::get_mempool_transactions_from_wallets(std::vector<domain::wallet::payment_address> const& payment_addresses, bool use_testnet_rules) const {
     auto const [encoding_p2kh, encoding_p2sh] = get_address_versions(use_testnet_rules);
 
     std::vector<domain::chain::transaction> ret;
 
     database_.transactions_unconfirmed().for_each_result([&](kth::database::transaction_unconfirmed_result const &tx_res) {
-        auto tx = tx_res.transaction(witness);
+        auto tx = tx_res.transaction();
         tx.recompute_hash();
 
         // Only insert the transaction once. Avoid duplicating the tx if serveral wallets are used in the same tx, and if the same wallet is the input and output addr.
@@ -1182,12 +1143,7 @@ void block_chain::fill_tx_list_from_mempool(domain::message::compact_block const
 
 
     database_.transactions_unconfirmed().for_each([&](domain::chain::transaction const &tx) {
-#if defined(KTH_CURRENCY_BCH)
-        bool witness = false;
-#else
-        bool witness = true;
-#endif
-        uint64_t shortid = sip_hash_uint256(k0, k1, tx.hash(witness)) & uint64_t(0xffffffffffff);
+        uint64_t shortid = sip_hash_uint256(k0, k1, tx.hash()) & uint64_t(0xffffffffffff);
 
       /*   LOG_INFO(LOG_BLOCKCHAIN
             << "mempool tx ->  " << encode_hash(tx.hash())
@@ -1223,12 +1179,6 @@ void block_chain::fill_tx_list_from_mempool(domain::message::compact_block const
 }
 
 safe_chain::mempool_mini_hash_map block_chain::get_mempool_mini_hash_map(domain::message::compact_block const& block) const {
-#if defined(KTH_CURRENCY_BCH)
-     bool witness = false;
-#else
-     bool witness = true;
-#endif
-
     if (stopped()) {
         return safe_chain::mempool_mini_hash_map();
     }
@@ -1242,7 +1192,7 @@ safe_chain::mempool_mini_hash_map block_chain::get_mempool_mini_hash_map(domain:
 
     database_.transactions_unconfirmed().for_each([&](domain::chain::transaction const &tx) {
 
-        auto sh = sip_hash_uint256(k0, k1, tx.hash(witness));
+        auto sh = sip_hash_uint256(k0, k1, tx.hash());
 
        /* to_little_endian()
         uint64_t pepe = 4564564;
@@ -1259,9 +1209,9 @@ safe_chain::mempool_mini_hash_map block_chain::get_mempool_mini_hash_map(domain:
     return mempool;
 }
 
-std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::string const& payment_address, bool use_testnet_rules, bool witness) const{
+std::vector<kth::blockchain::mempool_transaction_summary> block_chain::get_mempool_transactions(std::string const& payment_address, bool use_testnet_rules) const{
     std::vector<std::string> addresses = {payment_address};
-    return get_mempool_transactions(addresses, use_testnet_rules, witness);
+    return get_mempool_transactions(addresses, use_testnet_rules);
 }
 
 

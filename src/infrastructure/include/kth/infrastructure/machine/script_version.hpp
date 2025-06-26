@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,6 +6,8 @@
 #define KTH_INFRASTUCTURE_MACHINE_SCRIPT_VERSION_HPP
 
 #include <cstdint>
+
+#if ! defined(KTH_CURRENCY_BCH)
 
 namespace kth::infrastructure::machine {
 
@@ -23,4 +25,6 @@ enum class script_version {
 
 } // namespace kth::infrastructure::machine
 
-#endif
+#endif // ! KTH_CURRENCY_BCH
+
+#endif // KTH_INFRASTUCTURE_MACHINE_SCRIPT_VERSION_HPP

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -44,6 +44,38 @@ void address::reset() {
     addresses_.clear();
     addresses_.shrink_to_fit();
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<address> address::from_data(byte_reader& reader, uint32_t version) {
+    auto count = reader.read_size_little_endian();
+    if (!count) {
+        return make_unexpected(count.error());
+    }
+
+    // Guard against potential for arbitrary memory allocation.
+    if (*count > max_address) {
+        return make_unexpected(error::invalid_address_count);
+    }
+
+    infrastructure::message::network_address::list addresses;
+    addresses.reserve(*count);
+
+    for (size_t i = 0; i < *count; ++i) {
+        auto address = infrastructure::message::network_address::from_data(reader, version, true);
+        if (!address) {
+            return make_unexpected(address.error());
+        }
+        addresses.push_back(std::move(*address));
+    }
+
+    return address(std::move(addresses));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk address::to_data(uint32_t version) const {
     data_chunk data;

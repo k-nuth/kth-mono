@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -34,7 +34,7 @@ bool push_scripts(chain::output::list& outputs, config::output const& output, ui
 
     // This presumes stealth versions are the same as non-stealth.
     if (output.version() != script_version) {
-        payment_ops = chain::script::to_pay_key_hash_pattern(hash);
+        payment_ops = chain::script::to_pay_public_key_hash_pattern(hash);
     } else if (output.version() == script_version) {
         payment_ops = chain::script::to_pay_script_hash_pattern(hash);
     } else {
@@ -43,10 +43,12 @@ bool push_scripts(chain::output::list& outputs, config::output const& output, ui
 
     // If stealth add null data stealth output immediately before payment.
     if (output.is_stealth()) {
-        outputs.push_back({no_amount, output.script(), chain::token_data_opt{}});
+        // outputs.push_back({no_amount, output.script(), chain::token_data_opt{}});
+        outputs.emplace_back(no_amount, output.script(), chain::token_data_opt{});
     }
 
-    outputs.push_back({output.amount(), {payment_ops}, chain::token_data_opt{}});
+    // outputs.push_back({output.amount(), {payment_ops}, chain::token_data_opt{}});
+    outputs.emplace_back(output.amount(), chain::script{payment_ops}, chain::token_data_opt{});
     return true;
 }
 

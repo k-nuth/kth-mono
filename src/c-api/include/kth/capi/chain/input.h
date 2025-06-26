@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,7 +24,7 @@ KTH_EXPORT
 void kth_chain_input_destruct(kth_input_t input);
 
 KTH_EXPORT
-kth_input_t kth_chain_input_factory_from_data(uint8_t* data, uint64_t n);
+kth_input_t kth_chain_input_factory_from_data(uint8_t* data, kth_size_t n);
 
 KTH_EXPORT
 kth_bool_t kth_chain_input_is_valid(kth_input_t input);

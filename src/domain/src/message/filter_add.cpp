@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -43,6 +43,29 @@ void filter_add::reset() {
     data_.clear();
     data_.shrink_to_fit();
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<filter_add> filter_add::from_data(byte_reader& reader, uint32_t /*version*/) {
+    auto const size = reader.read_size_little_endian();
+    if ( ! size) {
+        return make_unexpected(size.error());
+    }
+    if (*size > max_filter_add) {
+        return make_unexpected(error::invalid_filter_add);
+    }
+
+    auto data = reader.read_bytes(*size);
+    if ( ! data) {
+        return make_unexpected(data.error());
+    }
+    return filter_add(data_chunk(data->begin(), data->end()));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk filter_add::to_data(uint32_t version) const {
     data_chunk data;

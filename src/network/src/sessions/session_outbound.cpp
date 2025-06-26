@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -117,12 +117,7 @@ void session_outbound::attach_handshake_protocols(channel::ptr channel, result_h
     auto const invalid_services = settings_.invalid_services;
     auto const minimum_version = settings_.protocol_minimum;
 
-#if defined(KTH_CURRENCY_BCH)
     auto const minimum_services = serve::node_network;
-#else
-    // Require peer to serve network (and witness if configured on self).
-    auto const minimum_services = (own_services & serve::node_witness) | serve::node_network;
-#endif
 
     // Reject messages are not handled until bip61 (70002).
     // The negotiated_version is initialized to the configured maximum.

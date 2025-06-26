@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -38,14 +38,35 @@ void network_address::reset() {
     port_ = 0;
 }
 
-bool network_address::from_data(data_chunk const& data, uint32_t version, bool with_timestamp) {
-    data_source istream(data);
-    return from_data(istream, version, with_timestamp);
-}
+// static
+expect<network_address> network_address::from_data(byte_reader& reader, uint32_t version, bool with_timestamp) {
+    uint32_t timestamp = 0;
+    if (with_timestamp) {
+        auto const timestamp_exp = reader.read_little_endian<uint32_t>();
+        if ( ! timestamp_exp) {
+            return make_unexpected(timestamp_exp.error());
+        }
+        timestamp = *timestamp_exp;
+    }
 
-bool network_address::from_data(data_source& stream, uint32_t version, bool with_timestamp) {
-    istream_reader source(stream);
-    return from_data(source, version, with_timestamp);
+    auto const services = reader.read_little_endian<uint64_t>();
+    if ( ! services) {
+        return make_unexpected(services.error());
+    }
+
+    auto const ip = reader.read_bytes(std::tuple_size<ip_address>::value);
+    if ( ! ip) {
+        return make_unexpected(ip.error());
+    }
+
+    auto const port = reader.read_big_endian<uint16_t>();
+    if ( ! port) {
+        return make_unexpected(port.error());
+    }
+
+    ip_address ip_addr;
+    std::memcpy(ip_addr.data(), ip->data(), ip->size());
+    return network_address(timestamp, *services, ip_addr, *port);
 }
 
 data_chunk network_address::to_data(uint32_t version, bool with_timestamp) const {
@@ -112,18 +133,6 @@ uint16_t network_address::port() const {
 
 void network_address::set_port(uint16_t value) {
     port_ = value;
-}
-
-network_address network_address::factory_from_data(data_chunk const& data, uint32_t version, bool with_timestamp) {
-    network_address instance;
-    instance.from_data(data, version, with_timestamp);
-    return instance;
-}
-
-network_address network_address::factory_from_data(data_source& stream, uint32_t version, bool with_timestamp) {
-    network_address instance;
-    instance.from_data(stream, version, with_timestamp);
-    return instance;
 }
 
 } // namespace kth::infrastructure::message

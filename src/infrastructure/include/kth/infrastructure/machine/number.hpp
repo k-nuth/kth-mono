@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,7 +8,10 @@
 #include <cstddef>
 
 #include <kth/infrastructure/define.hpp>
+#include <kth/infrastructure/error.hpp>
 #include <kth/infrastructure/utility/data.hpp>
+
+#include <nonstd/expected.hpp>
 
 namespace kth::infrastructure::machine {
 
@@ -127,11 +130,44 @@ public:
     number operator-(int64_t value) const;
     number operator+(number const& x) const;
     number operator-(number const& x) const;
+    number operator*(number const& x) const;
+    number operator/(number const& x) const;
+    number operator%(number const& x) const;
 
     number& operator+=(int64_t value);
     number& operator-=(int64_t value);
     number& operator+=(number const& x);
     number& operator-=(number const& x);
+    number& operator*=(number const& x);
+    number& operator/=(number const& x);
+    number& operator%=(number const& x);
+
+    // Safe arithmetic
+    //-------------------------------------------------------------------------
+    bool safe_add(number const& x);
+    bool safe_add(int64_t x);
+    bool safe_sub(number const& x);
+    bool safe_sub(int64_t x);
+    bool safe_mul(number const& x);
+    bool safe_mul(int64_t x);
+
+    static
+    nonstd::expected<number, code> safe_add(number const& x, number const& y);
+
+    static
+    nonstd::expected<number, code> safe_sub(number const& x, number const& y);
+
+    static
+    nonstd::expected<number, code> safe_mul(number const& x, number const& y);
+
+
+    // Minimally encoded
+    //-------------------------------------------------------------------------
+    static
+    bool is_minimally_encoded(data_chunk const& data, size_t max_integer_size);
+
+    static
+    bool minimally_encode(data_chunk& data);
 
 private:
     int64_t value_;

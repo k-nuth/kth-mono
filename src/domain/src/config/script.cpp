@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,6 +16,8 @@
 #include <kth/domain/common.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/string.hpp>
+#include <kth/infrastructure/config/base16.hpp>
+
 
 namespace kth::domain::config {
 
@@ -31,7 +33,13 @@ script::script(chain::script const& value)
 }
 
 script::script(data_chunk const& value) {
-    entity_from_data(value_, value, false);
+    // entity_from_data(value_, value, false);
+    byte_reader reader(value);
+    auto script_exp = chain::script::from_data(reader, false);
+    if ( ! script_exp) {
+        BOOST_THROW_EXCEPTION(invalid_option_value(encode_base16(value)));
+    }
+    value_ = std::move(*script_exp);
 }
 
 script::script(const std::vector<std::string>& tokens) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -51,7 +51,7 @@ TEST_CASE("elliptic curve  sign  positive  test", "[elliptic curve tests]") {
     ec_signature signature;
     ec_secret const secret = hash_literal(SECRET3);
     hash_digest const sighash = hash_literal(SIGHASH3);
-    REQUIRE(sign(signature, secret, sighash));
+    REQUIRE(sign_ecdsa(signature, secret, sighash));
 
     auto const result = encode_base16(signature);
     REQUIRE(result == EC_SIGNATURE3);
@@ -73,7 +73,7 @@ TEST_CASE("elliptic curve  sign  round trip positive  test", "[elliptic curve te
     hash_digest const hash = bitcoin_hash(data);
     ec_secret const secret = hash_literal(SECRET1);
     REQUIRE(secret_to_public(point, secret));
-    REQUIRE(sign(signature, secret, hash));
+    REQUIRE(sign_ecdsa(signature, secret, hash));
     REQUIRE(verify_signature(point, hash, signature));
 }
 
@@ -84,7 +84,7 @@ TEST_CASE("elliptic curve  sign  round trip negative  test", "[elliptic curve te
     hash_digest hash = bitcoin_hash(data);
     ec_secret const secret = base16_literal(SECRET1);
     REQUIRE(secret_to_public(point, secret));
-    REQUIRE(sign(signature, secret, hash));
+    REQUIRE(sign_ecdsa(signature, secret, hash));
 
     // Invalidate the positive test.
     hash[0] = 0;

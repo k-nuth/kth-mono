@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,10 +9,21 @@
 
 namespace kth::infrastructure::machine {
 
+
+// Copied from Bitcoin Cash Node
+// /** Signature hash types/flags */
+// enum {
+//     SIGHASH_ALL = 1,
+//     SIGHASH_NONE = 2,
+//     SIGHASH_SINGLE = 3,
+//     SIGHASH_UTXOS = 0x20, ///< New in Upgrade9 (May 2023), must only be accepted if flags & SCRIPT_ENABLE_TOKENS
+//     SIGHASH_FORKID = 0x40,
+//     SIGHASH_ANYONECANPAY = 0x80,
+// };
+
 /// Signature hash types.
 /// Comments from: bitcoin.org/en/developer-guide#standard-transactions
-enum sighash_algorithm : uint32_t
-{
+enum sighash_algorithm : uint32_t {
     /// The default, signs all the inputs and outputs, protecting everything
     /// except the signature scripts against modification.
     all = 0x01,
@@ -32,12 +43,20 @@ enum sighash_algorithm : uint32_t
     /// included in the signature, and can be updated.
     single = 0x03,
 
-    //TODO(fernando): check if we have to cancel the following values for coins not equal to BCH
-// #if defined(KTH_CURRENCY_BCH)
-    cash_forkid_all = all | 0x40,           //Old name: all_forkid
-    cash_forkid_none = none | 0x40,         //Old name: none_forkid
-    cash_forkid_single = single | 0x40,     //Old name: single_forkid
-// #endif
+
+
+#if defined(KTH_CURRENCY_BCH)
+    ///< New in Descartes/Upgrade9 (2023-May), must only be accepted if flags & SCRIPT_ENABLE_TOKENS
+    utxos = 0x20,
+    utxos_all = all | utxos,
+    utxos_none = none | utxos,
+    utxos_single = single | utxos,
+
+    forkid = 0x40,
+    forkid_all = all | forkid,
+    forkid_none = none | forkid,
+    forkid_single = single | forkid,
+#endif
 
     /// The above types can be modified with this flag, creating three new
     /// combined types.
@@ -47,16 +66,16 @@ enum sighash_algorithm : uint32_t
     /// anyone to add or remove other inputs, so anyone can contribute
     /// additional satoshis but they cannot change how many satoshis are
     /// sent nor where they go.
-    all_anyone_can_pay = all | anyone_can_pay,
+    anyone_can_pay_all = all | anyone_can_pay,
 
     /// Signs only this one input and allows anyone to add or remove other
     /// inputs or outputs, so anyone who gets a copy of this input can spend
     /// it however they'd like.
-    none_anyone_can_pay = none | anyone_can_pay,
+    anyone_can_pay_none = none | anyone_can_pay,
 
     /// Signs this one input and its corresponding output. Allows anyone to
     /// add or remove other inputs.
-    single_anyone_can_pay = single | anyone_can_pay,
+    anyone_can_pay_single = single | anyone_can_pay,
 
     /// Used to mask unused bits in the signature hash byte.
     mask = 0x1f

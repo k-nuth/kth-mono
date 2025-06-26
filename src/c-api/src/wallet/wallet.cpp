@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -36,6 +36,18 @@ kth_longhash_t kth_wallet_mnemonics_to_seed(kth_string_list_t mnemonics) {
 void kth_wallet_mnemonics_to_seed_out(kth_string_list_t mnemonics, kth_longhash_t* out_hash) {
     auto const& mnemonics_cpp = *static_cast<std::vector<std::string> const*>(mnemonics);
     auto hash_cpp = kth::infrastructure::wallet::decode_mnemonic(mnemonics_cpp);
+    kth::copy_c_hash(hash_cpp, out_hash);
+}
+
+kth_longhash_t kth_wallet_mnemonics_to_seed_normalized_passphrase(kth_string_list_t mnemonics, char const* normalized_passphrase) {
+    auto const& mnemonics_cpp = *static_cast<std::vector<std::string> const*>(mnemonics);
+    auto hash_cpp = kth::infrastructure::wallet::decode_mnemonic_normalized_passphrase(mnemonics_cpp, std::string(normalized_passphrase));
+    return kth::to_longhash_t(hash_cpp);
+}
+
+void kth_wallet_mnemonics_to_seed_normalized_passphrase_out(kth_string_list_t mnemonics, char const* normalized_passphrase, kth_longhash_t* out_hash) {
+    auto const& mnemonics_cpp = *static_cast<std::vector<std::string> const*>(mnemonics);
+    auto hash_cpp = kth::infrastructure::wallet::decode_mnemonic_normalized_passphrase(mnemonics_cpp, std::string(normalized_passphrase));
     kth::copy_c_hash(hash_cpp, out_hash);
 }
 

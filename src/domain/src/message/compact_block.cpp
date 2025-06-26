@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -104,7 +104,11 @@ bool compact_block::from_block(message::block const& block) {
     compact_block::short_id_list short_ids_list;
     short_ids_list.reserve(block.transactions().size() - 1);
     for (size_t i = 1; i < block.transactions().size(); ++i) {
-        uint64_t shortid = sip_hash_uint256(k0, k1, block.transactions()[i].hash(witness_default())) & uint64_t(0xffffffffffff);
+        uint64_t shortid = sip_hash_uint256(
+            k0,
+            k1,
+            block.transactions()[i].hash()
+        ) & uint64_t(0xffffffffffff);
         short_ids_list.push_back(shortid);
     }
 
@@ -114,9 +118,60 @@ bool compact_block::from_block(message::block const& block) {
     return true;
 }
 
-data_chunk compact_block::to_data(uint32_t version) const {
-    //std::cout << "compact_block::to_data\n";
+// Deserialization.
+//-----------------------------------------------------------------------------
 
+// static
+expect<compact_block> compact_block::from_data(byte_reader& reader, uint32_t version) {
+    auto const header = chain::header::from_data(reader);
+    if ( ! header) {
+        return make_unexpected(header.error());
+    }
+
+    auto const nonce = reader.read_little_endian<uint64_t>();
+    if ( ! nonce) {
+        return make_unexpected(nonce.error());
+    }
+
+    auto const short_id_count = reader.read_size_little_endian();
+    if ( ! short_id_count) {
+        return make_unexpected(short_id_count.error());
+    }
+    if (*short_id_count > static_absolute_max_block_size()) {
+        return make_unexpected(error::invalid_compact_block);
+    }
+
+    short_id_list short_ids;
+    short_ids.reserve(*short_id_count);
+    for (size_t i = 0; i < *short_id_count; ++i) {
+        auto const lsb = reader.read_little_endian<uint32_t>();
+        if ( ! lsb) {
+            return make_unexpected(lsb.error());
+        }
+        auto const msb = reader.read_little_endian<uint16_t>();
+        if ( ! msb) {
+            return make_unexpected(msb.error());
+        }
+        short_ids.emplace_back((uint64_t(*msb) << 32) | uint64_t(*lsb));
+        //short_ids_.push_back(source.read_mini_hash());
+    }
+
+    auto txs = read_collection<prefilled_transaction>(reader, version);
+    if ( ! txs) {
+        return make_unexpected(txs.error());
+    }
+
+    if (version < compact_block::version_minimum) {
+        return make_unexpected(error::version_too_low);
+    }
+
+    return compact_block(*header, *nonce, std::move(short_ids), std::move(*txs));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
+
+data_chunk compact_block::to_data(uint32_t version) const {
     data_chunk data;
     auto const size = serialized_size(version);
     data.reserve(size);

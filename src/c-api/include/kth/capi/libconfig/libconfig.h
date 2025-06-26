@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,14 +21,31 @@ typedef enum {
 } kth_libconfig_log_library_t;
 
 typedef struct {
+    uint8_t size_int;
+    uint8_t size_long;
+    uint8_t size_pointer;
+} kth_libconfig_type_sizes_t;
+
+typedef struct {
     kth_libconfig_log_library_t log_library;
-    kth_bool_t use_libmdbx;
     char const* version;
     char const* microarchitecture_id;
     kth_currency_t currency;
     kth_bool_t mempool;
     kth_bool_t db_readonly;
     kth_bool_t debug_mode;
+
+    char const* architecture;          // x86_64, ARM64
+    char const* os_name;               // Linux, Windows, macOS
+    char const* compiler_name;         // GCC, Clang, MSVC
+    char const* compiler_version;      // ej. "12.2.0"
+    char const* optimization_level;    // -O2, -O3
+    uint32_t build_timestamp;          // Epoch time
+    char const* build_git_hash;        // Git hash
+    char const* endianness;            // little, big
+
+    kth_libconfig_type_sizes_t type_sizes;
+
 } kth_libconfig_t;
 
 KTH_EXPORT
