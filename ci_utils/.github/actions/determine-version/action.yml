@@ -27,14 +27,25 @@ runs:
       echo "LAST_TAG: $LAST_TAG"
       [[ "$LAST_TAG" == "" ]] && LAST_TAG="0.0.0"
 
-      VERSION=$(echo "${{ inputs.github-ref }}" | sed -e 's,.*/\(.*\),\1,')
-      [[ "${{ inputs.github-ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+      # For PR, github-ref might be just the branch name (e.g., "release/0.68.0")
+      # For push, it's the full ref (e.g., "refs/heads/release/0.68.0")
+      GITHUB_REF="${{ inputs.github-ref }}"
+      echo "Input github-ref: $GITHUB_REF"
+      
+      # If it doesn't start with refs/, assume it's a branch name and add the prefix
+      if [[ ! "$GITHUB_REF" == "refs/"* ]]; then
+        GITHUB_REF="refs/heads/$GITHUB_REF"
+        echo "Normalized github-ref: $GITHUB_REF"
+      fi
+
+      VERSION=$(echo "$GITHUB_REF" | sed -e 's,.*/\(.*\),\1,')
+      [[ "$GITHUB_REF" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
       echo "Raw VERSION from ref: $VERSION"
-      echo "Github ref: ${{ inputs.github-ref }}"
+      echo "Github ref: $GITHUB_REF"
 
       # Handle release branches (release/v1.2.3 -> 1.2.3)
-      if [[ "${{ inputs.github-ref }}" == "refs/heads/release/"* ]]; then
+      if [[ "$GITHUB_REF" == "refs/heads/release/"* ]]; then
         VERSION=$(echo $VERSION | sed -e 's/^release\///' -e 's/^v//')
         echo "Release branch detected, using version: $VERSION"
         
@@ -51,7 +62,7 @@ runs:
         fi
         
       # Handle hotfix branches (hotfix/v1.2.4 -> 1.2.4)
-      elif [[ "${{ inputs.github-ref }}" == "refs/heads/hotfix/"* ]]; then
+      elif [[ "$GITHUB_REF" == "refs/heads/hotfix/"* ]]; then
         VERSION=$(echo $VERSION | sed -e 's/^hotfix\///' -e 's/^v//')
         echo "Hotfix branch detected, using version: $VERSION"
         
@@ -68,7 +79,7 @@ runs:
         fi
         
       # Handle development branches that should upload packages (dev-publish/feature-name -> feature-name-dev.run_number)
-      elif [[ "${{ inputs.github-ref }}" == "refs/heads/dev-publish/"* ]]; then
+      elif [[ "$GITHUB_REF" == "refs/heads/dev-publish/"* ]]; then
         FEATURE_NAME=$(echo $VERSION | sed -e 's/^dev-publish\///')
         VERSION=$(echo "$LAST_TAG-dev-$FEATURE_NAME.${{ inputs.run-number }}")
         echo "🚀 Development publish branch detected, using version: $VERSION"

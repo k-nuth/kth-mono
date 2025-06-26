@@ -6,8 +6,10 @@ VERSION="0.68.0"
 echo "Building version: ${VERSION}"
 
 git checkout master
+git stash
 git pull origin master
-git checkout -b "release-${VERSION}"
+git stash pop
+git checkout -b "release/${VERSION}"
 
 rm -rf build
 rm -rf conan.lock
@@ -16,10 +18,9 @@ conan lock create conanfile.py --version="${VERSION}" --update
 
 git add conan.lock
 git commit -m "release: update conan.lock for version ${VERSION}"
-# create a PR for the release
+git push origin "release/${VERSION}"
+
 gh pr create --title "release: ${VERSION}" --body "release: ${VERSION}" --base master --head "release/${VERSION}"
-# we need to give time to GhA to run the build and publish the package
-# wait for the build to finish
 
 echo "Waiting for the build to finish for branch: release/${VERSION}"
 while true; do
@@ -72,7 +73,7 @@ done
 gh pr merge --squash --auto "release/${VERSION}"
 
 # remove the release branch locally and remotely
-git push origin --delete "release-${VERSION}"
-git branch -D "release-${VERSION}"
+git push origin --delete "release/${VERSION}"
+git branch -D "release/${VERSION}"
 git checkout master
 git pull origin master
