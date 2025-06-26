@@ -14,7 +14,7 @@ def option_on_off(option):
     return "ON" if option else "OFF"
 
 class KnuthConan(ConanFile):
-    version="0.1"
+    # version is set dynamically via --version parameter
     name = "kth"
     license = "http://www.boost.org/users/license.html"
     url = "https://github.com/k-nuth/kth"
