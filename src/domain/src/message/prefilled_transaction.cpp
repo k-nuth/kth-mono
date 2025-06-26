@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -48,6 +48,25 @@ void prefilled_transaction::reset() {
     transaction_ = chain::transaction{};
 }
 
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<prefilled_transaction> prefilled_transaction::from_data(byte_reader& reader, uint32_t version) {
+    auto const index = reader.read_variable_little_endian();
+    if ( ! index) {
+        return make_unexpected(index.error());
+    }
+    auto const transaction = chain::transaction::from_data(reader, true);
+    if ( ! transaction) {
+        return make_unexpected(transaction.error());
+    }
+    return prefilled_transaction(*index, std::move(*transaction));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
+
 data_chunk prefilled_transaction::to_data(uint32_t version) const {
     data_chunk data;
     auto const size = serialized_size(version);
@@ -65,13 +84,8 @@ void prefilled_transaction::to_data(uint32_t version, data_sink& stream) const {
 }
 
 size_t prefilled_transaction::serialized_size(uint32_t /*version*/) const {
-    // TODO(kth): serialize size should use witness for ! BCH
     return infrastructure::message::variable_uint_size(index_) +
-           transaction_.serialized_size(/*wire*/ true, witness_default()
-#ifdef KTH_CACHED_RPC_DATA
-                                      , /*unconfirmed*/ false
-#endif
-                                       );
+           transaction_.serialized_size(true);
 }
 
 uint64_t prefilled_transaction::index() const {

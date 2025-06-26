@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -76,16 +76,23 @@ public:
     }
 
     /// Constructors.
-    ec_private();
-    ec_private(ec_private const& x) = default;
+    ec_private() = default;
+    
+    explicit
     ec_private(std::string const& wif, uint8_t version = mainnet_p2kh);
+    
+    explicit
     ec_private(wif_compressed const& wif, uint8_t version = mainnet_p2kh);
+    
+    explicit
     ec_private(const wif_uncompressed& wif, uint8_t version = mainnet_p2kh);
 
     /// The version is 16 bits. The most significant byte is the WIF prefix and
     /// the least significant byte is the address perfix. 0x8000 by default.
+    explicit
     ec_private(ec_secret const& secret, uint16_t version = mainnet, bool compress = true);
 
+    ec_private(ec_private const& x) = default;
     ec_private& operator=(ec_private const& x) = default;
 
     /// Operators.
@@ -147,7 +154,7 @@ private:
     bool valid_{false};
     bool compress_{true};
     uint16_t version_{0};
-    ec_secret secret_;
+    ec_secret secret_{null_hash};
 };
 
 } // namespace kth::domain::wallet

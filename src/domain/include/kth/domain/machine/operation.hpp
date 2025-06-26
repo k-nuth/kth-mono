@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,20 +17,23 @@
 //#include <kth/infrastructure/define.hpp>
 
 #include <kth/infrastructure/machine/script_pattern.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::machine {
 
 //TODO(fernando): static?
 constexpr
-auto invalid_code = opcode::disabled_xor;
+// auto invalid_code = opcode::disabled_xor;
+auto invalid_code = opcode::invalidopcode;
 
 class KD_API operation {
 public:
@@ -54,29 +57,8 @@ public:
     // Deserialization.
     //-------------------------------------------------------------------------
 
-    // TODO(legacy): optimize for larger data by using a shared byte array.
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source) {
-        ////reset();
-        valid_ = true;
-        code_ = static_cast<opcode>(source.read_byte());
-        auto const size = read_data_size(code_, source);
-
-        // The max_script_size and max_push_data_size constants limit
-        // evaluation, but not all scripts evaluate, so use max_block_size
-        // to guard memory allocation here.
-        if (size > static_absolute_max_block_size()) {
-            source.invalidate();
-        } else {
-            data_ = source.read_bytes(size);
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return valid_;
-    }
+    static
+    expect<operation> from_data(byte_reader& reader);
 
     bool from_string(std::string const& mnemonic);
 
@@ -179,7 +161,7 @@ public:
     bool is_reserved(opcode code);
 
     static
-    bool is_disabled(opcode code);
+    bool is_disabled(opcode code, uint32_t active_forks);
 
     static
     bool is_conditional(opcode code);
@@ -201,7 +183,7 @@ public:
     bool is_positive() const;
 
     [[nodiscard]]
-    bool is_disabled() const;
+    bool is_disabled(uint32_t active_forks) const;
 
     [[nodiscard]]
     bool is_conditional() const;
@@ -210,7 +192,7 @@ public:
     bool is_relaxed_push() const;
 
     [[nodiscard]]
-    bool is_oversized() const;
+    bool is_oversized(size_t max_size) const;
 
     [[nodiscard]]
     bool is_minimal_push() const;
@@ -222,9 +204,8 @@ protected:
     operation(opcode code, data_chunk&& data, bool valid);
     operation(opcode code, data_chunk const& data, bool valid);
 
-    template <typename R>
     static
-    uint32_t read_data_size(opcode code, R& source);
+    expect<uint32_t> read_data_size(opcode code, byte_reader& reader);
 
     opcode opcode_from_data(data_chunk const& data, bool minimal);
     void reset();

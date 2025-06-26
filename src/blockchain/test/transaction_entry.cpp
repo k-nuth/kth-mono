@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -34,7 +34,17 @@ transaction_const_ptr make_tx() {
     auto const tx = std::make_shared<const domain::message::transaction>();
     tx->validation.state = std::make_shared<chain_state>(
 #if defined(KTH_CURRENCY_BCH)
-        chain_state {data(), 0, {}, domain::config::network::testnet4, domain::chain::chain_state::assert_anchor_block_info_t{}, 0, kth::lobachevski_t(0), kth::galois_t(0)});
+        chain_state {
+            data(), 
+            0, 
+            {}, 
+            domain::config::network::testnet4, 
+            domain::chain::chain_state::assert_anchor_block_info_t{}, 
+            0, 
+            abla::config{},
+            kth::leibniz_t(0),
+            kth::cantor_t(0)
+        });
 #else
         chain_state {data(), 0, {}});
 #endif //KTH_CURRENCY_BCH

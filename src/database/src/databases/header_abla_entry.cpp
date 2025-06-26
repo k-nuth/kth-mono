@@ -27,14 +27,29 @@ void to_data_with_abla_state(std::ostream& stream, domain::chain::block const& b
     to_data_with_abla_state(sink, block);
 }
 
-std::optional<header_with_abla_state_t> get_header_and_abla_state_from_data(data_chunk const& data) {
-    data_source istream(data);
-    return get_header_and_abla_state_from_data(istream);
+expect<header_with_abla_state_t> get_header_and_abla_state_from_data(byte_reader& reader) {
+    auto header = domain::chain::header::from_data(reader, true);
+    if ( ! header) {
+        return make_unexpected(header.error());
+    }
+
+    auto const block_size = reader.read_little_endian<uint64_t>();
+    if ( ! block_size) {
+        return std::make_tuple(std::move(*header), 0, 0, 0);
+    }
+
+    auto const control_block_size = reader.read_little_endian<uint64_t>();
+    if ( ! control_block_size) {
+        return std::make_tuple(std::move(*header), 0, 0, 0);
+    }
+
+    auto const elastic_buffer_size = reader.read_little_endian<uint64_t>();
+    if ( ! elastic_buffer_size) {
+        return std::make_tuple(std::move(*header), 0, 0, 0);
+    }
+
+    return std::make_tuple(std::move(*header), *block_size, *control_block_size, *elastic_buffer_size);
 }
 
-std::optional<header_with_abla_state_t> get_header_and_abla_state_from_data(std::istream& stream) {
-    istream_reader source(stream);
-    return get_header_and_abla_state_from_data(source);
-}
 
 } // namespace kth::database

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -60,7 +60,7 @@ void stealth_sender::initialize(ec_secret const& ephemeral_private,
     }
 
     if (create_stealth_script(script_, ephemeral_private, filter, seed)) {
-        address_ = {sender_public, version_};
+        address_ = wallet::payment_address{ec_public{sender_public}, version_};
     }
 }
 

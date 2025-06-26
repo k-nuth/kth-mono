@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -41,29 +41,8 @@ public:
         factory_to_data(sink, transaction_, arrival_time_, height_);
     }
 
-    bool from_data(const data_chunk& data);
-    bool from_data(std::istream& stream);
-
-
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source) {
-        reset();
-
-#if defined(KTH_CACHED_RPC_DATA)
-        transaction_.from_data(source, false, true, true);
-#else
-        transaction_.from_data(source, false, true);
-#endif
-        arrival_time_ = source.read_4_bytes_little_endian();
-
-        height_ = source.read_4_bytes_little_endian();
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<transaction_unconfirmed_entry> from_data(byte_reader& reader);
 
     static
     data_chunk factory_to_data(domain::chain::transaction const& tx, uint32_t arrival_time, uint32_t height);
@@ -74,16 +53,9 @@ public:
     template <typename W, KTH_IS_WRITER(W)>
     static
     void factory_to_data(W& sink, domain::chain::transaction const& tx, uint32_t arrival_time, uint32_t height) {
-
-#if defined(KTH_CACHED_RPC_DATA)
-        tx.to_data(sink, false, true, true);
-#else
-        tx.to_data(sink, false, true);
-#endif
-
+        tx.to_data(sink, false);
         sink.write_4_bytes_little_endian(arrival_time);
         sink.write_4_bytes_little_endian(height);
-
     }
 
 private:

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2022 The Bitcoin developers
+// Copyright (c) 2017-2024 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -116,4 +116,11 @@ enum {
     // Enable native tokens support, including all consensus rules & native
     // introspection op-codes related to them.
     SCRIPT_ENABLE_TOKENS = (1U << 27),
+
+    // Upgrade 11
+    // - Enable CHIP-2021-05-vm-limits: Targeted Virtual Machine Limits
+    // - Enable CHIP-2024-07-BigInt: High-Precision Arithmetic for Bitcoin Cash
+    SCRIPT_ENABLE_MAY2025 = (1U << 28),
+    // Used only if SCRIPT_ENABLE_MAY2025 is set; Use "relay" costing rules: Hashing is costed 3x for standard txns.
+    SCRIPT_VM_LIMITS_STANDARD = (1U << 29),
 };

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,6 +21,17 @@ bool get_address::is_valid() const {
 }
 
 void get_address::reset() {}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<get_address> get_address::from_data(byte_reader& reader, uint32_t /*version*/) {
+    return get_address();
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk get_address::to_data(uint32_t version) const {
     data_chunk data;

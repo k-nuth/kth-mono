@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -52,6 +52,31 @@ void block_transactions::reset() {
     transactions_.shrink_to_fit();
 }
 
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<block_transactions> block_transactions::from_data(byte_reader& reader, uint32_t version) {
+    auto const block_hash = read_hash(reader);
+    if ( ! block_hash) {
+        return make_unexpected(block_hash.error());
+    }
+
+    auto txs = read_collection<chain::transaction>(reader, true);
+    if ( ! txs) {
+        return make_unexpected(txs.error());
+    }
+
+    if (version < block_transactions::version_minimum) {
+        return make_unexpected(error::version_too_low);
+    }
+
+    return block_transactions(*block_hash, std::move(*txs));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
+
 data_chunk block_transactions::to_data(uint32_t version) const {
     data_chunk data;
     auto const size = serialized_size(version);
@@ -72,11 +97,7 @@ size_t block_transactions::serialized_size(uint32_t /*version*/) const {
     auto size = hash_size + infrastructure::message::variable_uint_size(transactions_.size());
 
     for (auto const& element : transactions_) {
-        size += element.serialized_size(/*wire*/ true, witness_default()
-#ifdef KTH_CACHED_RPC_DATA
-                                       , /*unconfirmed*/ false
-#endif
-                                       );
+        size += element.serialized_size(/*wire*/ true);
     }
 
     return size;

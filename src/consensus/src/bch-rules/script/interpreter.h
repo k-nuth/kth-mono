@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2022 The Bitcoin developers
+// Copyright (c) 2017-2024 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,7 +16,6 @@
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 class CPubKey;
@@ -48,10 +47,17 @@ struct SignatureHashMissingUtxoDataError : std::runtime_error {
     virtual ~SignatureHashMissingUtxoDataError() override = default;
 };
 
+
+/// Result returned from SignatureHash() below
+struct SignatureHashResult {
+    uint256 signatureHash;
+    size_t bytesHashed{}; // the number of bytes of data hashed to generate `signatureHash`
+};
+
 /// Returns the transaction input hash digest for signature creation and/or verification
 /// @throw std::ios_base::failure or SignatureHashMissingUtxoDataError (in tests only)
-uint256 SignatureHash(const CScript &scriptCode, const ScriptExecutionContext &context, SigHashType sigHashType,
-                      const PrecomputedTransactionData *cache /* null ok */, uint32_t flags);
+SignatureHashResult SignatureHash(const CScript &scriptCode, const ScriptExecutionContext &context, SigHashType sigHashType,
+                                  const PrecomputedTransactionData *cache /* null ok */, uint32_t flags);
 
 class BaseSignatureChecker {
 public:
@@ -59,7 +65,7 @@ public:
                                  const uint256 &sighash) const;
 
     virtual bool CheckSig(const std::vector<uint8_t> &vchSigIn, const std::vector<uint8_t> &vchPubKey,
-                          const CScript &scriptCode, uint32_t flags) const {
+                          const CScript &scriptCode, uint32_t flags, size_t *pnBytesHashed) const {
         return false;
     }
 
@@ -100,7 +106,7 @@ public:
 
     // The overridden functions are now final.
     bool CheckSig(const std::vector<uint8_t> &vchSigIn, const std::vector<uint8_t> &vchPubKey,
-                  const CScript &scriptCode, uint32_t flags) const final override;
+                  const CScript &scriptCode, uint32_t flags, size_t *pnBytesHashed) const final override;
     bool CheckLockTime(const CScriptNum &nLockTime) const final override;
     bool CheckSequence(const CScriptNum &nSequence) const final override;
     const ScriptExecutionContext *GetContext() const final override { return &context; }
@@ -134,3 +140,6 @@ bool VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, uint32_
 }
 
 int FindAndDelete(CScript &script, const CScript &b);
+
+/** Used internally by interpreter.cpp but also exported here for use by tests. */
+bool CastToBool(const StackT::value_type &vch);

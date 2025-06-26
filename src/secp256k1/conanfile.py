@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,6 +18,7 @@ class Secp256k1Conan(KnuthConanFileV2):
     url = "https://github.com/k-nuth/secp256k1"
     description = "Optimized C library for EC operations on curve secp256k1"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "library"
 
     #TODO(fernando): See what to do with shared/static option... (not supported yet in Cmake)
 
@@ -65,7 +66,7 @@ class Secp256k1Conan(KnuthConanFileV2):
         "ecmult_window_size": 15,
         "ecmult_gen_precision": 4,
 
-        "enable_ecmult_static_precomputation": False,
+        "enable_ecmult_static_precomputation": True,
         "enable_module_ecdh": False,
         "enable_module_schnorr": True,
         "enable_module_recovery": True,

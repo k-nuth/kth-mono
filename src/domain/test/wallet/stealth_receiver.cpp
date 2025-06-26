@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -69,7 +69,7 @@ TEST_CASE("stealth receiver  exchange between sender and receiver  always  round
 
     // The receiver now has the stealth private key and the send address.
     REQUIRE(encode_base16(receiver_private) == RECEIVER_PRIVATE);
-    REQUIRE(payment_address(receiver_public, version) == derived_address);
+    REQUIRE(payment_address(ec_public{receiver_public}, version) == derived_address);
 }
 
 // End Test Suite

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,8 +17,8 @@
 
 #include <kth/domain/chain/script.hpp>
 #include <kth/domain/define.hpp>
+#include <kth/domain/deserialization.hpp>
 #include <kth/domain/machine/opcode.hpp>
-#include <kth/domain/multi_crypto_settings.hpp>
 
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
@@ -27,8 +27,10 @@
 #include <kth/infrastructure/utility/thread.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
+
+//TODO: tengo que ver bien en qué namespace poner todo lo de tokens
 
 namespace kth::domain::chain {
 
@@ -105,16 +107,28 @@ enum class capability_t : uint8_t {
 struct fungible {
     amount_t amount;
 
+    // friend constexpr
+    // auto operator<=>(fungible const&, fungible const&) = default;
+
     friend constexpr
-    auto operator<=>(fungible const&, fungible const&) = default;
+    bool operator==(fungible const&, fungible const&) = default;
+
+    friend constexpr
+    bool operator!=(fungible const&, fungible const&) = default;
 };
 
 struct non_fungible {
     capability_t capability;
     commitment_t commitment;
 
-    friend
-    auto operator<=>(non_fungible const&, non_fungible const&) = default;
+    // friend
+    // auto operator<=>(non_fungible const&, non_fungible const&) = default;
+
+    friend constexpr
+    bool operator==(non_fungible const&, non_fungible const&) = default;
+
+    friend constexpr
+    bool operator!=(non_fungible const&, non_fungible const&) = default;
 };
 
 using both_kinds = std::pair<fungible, non_fungible>;
@@ -123,8 +137,14 @@ struct token_data_t {
     token_id_t id;
     std::variant<fungible, non_fungible, both_kinds> data;
 
+    // friend constexpr
+    // auto operator<=>(token_data_t const&, token_data_t const&) = default;
+
     friend constexpr
-    auto operator<=>(token_data_t const&, token_data_t const&) = default;
+    bool operator==(token_data_t const&, token_data_t const&) = default;
+
+    friend constexpr
+    bool operator!=(token_data_t const&, token_data_t const&) = default;
 };
 
 using token_data_opt = std::optional<token_data_t>;
@@ -161,7 +181,7 @@ bool is_valid(token_data_opt const& x) {
 }
 
 
-namespace encoding {
+namespace token::encoding {
 
 inline constexpr
 size_t serialized_size(fungible const& x) {
@@ -316,61 +336,208 @@ bool is_valid_bitfield(uint8_t bitfield) {
     return true;
 }
 
-template <typename R, KTH_IS_READER(R)>
-inline constexpr
-bool from_data(R& source, fungible& x, bool /*has_commitment*/) {
-    x.amount = amount_t(source.read_variable_little_endian());
-    return source;
+// template <typename R, KTH_IS_READER(R)>
+// bool from_data_old(R& source, fungible& x, bool /*has_commitment*/) {
+//     x.amount = amount_t(source.read_variable_little_endian());
+//     return source;
+// }
+
+// template <typename R, KTH_IS_READER(R)>
+// inline constexpr
+// bool from_data_old(R& source, non_fungible& x, bool has_commitment) {
+//     if (has_commitment) {
+//         //TODO(fernando): check size is valid
+//         auto const size = source.read_size_little_endian();
+//         x.commitment = source.read_bytes(size);
+//     }
+//     return source;
+// }
+
+// template <typename R, KTH_IS_READER(R)>
+// inline constexpr
+// bool from_data_old(R& source, both_kinds& x, bool has_commitment) {
+//     from_data_old(source, x.second, has_commitment);
+//     from_data_old(source, x.first, has_commitment);
+//     return source;
+// }
+
+// template <typename R, KTH_IS_READER(R)>
+// inline constexpr
+// bool from_data_old(R& source, token_data_opt& x) {
+//     x.reset();
+//     auto const id = source.read_hash();
+//     auto const bitfield = source.read_byte();
+
+//     if ( ! is_valid_bitfield(bitfield)) {
+//         source.invalidate();
+//         return false;
+//     }
+
+//     if (has_nft(bitfield) && has_amount(bitfield)) {
+//         x.emplace(token_data_t {id, both_kinds { {}, {capability(bitfield), {}} }});
+//     } else if (has_nft(bitfield)) {
+//         x.emplace(token_data_t {id, non_fungible { .capability = capability(bitfield) }});
+//     } else if (has_amount(bitfield)) {
+//         x.emplace(token_data_t {id, fungible {}});
+//     }
+
+//     auto const visitor = [&source, bitfield](auto&& arg) {
+//         return from_data_old(source, arg, has_commitment(bitfield));
+//     };
+//     std::visit(visitor, x->data);
+
+//     return source;
+// }
+
+namespace detail {
+
+inline
+expect<void> from_data(byte_reader& reader, fungible& x, bool /*has_commitment*/) {
+    auto const amt = reader.read_variable_little_endian();
+    if ( ! amt) {
+        return make_unexpected(amt.error());
+    }
+    x.amount = amount_t(*amt);
+    return {};
 }
 
-template <typename R, KTH_IS_READER(R)>
-inline constexpr
-bool from_data(R& source, non_fungible& x, bool has_commitment) {
-    if (has_commitment) {
-        //TODO(fernando): check size is valid
-        auto const size = source.read_size_little_endian();
-        x.commitment = source.read_bytes(size);
+inline
+expect<void> from_data(byte_reader& reader, non_fungible& x, bool has_commitment) {
+    if ( ! has_commitment) {
+        return {};
     }
-    return source;
+
+    //TODO(fernando): check size is valid
+    auto const size = reader.read_size_little_endian();
+    if ( ! size) {
+        return make_unexpected(size.error());
+    }
+    auto commitment = reader.read_bytes(*size);
+    if ( ! commitment) {
+        return make_unexpected(commitment.error());
+    }
+    x.commitment = std::vector<uint8_t>(std::begin(*commitment), std::end(*commitment));
+    return {};
 }
 
-template <typename R, KTH_IS_READER(R)>
-inline constexpr
-bool from_data(R& source, both_kinds& x, bool has_commitment) {
-    from_data(source, x.second, has_commitment);
-    from_data(source, x.first, has_commitment);
-    return source;
+inline
+expect<void> from_data(byte_reader& reader, both_kinds& x, bool has_commitment) {
+    auto res = from_data(reader, x.second, has_commitment);
+    if ( ! res) {
+        return res;
+    }
+    res = from_data(reader, x.first, has_commitment);
+    if ( ! res) {
+        return res;
+    }
+    return {};
 }
 
-template <typename R, KTH_IS_READER(R)>
-inline constexpr
-bool from_data(R& source, token_data_opt& x) {
-    x.reset();
-    auto const id = source.read_hash();
-    auto const bitfield = source.read_byte();
+// TODO: hacer algo así:
+// template<typename T>
+// inline constexpr expect<T> from_data(byte_reader& reader, bool has_commitment) {
+//     T result{};  // Crear una instancia vacía de T para llenarla.
 
-    if ( ! is_valid_bitfield(bitfield)) {
-        source.invalidate();
-        return false;
+//     if constexpr (std::is_same_v<T, fungible>) {
+//         auto const amt = reader.read_variable_little_endian();
+//         if (!amt) {
+//             return make_unexpected(amt.error());
+//         }
+//         result.amount = amount_t(*amt);
+//     } else if constexpr (std::is_same_v<T, non_fungible>) {
+//         if (has_commitment) {
+//             auto const size = reader.read_size_little_endian();
+//             if (!size) {
+//                 return make_unexpected(size.error());
+//             }
+//             auto commitment = reader.read_bytes(size);
+//             if (!commitment) {
+//                 return make_unexpected(commitment.error());
+//             }
+//             result.commitment = std::move(*commitment);
+//         }
+//     } else if constexpr (std::is_same_v<T, both_kinds>) {
+//         // Leer el non_fungible primero
+//         auto non_fungible_result = from_data<non_fungible>(reader, has_commitment);
+//         if (!non_fungible_result) {
+//             return make_unexpected(non_fungible_result.error());
+//         }
+//         result.second = std::move(*non_fungible_result);
+
+//         // Luego leer el fungible
+//         auto fungible_result = from_data<fungible>(reader, false);  // has_commitment no aplica a fungible
+//         if (!fungible_result) {
+//             return make_unexpected(fungible_result.error());
+//         }
+//         result.first = std::move(*fungible_result);
+//     }
+
+//     return result;
+// }
+
+} // namespace detail
+
+inline
+expect<token_data_t> from_data(byte_reader& reader) {
+    auto const id = read_hash(reader);
+    if ( ! id) {
+        return make_unexpected(id.error());
     }
 
-    if (has_nft(bitfield) && has_amount(bitfield)) {
-        x.emplace(token_data_t {id, both_kinds { {}, {capability(bitfield), {}} }});
-    } else if (has_nft(bitfield)) {
-        x.emplace(token_data_t {id, non_fungible { .capability = capability(bitfield) }});
-    } else if (has_amount(bitfield)) {
-        x.emplace(token_data_t {id, fungible {}});
+    auto const bitfield = reader.read_byte();
+    if ( ! bitfield) {
+        return make_unexpected(bitfield.error());
+    }
+    if ( ! is_valid_bitfield(*bitfield)) {
+        return make_unexpected(error::invalid_bitfield);
     }
 
-    auto const visitor = [&source, bitfield](auto&& arg) {
-        return from_data(source, arg, has_commitment(bitfield));
+    token_data_t x = {
+        *id,
+        fungible {}
     };
-    std::visit(visitor, x->data);
+    if (has_nft(*bitfield) && has_amount(*bitfield)) {
+        x.data = both_kinds {
+            {},
+            {capability(*bitfield), {}}
+        };
+    } else if (has_nft(*bitfield)) {
+        x.data = non_fungible { .capability = capability(*bitfield) };
+    }
 
-    return source;
+    auto const visitor = [&reader, bitfield](auto&& arg) -> expect<void> {
+        using T = std::decay_t<decltype(arg)>;
+        auto const res = detail::from_data(reader, arg, has_commitment(*bitfield));
+        if ( ! res) {
+            return make_unexpected(res.error());
+        }
+        return {};
+    };
+
+    auto const res = std::visit(visitor, x.data);
+    if ( ! res) {
+        return make_unexpected(res.error());
+    }
+
+    return x;
 }
 
-} // namespace encoding
+} // namespace token::encoding
+
+//TODO: create a C++ concept to model types that has serialized_size(x) and to_data(W&, x)
+//      to finish the following code we need to get rid of the W template parameter in to_data
+
+// template <typename T>
+// concept has_serialized_size = requires(T x) {
+//     { serialized_size(x) } -> std::convertible_to<size_t>;
+// };
+
+// template <typename T, typename W>
+// concept has_to_data = requires(T x, W& sink) {
+//     { to_data(sink, x) } -> std::same_as<void>;
+// };
+
+// concept serializable = has_serialized_size<T> && has_to_data<T, W>;
 
 } // namespace kth::domain::chain
 

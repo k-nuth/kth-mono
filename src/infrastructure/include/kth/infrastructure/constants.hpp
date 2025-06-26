@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,12 +28,6 @@ constexpr uint16_t max_uint16 = MAX_UINT16;
 constexpr uint8_t max_uint8 = MAX_UINT8;
 constexpr uint64_t max_size_t = BC_MAX_SIZE;
 constexpr uint8_t byte_bits = 8;
-
-// Script/interpreter constants.
-//-----------------------------------------------------------------------------
-
-// Consensus
-constexpr size_t max_push_data_size = 520;
 
 // Network protocol constants.
 //-----------------------------------------------------------------------------

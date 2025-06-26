@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -85,6 +85,52 @@ void reject::reset() {
     reason_.shrink_to_fit();
     data_.fill(0);
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<reject> reject::from_data(byte_reader& reader, uint32_t version) {
+    auto message = reader.read_string();
+    if ( ! message) {
+        return make_unexpected(message.error());
+    }
+    auto const code = reader.read_byte();
+    if ( ! code) {
+        return make_unexpected(code.error());
+    }
+    auto reason = reader.read_string();
+    if ( ! reason) {
+        return make_unexpected(reason.error());
+    }
+
+    hash_digest data;
+    if (*message == block::command || *message == transaction::command) {
+        // Some nodes do not follow the documented convention of supplying hash
+        // for tx and block rejects. Use this to prevent error on empty stream.
+        auto const bytes = reader.read_remaining_bytes();
+        if ( ! bytes) {
+            return make_unexpected(bytes.error());
+        }
+        if (bytes->size() == hash_size) {
+            build_array(data, {data_chunk(bytes->begin(), bytes->end())});
+        }
+    }
+
+    if (version < reject::version_minimum) {
+        return make_unexpected(error::version_too_low);
+    }
+
+    return reject(
+        reason_from_byte(*code),
+        std::move(*message),
+        std::move(*reason),
+        data
+    );
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk reject::to_data(uint32_t version) const {
     data_chunk data;

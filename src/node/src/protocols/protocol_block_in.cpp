@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -38,15 +38,6 @@ using namespace std::chrono;
 using namespace std::placeholders;
 
 constexpr
-bool is_witness(uint64_t services) {
-#if defined(KTH_CURRENCY_BCH)
-    return false;
-#else
-    return (services & version::service::node_witness) != 0;
-#endif
-}
-
-constexpr
 uint64_t get_compact_blocks_version() {
 #if defined(KTH_CURRENCY_BCH)
         return 1;
@@ -74,12 +65,6 @@ protocol_block_in::protocol_block_in(full_node& node, channel::ptr channel, safe
         negotiated_version() > version::level::no_blocks_end ||
         negotiated_version() < version::level::no_blocks_start),
 
-#if ! defined(KTH_CURRENCY_BCH)
-    // Witness must be requested if possibly enforced.
-    require_witness_(is_witness(node.network_settings().services)),
-    peer_witness_(is_witness(channel->peer_version()->services())),
-#endif
-
     CONSTRUCT_TRACK(protocol_block_in)
 {}
 
@@ -89,15 +74,6 @@ protocol_block_in::protocol_block_in(full_node& node, channel::ptr channel, safe
 void protocol_block_in::start() {
     // Use timer to drop slow peers.
     protocol_timer::start(block_latency_, BIND1(handle_timeout, _1));
-
-
-#if ! defined(KTH_CURRENCY_BCH)
-    // Do not process incoming blocks if required witness is unavailable.
-    // The channel will remain active outbound unless node becomes stale.
-    if (require_witness_ && !peer_witness_) {
-        return;
-    }
-#endif
 
     // TODO: move headers to a derived class protocol_block_in_31800.
     SUBSCRIBE2(headers, handle_receive_headers, _1, _2);
@@ -282,13 +258,6 @@ void protocol_block_in::send_get_data(code const& ec, get_data_ptr message) {
     mutex.unlock();
     ///////////////////////////////////////////////////////////////////////////
 
-#if ! defined(KTH_CURRENCY_BCH)
-    // Convert requested message types to corresponding witness types.
-    if (require_witness_) {
-        message->to_witness();
-    }
-#endif
-
     // There was no backlog so the timer must be started now.
     if (fresh) {
         reset_timer();
@@ -378,16 +347,6 @@ bool protocol_block_in::handle_receive_block(code const& ec, block_const_ptr mes
         stop(error::channel_stopped);
         return false;
     }
-
-#if ! defined(KTH_CURRENCY_BCH)
-    if ( ! require_witness_ && message->is_segregated()) {
-        LOG_DEBUG(LOG_NODE
-           , "Block [", encode_hash(message->hash())
-           , "] contains unrequested witness from [", authority(), "]");
-        stop(error::channel_stopped);
-        return false;
-    }
-#endif
 
     // message->validation.originator = nonce();
     // chain_.organize(message, BIND2(handle_store_block, _1, message));
@@ -785,11 +744,13 @@ void protocol_block_in::handle_stop(code const&) {
 inline
 bool enabled(size_t height) {
     // Vary the reporting performance reporting interval by height.
-    auto const modulus =
-        (height < 100000 ? 100 :
-        (height < 200000 ? 10 : 1));
+    // auto const modulus =
+    //     (height < 100000 ? 100 :
+    //     (height < 200000 ? 10 : 1));
 
-    return height % modulus == 0;
+    // return height % modulus == 0;
+
+    return true;
 }
 
 inline
@@ -856,35 +817,35 @@ void protocol_block_in::report(domain::chain::block const& block) {
             block.validation.cache_efficiency);
 #endif
 
-        auto formatted = fmt::format("Block [{:6}] {:>5} txs {:>5} ins "
+        auto formatted = fmt::format("[{:6}] {:>5} txs {:>5} ins "
             "{:>4} wms {:>5} vms {:>4} vus {:>4} rus {:>4} cus {:>4} pus "
             "{:>4} aus {:>4} sus {:>4} dus {:f}", height, transactions, inputs,
 
-            // wait total (ms)
+            // wms: wait total (ms)
             total_cost_ms(times.end_deserialize, times.start_check),
 
-            // validation total (ms)
+            // vms: validation total (ms)
             total_cost_ms(start_validate, times.start_notify),
 
-            // validation per input (µs)
+            // vus: validation per input (µs)
             unit_cost(start_validate, times.start_notify, inputs),
 
-            // deserialization (read) per input (µs)
+            // rus: deserialization (read) per input (µs)
             unit_cost(times.start_deserialize, times.end_deserialize, inputs),
 
-            // check per input (µs)
+            // cus: check per input (µs)
             unit_cost(times.start_check, times.start_populate, inputs),
 
-            // population per input (µs)
+            // pus: population per input (µs)
             unit_cost(times.start_populate, times.start_accept, inputs),
 
-            // accept per input (µs)
+            // aus: accept per input (µs)
             unit_cost(times.start_accept, times.start_connect, inputs),
 
-            // connect (script) per input (µs)
+            // sus: connect (script) per input (µs)
             unit_cost(times.start_connect, times.start_notify, inputs),
 
-            // deposit per input (µs)
+            // dus: deposit per input (µs)
             unit_cost(times.start_push, times.end_push, inputs),
 
             // this block transaction cache efficiency (hits/queries)

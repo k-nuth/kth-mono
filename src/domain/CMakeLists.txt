@@ -1,31 +1,26 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(domain VERSION 0 LANGUAGES CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
 option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE property" ON)
 option(WITH_TESTS "Compile with unit tests." ON)
 option(WITH_EXAMPLES "Compile with examples." OFF)
-option(WITH_CACHED_RPC_DATA "Cached RPC data enabled." OFF)
 option(WITH_ICU "Compile with International Components for Unicode." OFF)
 option(WITH_PNG "Compile with Libpng support." OFF)
 option(WITH_QRENCODE "Compile with QREncode." OFF)
 option(JUST_KTH_SOURCES "Just Knuth source code to be linted." OFF)
+option(WITH_CONSOLE "Compile console application." OFF)
 
-option(GLOBAL_BUILD "" OFF)
-
-if (WITH_CACHED_RPC_DATA)
-  message(STATUS "Knuth: Cached RPC data enabled")
-  add_definitions(-DKTH_CACHED_RPC_DATA)
-endif()
+option(GLOBAL_BUILD "" ON)
 
 if (WITH_ICU)
   add_definitions(-DWITH_ICU -DBOOST_HAS_ICU)
@@ -38,6 +33,8 @@ endif()
 if (WITH_QRENCODE)
   add_definitions(-DWITH_QRENCODE)
 endif()
+
+add_definitions(-DJEMALLOC)
 
 
 set(LOG_LIBRARY "boost" CACHE STRING "Setting for the logging library (boost|spdlog|binlog).")
@@ -95,6 +92,26 @@ if (${CURRENCY} STREQUAL "LTC")
   find_package(OpenSSL 1.0.1 REQUIRED)
 endif()
 
+if (WITH_ICU)
+  find_package(ICU REQUIRED)
+endif()
+
+find_package(tiny-aes-c REQUIRED)
+# # jemalloc
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(JEMALLOC jemalloc)
+
+# message("-- Found jemalloc: JEMALLOC_INCLUDE_DIRS: ${JEMALLOC_INCLUDE_DIRS}")
+# message("-- Found jemalloc: JEMALLOC_LIBRARY_DIRS: ${JEMALLOC_LIBRARY_DIRS}")
+# message("-- Found jemalloc: JEMALLOC_CFLAGS_OTHER: ${JEMALLOC_CFLAGS_OTHER}")
+
+# include_directories(${JEMALLOC_INCLUDE_DIRS})
+# link_directories(${JEMALLOC_LIBRARY_DIRS})
+# add_definitions(${JEMALLOC_CFLAGS_OTHER})
+
+
+
+
 include(CheckCXXCompilerFlag)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/ci_utils/cmake)
@@ -136,6 +153,13 @@ if(ENABLE_TSAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
 endif()
 
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -matomics -mbulk-memory")
+  _add_cxx_compile_flag(-matomics _has_matomics_flag)
+  _add_cxx_compile_flag(-mbulk-memory _has_mbulk_memory_flag)
+endif()
+
 _add_cxx_compile_flag(-Wno-missing-braces _has_no_missing_braces_warning_flag)
 _add_cxx_compile_flag(-Wno-mismatched-tags _has_no_mismatched_tags_warning_flag)
 _add_c_compile_flag(-Wno-deprecated-declarations _has_no_deprecated_declarations_warning_flag)
@@ -173,6 +197,7 @@ set(kth_sources_just_legacy
         src/chain/script.cpp
         src/chain/transaction_basis.cpp
         src/chain/transaction.cpp
+        src/chain/utxo.cpp
 
         src/machine/interpreter.cpp
 
@@ -257,6 +282,7 @@ set(kth_sources_just_legacy
         src/wallet/stealth_address.cpp
         src/wallet/stealth_receiver.cpp
         src/wallet/stealth_sender.cpp
+        src/wallet/wallet_manager.cpp
 )
 
 set(kth_sources_just_legacy
@@ -265,15 +291,8 @@ set(kth_sources_just_legacy
 )
 
 set(kth_sources_just_kth
-    src/wallet/transaction_functions.cpp
+    # src/wallet/transaction_functions.cpp
 )
-
-if (NOT ${CURRENCY} STREQUAL "BCH")
-    set(kth_sources_just_legacy
-      ${kth_sources_just_legacy}
-      src/chain/witness.cpp
-    )
-endif()
 
 if (${CURRENCY} STREQUAL "LTC")
     set(kth_sources_just_kth
@@ -347,12 +366,12 @@ set(kth_headers
     include/kth/domain/chain/output.hpp
     include/kth/domain/chain/daa/aserti3_2d.hpp
     include/kth/domain/chain/token_data.hpp
+    include/kth/domain/chain/token_data_serialization.hpp
     include/kth/domain/chain/output_point.hpp
     include/kth/domain/chain/hash_memoizer.hpp
     include/kth/domain/chain/script_basis.hpp
     include/kth/domain/chain/transaction_basis.hpp
     include/kth/domain/chain/stealth.hpp
-    include/kth/domain/chain/witness.hpp
     include/kth/domain/chain/point_iterator.hpp
     include/kth/domain/chain/header.hpp
     include/kth/domain/chain/history.hpp
@@ -363,11 +382,13 @@ set(kth_headers
     include/kth/domain/chain/point.hpp
     include/kth/domain/chain/output_basis.hpp
     include/kth/domain/chain/point_value.hpp
+    include/kth/domain/chain/utxo.hpp
     include/kth/domain/define.hpp
     include/kth/domain/multi_crypto_support.hpp
     include/kth/domain/constants.hpp
+
     include/kth/domain/wallet/stealth_address.hpp
-    include/kth/domain/wallet/transaction_functions.hpp
+    # include/kth/domain/wallet/transaction_functions.hpp
     include/kth/domain/wallet/bitcoin_uri.hpp
     include/kth/domain/wallet/ec_private.hpp
     include/kth/domain/wallet/stealth_receiver.hpp
@@ -381,7 +402,8 @@ set(kth_headers
     include/kth/domain/wallet/select_outputs.hpp
     include/kth/domain/wallet/uri_reader.hpp
     include/kth/domain/wallet/encrypted_keys.hpp
-    include/kth/domain/utils.hpp
+    include/kth/domain/wallet/wallet_manager.hpp
+
     include/kth/domain/common.hpp
     include/kth/domain/machine/opcode.hpp
     include/kth/domain/machine/operation.hpp
@@ -391,7 +413,6 @@ set(kth_headers
     include/kth/domain/math/limits.hpp
     include/kth/domain/math/stealth.hpp
     include/kth/domain/utility/property_tree.hpp
-    include/kth/domain/multi_crypto_settings.hpp
     include/kth/domain/impl/machine
     include/kth/domain/impl/machine/program.ipp
     include/kth/domain/impl/machine/interpreter.ipp
@@ -415,7 +436,7 @@ set(kth_headers
 
 add_library(${PROJECT_NAME} ${MODE} ${kth_sources} ${kth_headers})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 if (ENABLE_POSITION_INDEPENDENT_CODE)
     set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -430,6 +451,10 @@ if (NOT ENABLE_SHARED)
 endif()
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
+
+if (WITH_ICU)
+  target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${ICU_INCLUDE_DIR})
+endif()
 
 if (${CURRENCY} STREQUAL "LTC")
   target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${OPENSSL_INCLUDE_DIR})
@@ -446,7 +471,13 @@ if (${CURRENCY} STREQUAL "LTC")
   target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENSSL_CRYPTO_LIBRARY})
 endif()
 
+if (WITH_ICU)
+  target_link_libraries(${PROJECT_NAME} PUBLIC ICU::icuuc)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC infrastructure::infrastructure)
+target_link_libraries(${PROJECT_NAME} PUBLIC tiny-aes-c::tiny-aes-c)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${JEMALLOC_LIBRARIES})
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   target_link_libraries(${PROJECT_NAME} PUBLIC Boost::thread)
@@ -460,6 +491,55 @@ endif()
 
 
 _group_sources(${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}")
+
+# Console
+# ------------------------------------------------------------------------------
+message(STATUS "Knuth: WITH_CONSOLE ${WITH_CONSOLE}")
+if (WITH_CONSOLE)
+    set(_test_console_sources
+      console/main.cpp
+    )
+
+  add_executable(kth_domain_console ${_test_console_sources})
+
+  target_link_libraries(kth_domain_console ${PROJECT_NAME})
+
+  set_target_properties(
+          kth_domain_console PROPERTIES
+          FOLDER "domain"
+          OUTPUT_NAME kth_domain_console)
+
+
+  # Enable sanitizers and other debug options only in debug mode
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      message(STATUS "Activating sanitizers and debug options")
+      message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+      message(STATUS "APPLE: ${APPLE}")
+
+      if (APPLE)
+          # In macOS, use only AddressSanitizer and UndefinedBehaviorSanitizer
+          target_compile_options(kth_domain_console PRIVATE
+              -fsanitize=address,undefined
+              -fno-omit-frame-pointer
+              -g
+          )
+          target_link_options(kth_domain_console PRIVATE
+              -fsanitize=address,undefined
+          )
+      else()
+          # In other operating systems (like Linux), add LeakSanitizer also
+          target_compile_options(kth_domain_console PRIVATE
+              -fsanitize=address,undefined,leak
+              -fno-omit-frame-pointer
+              -g
+          )
+          target_link_options(kth_domain_console PRIVATE
+              -fsanitize=address,undefined,leak
+          )
+      endif()
+
+  endif()
+endif()
 
 # Tests
 # ------------------------------------------------------------------------------
@@ -534,6 +614,7 @@ if (WITH_TESTS)
         test/wallet/stealth_receiver.cpp
         test/wallet/stealth_sender.cpp
         test/wallet/uri_reader.cpp
+        test/wallet/wallet_manager.cpp
 
         #TODO(fernando): to include
         # test/wallet/transaction_functions.cpp

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -52,29 +52,8 @@ public:
         factory_to_data(sink, transaction_, height_, median_time_past_, position_ );
     }
 
-    bool from_data(const data_chunk& data);
-    bool from_data(std::istream& stream);
-
-
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source) {
-        reset();
-
-#if defined(KTH_CACHED_RPC_DATA)
-        transaction_.from_data(source, false, true, false);
-#else
-        transaction_.from_data(source, false, true);
-#endif
-        height_ = source.read_4_bytes_little_endian();
-        median_time_past_ = source.read_4_bytes_little_endian();
-        position_ = read_position(source);
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<transaction_entry> from_data(byte_reader& reader);
 
     bool confirmed() const;
 
@@ -90,12 +69,7 @@ public:
     template <typename W, KTH_IS_WRITER(W)>
     static
     void factory_to_data(W& sink, domain::chain::transaction const& tx, uint32_t height, uint32_t median_time_past, uint32_t position) {
-#if defined(KTH_CACHED_RPC_DATA)
-        tx.to_data(sink, false, true, false);
-#else
-        tx.to_data(sink, false, true);
-#endif
-
+        tx.to_data(sink, false);
         sink.write_4_bytes_little_endian(height);
         sink.write_4_bytes_little_endian(median_time_past);
         write_position(sink, position);

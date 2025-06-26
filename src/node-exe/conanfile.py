@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,7 @@ class KnuthNodeExeConan(KnuthConanFileV2):
     url = "https://github.com/k-nuth/kth"
     description = "Bitcoin full node executable"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "application"
 
     options = {
         "currency": ['BCH', 'BTC', 'LTC'],
@@ -59,12 +60,12 @@ class KnuthNodeExeConan(KnuthConanFileV2):
 
     def requirements(self):
         if not self.options.no_compilation and self.settings.get_safe("compiler") is not None:
-            self.requires("node/0.46.0", transitive_headers=True, transitive_libs=True)
+            self.requires("node/0.58.0", transitive_headers=True, transitive_libs=True)
 
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
     def config_options(self):
         KnuthConanFileV2.config_options(self)

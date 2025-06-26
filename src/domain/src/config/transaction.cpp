@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -43,10 +43,13 @@ std::istream& operator>>(std::istream& input, transaction& argument) {
     std::string hexcode;
     input >> hexcode;
 
-    if ( ! entity_from_data(argument.value_, base16(hexcode))) {
+    data_chunk const bytes = base16(hexcode);
+    byte_reader reader(bytes);
+    auto transaction_exp = chain::transaction::from_data(reader, true);
+    if ( ! transaction_exp) {
         BOOST_THROW_EXCEPTION(invalid_option_value(hexcode));
     }
-
+    argument.value_ = std::move(*transaction_exp);
     return input;
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -72,6 +72,65 @@ void merkle_block::reset() {
     flags_.clear();
     flags_.shrink_to_fit();
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<merkle_block> merkle_block::from_data(byte_reader& reader, uint32_t version) {
+    auto const header = chain::header::from_data(reader, version);
+    if ( ! header) {
+        return make_unexpected(header.error());
+    }
+
+    auto const total_transactions = reader.read_little_endian<uint32_t>();
+    if ( ! total_transactions) {
+        return make_unexpected(total_transactions.error());
+    }
+
+    auto const count = reader.read_size_little_endian();
+    if ( ! count) {
+        return make_unexpected(count.error());
+    }
+    // Guard against potential for arbitary memory allocation.
+    if (*count > static_absolute_max_block_size()) {
+        return make_unexpected(error::bad_merkle_block_count);
+    }
+
+    hash_list hashes;
+    hashes.reserve(*count);
+    for (size_t i = 0; i < *count; ++i) {
+        auto const hash = read_hash(reader);
+        if ( ! hash) {
+            return make_unexpected(hash.error());
+        }
+        hashes.emplace_back(*hash);
+    }
+
+    auto const flags_size = reader.read_size_little_endian();
+    if ( ! flags_size) {
+        return make_unexpected(flags_size.error());
+    }
+
+    auto const flags = reader.read_bytes(*flags_size);
+    if ( ! flags) {
+        return make_unexpected(flags.error());
+    }
+
+    if (version < merkle_block::version_minimum) {
+        return make_unexpected(error::unsupported_version);
+    }
+
+    return merkle_block(
+        *header,
+        *total_transactions,
+        std::move(hashes),
+        data_chunk(flags->begin(), flags->end())
+    );
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk merkle_block::to_data(uint32_t version) const {
     data_chunk data;

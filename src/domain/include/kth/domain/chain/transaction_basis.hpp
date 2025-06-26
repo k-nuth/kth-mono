@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,7 +21,7 @@
 #include <kth/domain/define.hpp>
 #include <kth/domain/machine/opcode.hpp>
 #include <kth/domain/machine/rule_fork.hpp>
-#include <kth/domain/multi_crypto_settings.hpp>
+
 #include <kth/infrastructure/error.hpp>
 #include <kth/infrastructure/math/elliptic_curve.hpp>
 #include <kth/infrastructure/math/hash.hpp>
@@ -31,99 +31,71 @@
 #include <kth/infrastructure/utility/thread.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
+#include <kth/domain/deserialization.hpp>
 
 namespace kth::domain::chain {
 
 namespace detail {
-// Read a length-prefixed collection of inputs or outputs from the source.
-template <class Source, class Put>
-bool read(Source& source, std::vector<Put>& puts, bool wire, bool witness) {
-    auto result = true;
-    auto const count = source.read_size_little_endian();
 
-    // Guard against potential for arbitary memory allocation.
-    if (count > static_absolute_max_block_size()) {
-        source.invalidate();
-    } else {
-        puts.resize(count);
-    }
+// // Read a length-prefixed collection of inputs or outputs from the source.
+// template <class Source, class Put>
+// bool read(Source& source, std::vector<Put>& puts, bool wire) {
+//     auto result = true;
+//     auto const count = source.read_size_little_endian();
 
-    auto const deserialize = [&](Put& put) {
-        result = result && put.from_data(source, wire, witness_val(witness));
-#ifndef NDEBUG
-        put.script().operations();
-#endif
-    };
+//     // Guard against potential for arbitary memory allocation.
+//     if (count > static_absolute_max_block_size()) {
+//         source.invalidate();
+//     } else {
+//         puts.resize(count);
+//     }
 
-    std::for_each(puts.begin(), puts.end(), deserialize);
-    return result;
-}
+//     auto const deserialize = [&](Put& put) {
+//         result = result && put.from_data(source, wire);
+// #ifndef NDEBUG
+//         put.script().operations();
+// #endif
+//     };
+
+//     std::for_each(puts.begin(), puts.end(), deserialize);
+//     return result;
+// }
 
 // Write a length-prefixed collection of inputs or outputs to the sink.
 template <class Sink, class Put>
-void write(Sink& sink, const std::vector<Put>& puts, bool wire, bool witness) {
+void write(Sink& sink, const std::vector<Put>& puts, bool wire) {
     sink.write_variable_little_endian(puts.size());
 
     auto const serialize = [&](const Put& put) {
-        put.to_data(sink, wire, witness_val(witness));
+        put.to_data(sink, wire);
     };
 
     std::for_each(puts.begin(), puts.end(), serialize);
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-// Input list must be pre-populated as it determines witness count.
-template <typename R, KTH_IS_READER(R)>
-inline
-void read_witnesses(R& source, input::list& inputs) {
-    auto const deserialize = [&](input& input) {
-        input.witness().from_data(source, true);
-    };
-
-    std::for_each(inputs.begin(), inputs.end(), deserialize);
-}
-
-// Witness count is not written as it is inferred from input count.
-template <typename W>
-inline void write_witnesses(W& sink, input::list const& inputs) {
-    auto const serialize = [&sink](input const& input) {
-        input.witness().to_data(sink, true);
-    };
-
-    std::for_each(inputs.begin(), inputs.end(), serialize);
-}
-#endif // not defined KTH_CURRENCY_BCH
 
 } // namespace detail
 
 
 class transaction_basis;
 
-hash_digest hash_non_witness(transaction_basis const& tx);
-
-#if defined(KTH_SEGWIT_ENABLED)
-hash_digest hash_witness(transaction_basis const& tx);
-#endif
-
-hash_digest hash(transaction_basis const& tx, bool witness);
+hash_digest hash(transaction_basis const& tx);
 hash_digest outputs_hash(transaction_basis const& tx);
 hash_digest inpoints_hash(transaction_basis const& tx);
 hash_digest sequences_hash(transaction_basis const& tx);
+hash_digest utxos_hash(transaction_basis const& tx);
 
 hash_digest to_outputs(transaction_basis const& tx);
 hash_digest to_inpoints(transaction_basis const& tx);
 hash_digest to_sequences(transaction_basis const& tx);
+hash_digest to_utxos(transaction_basis const& tx);
 
 uint64_t total_input_value(transaction_basis const& tx);
 uint64_t total_output_value(transaction_basis const& tx);
 uint64_t fees(transaction_basis const& tx);
 bool is_overspent(transaction_basis const& tx);
 
-#if defined(KTH_SEGWIT_ENABLED)
-bool is_segregated(transaction_basis const& tx);
-#endif
 
 class KD_API transaction_basis {
 public:
@@ -139,12 +111,6 @@ public:
     transaction_basis(uint32_t version, uint32_t locktime, ins const& inputs, outs const& outputs);
     transaction_basis(uint32_t version, uint32_t locktime, ins&& inputs, outs&& outputs);
 
-    // transaction_basis(transaction_basis const& x) = default;
-    // transaction_basis(transaction_basis&& x) = default;
-    // transaction_basis& operator=(transaction_basis const& x) = default;
-    // transaction_basis& operator=(transaction_basis&& x) = default;
-
-
     // Operators.
     //-----------------------------------------------------------------------------
 
@@ -154,65 +120,8 @@ public:
     // Deserialization.
     //-----------------------------------------------------------------------------
 
-    // Witness is not used by outputs, just for template normalization.
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool wire = true, bool witness = false) {
-        reset();
-
-        if (wire) {
-            // Wire (satoshi protocol) deserialization.
-            version_ = source.read_4_bytes_little_endian();
-            detail::read(source, inputs_, wire, witness_val(witness));
-#if defined(KTH_SEGWIT_ENABLED)
-            // Detect witness as no inputs (marker) and expected flag (bip144).
-            auto const marker = inputs_.size() == witness_marker && source.peek_byte() == witness_flag;
-#else
-            auto const marker = false;
-#endif
-
-            // This is always enabled so caller should validate with is_segregated.
-            if (marker) {
-                // Skip over the peeked witness flag.
-                source.skip(1);
-                detail::read(source, inputs_, wire, witness_val(witness));
-                detail::read(source, outputs_, wire, witness_val(witness));
-#if defined(KTH_SEGWIT_ENABLED)
-                detail::read_witnesses(source, inputs_);
-#endif
-            } else {
-                detail::read(source, outputs_, wire, witness_val(witness));
-            }
-
-            locktime_ = source.read_4_bytes_little_endian();
-        } else {
-            // Database (outputs forward) serialization.
-            // Witness data is managed internal to inputs.
-            detail::read(source, outputs_, wire, witness_val(witness));
-            detail::read(source, inputs_, wire, witness_val(witness));
-            auto const locktime = source.read_variable_little_endian();
-            auto const version = source.read_variable_little_endian();
-
-            if (locktime > max_uint32 || version > max_uint32) {
-                source.invalidate();
-            }
-
-            locktime_ = static_cast<uint32_t>(locktime);
-            version_ = static_cast<uint32_t>(version);
-        }
-
-#if defined(KTH_SEGWIT_ENABLED)
-        // TODO(legacy): optimize by having reader skip witness data.
-        if ( ! witness) {
-            strip_witness();
-        }
-#endif
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<transaction_basis> from_data(byte_reader& reader, bool wire = true);
 
     [[nodiscard]]
     bool is_valid() const;
@@ -221,39 +130,28 @@ public:
     //-----------------------------------------------------------------------------
 
     [[nodiscard]]
-    data_chunk to_data(bool wire = true, bool witness = false) const;
+    data_chunk to_data(bool wire = true) const;
 
-    void to_data(data_sink& stream, bool wire = true, bool witness = false) const;
+    void to_data(data_sink& stream, bool wire = true) const;
 
     // Witness is not used by outputs, just for template normalization.
     template <typename W>
-    void to_data(W& sink, bool wire = true, bool witness = false) const {
+    void to_data(W& sink, bool wire = true) const {
         if (wire) {
             // Wire (satoshi protocol) serialization.
             sink.write_4_bytes_little_endian(version_);
 
-#if defined(KTH_SEGWIT_ENABLED)
-            if (witness) {
-                sink.write_byte(witness_marker);
-                sink.write_byte(witness_flag);
-            }
-#endif //defined(KTH_SEGWIT_ENABLED)
 
-            detail::write(sink, inputs_, wire, witness_val(witness));
-            detail::write(sink, outputs_, wire, witness_val(witness));
+            detail::write(sink, inputs_, wire);
+            detail::write(sink, outputs_, wire);
 
-#if defined(KTH_SEGWIT_ENABLED)
-            if (witness) {
-                detail::write_witnesses(sink, inputs_);
-            }
-#endif //defined(KTH_SEGWIT_ENABLED)
 
             sink.write_4_bytes_little_endian(locktime_);
         } else {
             // Database (outputs forward) serialization.
             // Witness data is managed internal to inputs.
-            detail::write(sink, outputs_, wire, witness_val(witness));
-            detail::write(sink, inputs_, wire, witness_val(witness));
+            detail::write(sink, outputs_, wire);
+            detail::write(sink, inputs_, wire);
             sink.write_variable_little_endian(locktime_);
             sink.write_variable_little_endian(version_);
         }
@@ -263,7 +161,7 @@ public:
     //-----------------------------------------------------------------------------
 
     [[nodiscard]]
-    size_t serialized_size(bool wire = true, bool witness = false) const;
+    size_t serialized_size(bool wire = true) const;
 
     [[nodiscard]]
     uint32_t version() const;
@@ -293,14 +191,6 @@ public:
     void set_outputs(const outs& value);
     void set_outputs(outs&& value);
 
-    // Utilities.
-    //-------------------------------------------------------------------------
-
-#if defined(KTH_SEGWIT_ENABLED)
-    /// Clear witness from all inputs (does not change default hash).
-    void strip_witness();
-#endif
-
     // Validation.
     //-----------------------------------------------------------------------------
 
@@ -324,11 +214,6 @@ public:
 
     [[nodiscard]]
     size_t signature_operations(bool bip16, bool bip141) const;
-
-#if defined(KTH_SEGWIT_ENABLED)
-    [[nodiscard]]
-    size_t weight() const;
-#endif
 
     [[nodiscard]]
     bool is_coinbase() const;
@@ -370,7 +255,7 @@ public:
     size_t min_tx_size(chain_state const& state) const;
 
     [[nodiscard]]
-    code accept(chain_state const& state, bool is_segregated, bool is_overspent, bool is_duplicated, bool transaction_pool = true) const;
+    code accept(chain_state const& state, bool is_overspent, bool is_duplicated, bool transaction_pool = true) const;
 
     [[nodiscard]]
     bool is_standard() const;

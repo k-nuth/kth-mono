@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -206,44 +206,35 @@ block& block::operator=(block&& x) noexcept {
     return *this;
 }
 
-// Operators.
-//-----------------------------------------------------------------------------
-
-// bool block::operator==(block const& x) const {
-//     return (header_ == x.header_) && (transactions_ == x.transactions_);
-// }
-
-// bool block::operator!=(block const& x) const {
-//     return !(*this == x);
-// }
-
 // Deserialization.
 //-----------------------------------------------------------------------------
 
-// // private
-// void block::reset() {
-//     block_basis::reset();
-//     header_.reset();
-//     transactions_.clear();
-//     transactions_.shrink_to_fit();
-// }
 
-// bool block::is_valid() const {
-//     return !transactions_.empty() || header_.is_valid();
-// }
+expect<block> block::from_data(byte_reader& reader, bool wire) {
+    auto const start_deserialize = asio::steady_clock::now();
+    auto basis = block_basis::from_data(reader, wire);
+    auto const end_deserialize = asio::steady_clock::now();
+    if ( ! basis) {
+        return make_unexpected(basis.error());
+    }
+    block res {std::move(*basis)};
+    res.validation.start_deserialize = start_deserialize;
+    res.validation.end_deserialize = end_deserialize;
+    return res;
+}
 
 // Serialization.
 //-----------------------------------------------------------------------------
 
-data_chunk block::to_data(bool witness) const {
-    return block_basis::to_data(serialized_size(witness_val(witness)), witness);
+data_chunk block::to_data() const {
+    return block_basis::to_data(serialized_size());
 }
 
 // Properties (size, accessors, cache).
 //-----------------------------------------------------------------------------
 
 // Full block serialization is always canonical encoding.
-size_t block::serialized_size(bool witness) const {
+size_t block::serialized_size() const {
     size_t value;
 
 #if ! defined(__EMSCRIPTEN__)
@@ -251,14 +242,7 @@ size_t block::serialized_size(bool witness) const {
     // Critical Section
     mutex_.lock_upgrade();
 
-    if (witness_val(witness) && total_size_ != std::nullopt) {
-        value = total_size_.value();
-        mutex_.unlock_upgrade();
-        //---------------------------------------------------------------------
-        return value;
-    }
-
-    if ( ! witness_val(witness) && base_size_ != std::nullopt) {
+    if (base_size_) {
         value = base_size_.value();
         mutex_.unlock_upgrade();
         //---------------------------------------------------------------------
@@ -271,12 +255,7 @@ size_t block::serialized_size(bool witness) const {
 #else
     {
         std::shared_lock lock(mutex_);
-
-        if (witness_val(witness) && total_size_ != std::nullopt) {
-            return total_size_.value();
-        }
-
-        if ( ! witness_val(witness) && base_size_ != std::nullopt) {
+        if (base_size_) {
             return base_size_.value();
         }
     }
@@ -284,13 +263,8 @@ size_t block::serialized_size(bool witness) const {
     std::unique_lock lock(mutex_);
 #endif
 
-    value = chain::serialized_size(*this, witness);
-
-    if (witness_val(witness)) {
-        total_size_ = value;
-    } else {
-        base_size_ = value;
-    }
+    value = chain::serialized_size(*this);
+    base_size_ = value;
 
 #if ! defined(__EMSCRIPTEN__)
     mutex_.unlock();
@@ -303,26 +277,15 @@ size_t block::serialized_size(bool witness) const {
 // TODO(legacy): see set_header comments.
 void block::set_transactions(transaction::list const& value) {
     block_basis::set_transactions(value);
-
-#if defined(KTH_SEGWIT_ENABLED)
-    segregated_ = std::nullopt;
-#endif
     total_inputs_ = std::nullopt;
     base_size_ = std::nullopt;
-    total_size_ = std::nullopt;
 }
 
 // TODO(legacy): see set_header comments.
 void block::set_transactions(transaction::list&& value) {
     block_basis::set_transactions(std::move(value));
-
-#if defined(KTH_SEGWIT_ENABLED)
-    segregated_ = std::nullopt;
-#endif
-
     total_inputs_ = std::nullopt;
     base_size_ = std::nullopt;
-    total_size_ = std::nullopt;
 }
 
 // Utilities.
@@ -331,12 +294,17 @@ void block::set_transactions(transaction::list&& value) {
 chain::block genesis_generic(std::string const& raw_data) {
     data_chunk data;
     decode_base16(data, raw_data);
-    auto genesis = create<chain::block>(data);
 
-    KTH_ASSERT(genesis.is_valid());
-    KTH_ASSERT(genesis.transactions().size() == 1);
-    KTH_ASSERT(genesis.generate_merkle_root() == genesis.header().merkle());
-    return genesis;
+    // auto genesis = create<chain::block>(data);
+    byte_reader reader(data);
+    auto genesis = block::from_data(reader);
+
+    KTH_ASSERT(genesis);
+    KTH_ASSERT(genesis->is_valid());
+    KTH_ASSERT(genesis->transactions().size() == 1);
+    KTH_ASSERT(genesis->generate_merkle_root() == genesis->header().merkle());
+
+    return *genesis;
 }
 
 chain::block block::genesis_mainnet() {
@@ -404,28 +372,6 @@ block::indexes block::locator_heights(size_t top) {
     return heights;
 }
 
-// Utilities.
-//-----------------------------------------------------------------------------
-
-#if defined(KTH_SEGWIT_ENABLED)
-// Clear witness from all inputs (does not change default transaction hash).
-void block::strip_witness() {
-    auto const strip = [](transaction& transaction) {
-        transaction.strip_witness();
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Critical Section
-    unique_lock lock(mutex_);
-
-    segregated_ = false;
-    total_size_ = std::nullopt;
-    chain::strip_witness(*this);
-
-    ///////////////////////////////////////////////////////////////////////////
-}
-#endif
-
 // Validation helpers.
 //-----------------------------------------------------------------------------
 
@@ -433,11 +379,8 @@ void block::strip_witness() {
 size_t block::signature_operations() const {
     auto const state = validation.state;
     auto const bip16 = state ? state->is_enabled(rule_fork::bip16_rule) : true;
-#if ! defined(KTH_SEGWIT_ENABLED)
     auto const bip141 = false;
-#else
-    auto const bip141 = state ? state->is_enabled(rule_fork::bip141_rule) : false;
-#endif
+
     return block_basis::signature_operations(bip16, bip141);
 }
 
@@ -481,46 +424,13 @@ size_t block::total_inputs(bool with_coinbase) const {
     return value;
 }
 
-#if defined(KTH_SEGWIT_ENABLED)
-size_t block::weight() const {
-    return chain::weight(serialized_size(true), serialized_size(false));
-}
-
-bool block::is_segregated() const {
-    bool value;
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Critical Section
-    mutex_.lock_upgrade();
-
-    if (segregated_ != std::nullopt) {
-        value = segregated_.value();
-        mutex_.unlock_upgrade();
-        //---------------------------------------------------------------------
-        return value;
-    }
-
-    mutex_.unlock_upgrade_and_lock();
-    //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-    // If no block tx has witness data the commitment is optional (bip141).
-    value = chain::is_segregated(*this);
-
-    mutex_.unlock();
-    ///////////////////////////////////////////////////////////////////////////
-
-    return value;
-}
-#endif // defined(KTH_SEGWIT_ENABLED)
-
-
 // Validation.
 //-----------------------------------------------------------------------------
 
 // These checks are self-contained; blockchain (and so version) independent.
 code block::check() const {
     validation.start_check = asio::steady_clock::now();
-    return block_basis::check(serialized_size(false));
+    return block_basis::check(serialized_size());
 }
 
 code block::accept(bool transactions) const {
@@ -531,12 +441,7 @@ code block::accept(bool transactions) const {
 // These checks assume that prevout caching is completed on all tx.inputs.
 code block::accept(chain_state const& state, bool transactions) const {
     validation.start_accept = asio::steady_clock::now();
-
-#if defined(KTH_SEGWIT_ENABLED)
-    return block_basis::accept(state, serialized_size(), weight(), transactions);
-#else
     return block_basis::accept(state, serialized_size(), transactions);
-#endif
 }
 
 code block::connect() const {

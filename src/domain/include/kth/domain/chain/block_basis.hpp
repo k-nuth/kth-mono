@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,8 +20,7 @@
 #include <kth/domain/concepts.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
-#include <kth/domain/multi_crypto_settings.hpp>
-#include <kth/domain/utils.hpp>
+
 #include <kth/infrastructure/error.hpp>
 #include <kth/infrastructure/math/hash.hpp>
 #include <kth/infrastructure/utility/asio.hpp>
@@ -35,18 +34,6 @@
 namespace kth::domain::chain {
 
 using indexes = std::vector<size_t>;
-
-#if defined(KTH_SEGWIT_ENABLED)
-constexpr inline
-size_t weight(size_t serialized_size_true, size_t serialized_size_false) {
-    // Block weight is 3 * Base size * + 1 * Total size (bip141).
-    return base_size_contribution * serialized_size_false + total_size_contribution * serialized_size_true;
-}
-
-class KD_API block_basis;
-void strip_witness(block_basis& blk);
-bool is_segregated(block_basis const& blk);
-#endif
 
 class KD_API block_basis {
 public:
@@ -67,45 +54,8 @@ public:
     // Deserialization.
     //-------------------------------------------------------------------------
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool witness = false) {
-        // validation.start_deserialize = asio::steady_clock::now();
-        reset();
-
-        if ( ! header_.from_data(source, true)) {
-            return false;
-        }
-
-        auto const count = source.read_size_little_endian();
-
-        // Guard against potential for arbitary memory allocation.
-        if (count > static_absolute_max_block_size()) {
-            source.invalidate();
-        } else {
-            transactions_.resize(count);
-        }
-
-        // Order is required, explicit loop allows early termination.
-        for (auto& tx : transactions_) {
-            if ( ! entity_from_data(tx, source, true, witness_val(witness))) {
-                break;
-            }
-        }
-
-#if defined(KTH_SEGWIT_ENABLED)
-        // TODO(legacy): optimize by having reader skip witness data.
-        if ( ! witness_val(witness)) {
-            strip_witness(*this);
-        }
-#endif
-
-        if ( ! source) {
-            reset();
-        }
-
-        // validation.end_deserialize = asio::steady_clock::now();
-        return source;
-    }
+    static
+    expect<block_basis> from_data(byte_reader& reader, bool /*wire*/);
 
     [[nodiscard]]
     bool is_valid() const;
@@ -114,23 +64,23 @@ public:
     //-------------------------------------------------------------------------
 
     // [[nodiscard]]
-    data_chunk to_data(size_t serialized_size, bool witness = false) const;
+    data_chunk to_data(size_t serialized_size) const;
 
-    void to_data(data_sink& stream, bool witness = false) const;
+    void to_data(data_sink& stream) const;
 
     template <typename W>
-    void to_data(W& sink, bool witness = false) const {
+    void to_data(W& sink) const {
         header_.to_data(sink, true);
         sink.write_size_little_endian(transactions_.size());
-        auto const to = [&sink, witness](transaction const& tx) {
-            tx.to_data(sink, true, witness_val(witness));
+        auto const to = [&sink](transaction const& tx) {
+            tx.to_data(sink, true);
         };
 
         std::for_each(transactions_.begin(), transactions_.end(), to);
     }
 
     [[nodiscard]]
-    hash_list to_hashes(bool witness = false) const;
+    hash_list to_hashes() const;
 
     // Properties (size, accessors, cache).
     //-------------------------------------------------------------------------
@@ -177,7 +127,7 @@ public:
     uint256_t proof() const;
 
     [[nodiscard]]
-    hash_digest generate_merkle_root(bool witness = false) const;
+    hash_digest generate_merkle_root() const;
 
     [[nodiscard]]
     size_t signature_operations(bool bip16, bool bip141) const;
@@ -196,11 +146,6 @@ public:
 
     [[nodiscard]]
     bool is_valid_coinbase_script(size_t height) const;
-
-#if defined(KTH_SEGWIT_ENABLED)
-    [[nodiscard]]
-    bool is_valid_witness_commitment() const;
-#endif
 
     [[nodiscard]]
     bool is_forward_reference() const;
@@ -221,11 +166,7 @@ public:
     code check_transactions() const;
 
     [[nodiscard]]
-#if defined(KTH_SEGWIT_ENABLED)
-    code accept(chain_state const& state, size_t serialized_size, size_t weight, bool transactions = true) const;
-#else
     code accept(chain_state const& state, size_t serialized_size, bool transactions = true) const;
-#endif
 
     [[nodiscard]]
     code accept_transactions(chain_state const& state) const;
@@ -256,7 +197,7 @@ indexes locator_heights(size_t top);
 
 size_t total_inputs(block_basis const& blk, bool with_coinbase = true);
 
-size_t serialized_size(block_basis const& blk, bool witness = false);
+size_t serialized_size(block_basis const& blk);
 
 } // namespace kth::domain::chain
 

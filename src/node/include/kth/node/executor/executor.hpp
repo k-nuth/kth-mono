@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,14 +13,9 @@
 
 #include <kth/infrastructure/handlers.hpp>
 #include <kth/node.hpp>
+#include <kth/node/executor/executor_info.hpp>
 
 namespace kth::node {
-
-std::string_view microarchitecture();
-std::string_view march_names();
-std::string_view currency_symbol();
-std::string_view currency();
-std::string_view db_type(kth::database::db_mode_type db_mode);
 
 class executor {
 public:
@@ -63,6 +58,7 @@ public:
 
 private:
     bool wait_for_signal_and_close();
+    void print_ascii_art();
 
     static
     void stop(kth::code const& ec);
@@ -78,6 +74,7 @@ private:
     static
     std::promise<kth::code> stopping_;
 
+    bool stdout_enabled_;
     kth::node::configuration config_;
     kth::node::full_node::ptr node_;
     kth::handle0 run_handler_;
@@ -127,10 +124,6 @@ private:
 #define KTH_NETWORK_INIT "Network: {0} ({1} - {1:#x})."
 #define KTH_BLOCKCHAIN_CORES_INIT "Blockchain configured to use {} threads."
 #define KTH_NETWORK_CORES_INIT "Networking configured to use {} threads."
-
-#define KTH_DB_TYPE_FULL "full-indexed"
-#define KTH_DB_TYPE_BLOCKS "blocks-indexed"
-#define KTH_DB_TYPE_PRUNED "pruned"
 
 } // namespace kth::node
 

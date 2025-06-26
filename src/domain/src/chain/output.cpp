@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,9 +28,13 @@ uint32_t const output::validation::not_spent = max_uint32;
 // Constructors.
 //-----------------------------------------------------------------------------
 
-// output::output()
-//     : validation{}
-// {}
+output::output(output_basis const& x)
+    : output_basis(x)
+{}
+
+output::output(output_basis&& x) noexcept
+    : output_basis(std::move(x))
+{}
 
 output::output(output const& x)
     : output_basis(x)
@@ -58,18 +62,6 @@ output& output::operator=(output&& x) noexcept {
     return *this;
 }
 
-// output::output(uint64_t value, chain::script&& script)
-//     : value_(value)
-//     , script_(std::move(script))
-//     , validation{}
-// {}
-
-// output::output(uint64_t value, chain::script const& script)
-//     : value_(value)
-//     , script_(script)
-//     , validation{}
-// {}
-
 // Private cache access for copy/move construction.
 output::addresses_ptr output::addresses_cache() const {
     ///////////////////////////////////////////////////////////////////////////
@@ -78,6 +70,29 @@ output::addresses_ptr output::addresses_cache() const {
 
     return addresses_;
     ///////////////////////////////////////////////////////////////////////////
+}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<output> output::from_data(byte_reader& reader, bool wire) {
+    uint32_t spender_height = validation::not_spent;
+    if ( ! wire) {
+        auto const height = reader.read_little_endian<uint32_t>();
+        if ( ! height) {
+            return make_unexpected(height.error());
+        }
+        spender_height = *height;
+    }
+
+    auto basis = output_basis::from_data(reader, wire);
+    if ( ! basis) {
+        return make_unexpected(basis.error());
+    }
+    output result(std::move(*basis));
+    result.validation.spender_height = spender_height;
+    return result;
 }
 
 // Serialization.

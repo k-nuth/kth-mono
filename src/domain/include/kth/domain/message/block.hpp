@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,13 +15,16 @@
 #include <kth/domain/chain/transaction.hpp>
 #include <kth/domain/define.hpp>
 #include <kth/domain/message/version.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
+
+#include <kth/infrastructure/utility/istream_reader.hpp>
 
 namespace kth::domain::message {
 
@@ -44,23 +47,20 @@ public:
 
     block& operator=(chain::block&& x);
 
-    // block(block const& x) = default;
-    // block(block&& x) = default;
-    // // This class is move assignable but not copy assignable.
-    // block& operator=(block&& x) = default;
-    // block& operator=(block const&) = default;
-
     bool operator==(chain::block const& x) const;
     bool operator!=(chain::block const& x) const;
     bool operator==(block const& x) const;
     bool operator!=(block const& x) const;
 
-    // Witness is always deserialized if present.
-    // NOTE: Witness on BCH is dissabled on the chain::block class
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t /*version*/) {
-        return chain::block::from_data(source, true);
-    }
+    // Deserialization.
+    //-------------------------------------------------------------------------
+
+    static
+    expect<block> from_data(byte_reader& reader, uint32_t /*version*/);
+
+    // Serialization.
+    //-------------------------------------------------------------------------
+
 
     data_chunk to_data(uint32_t version) const;
     void to_data(uint32_t version, data_sink& stream) const;

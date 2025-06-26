@@ -1,22 +1,21 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(node-exe VERSION 0 LANGUAGES CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(WITH_MEMPOOL "Mempool enabled." OFF)
 option(DB_READONLY_MODE "Readonly DB mode enabled." OFF)
-option(USE_LIBMDBX "Uses libmdbx DB library." OFF)
 option(STATISTICS "Collect statistics." OFF)
 
-option(GLOBAL_BUILD "" OFF)
+option(GLOBAL_BUILD "" ON)
 
 
 if (WITH_MEMPOOL)
@@ -27,10 +26,6 @@ endif()
 if (DB_READONLY_MODE)
   message(STATUS "Knuth: Readonly DB mode enabled")
   add_definitions(-DKTH_DB_READONLY)
-endif()
-
-if (USE_LIBMDBX)
-  add_definitions(-DKTH_USE_LIBMDBX)
 endif()
 
 if (STATISTICS)
@@ -113,7 +108,7 @@ endif()
 # Build
 # ------------------------------------------------------------------------------
 add_executable(${PROJECT_NAME} src/main.cpp)
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC -DBCN_STATIC -DBCB_STATIC -DBCD_STATIC -DBCT_STATIC -DBC_STATIC)
 

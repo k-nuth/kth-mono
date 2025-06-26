@@ -12,8 +12,8 @@ Date            Knuth name          BCHN name            Timestamp
 2024-May-15     Lobachevski         Upgrade10           1715774400
 2025-May-15     Galois              Upgrade11           1747310400
 2026-May-15     Leibniz             Upgrade12           1778846400
+2027-May-15     Cantor              Upgrade13           1810382400
 
-????-???-??     Cantor              ?                            ?
 ????-???-??     Peano               ?                            ?
 ????-???-??     Hilbert             ?                            ?
 ????-???-??     Noether             ?                            ?

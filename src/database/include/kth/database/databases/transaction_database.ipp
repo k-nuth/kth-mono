@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -76,7 +76,7 @@ transaction_entry internal_database_basis<Clock>::get_transaction(uint64_t id, K
     }
 
     auto data = db_value_to_data_chunk(value);
-    auto entry = domain::create<transaction_entry>(data);
+    auto entry = domain::create_old<transaction_entry>(data);
 
     return entry;
 }

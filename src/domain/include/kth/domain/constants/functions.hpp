@@ -1,9 +1,13 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef KTH_DOMAIN_CONSTANTS_FUNCTIONS_HPP_
 #define KTH_DOMAIN_CONSTANTS_FUNCTIONS_HPP_
+
+#include <kth/domain/config/network.hpp>
+#include <kth/domain/constants/bch.hpp>
+#include <kth/domain/constants/bch_btc.hpp>
 
 namespace kth {
 

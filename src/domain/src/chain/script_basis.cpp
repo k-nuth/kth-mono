@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,11 +15,7 @@
 
 #include <boost/range/adaptor/reversed.hpp>
 
-
 #include <kth/domain/chain/transaction.hpp>
-#if defined(KTH_SEGWIT_ENABLED)
-#include <kth/domain/chain/witness.hpp>
-#endif
 
 #include <kth/domain/common.hpp>
 #include <kth/domain/constants.hpp>
@@ -59,7 +55,13 @@ auto const one_hash = hash_literal("00000000000000000000000000000000000000000000
 
 script_basis::script_basis(data_chunk&& encoded, bool prefix) {
     if (prefix) {
-        valid_ = entity_from_data(*this, encoded, prefix);
+        byte_reader reader(encoded);
+        auto obj = from_data(reader, prefix);
+        if (! obj) {
+            throw std::runtime_error(obj.error().message());
+        }
+        valid_ = true;
+        *this = std::move(obj.value());
         return;
     }
 
@@ -69,7 +71,13 @@ script_basis::script_basis(data_chunk&& encoded, bool prefix) {
 }
 
 script_basis::script_basis(data_chunk const& encoded, bool prefix) {
-    valid_ = entity_from_data(*this, encoded, prefix);
+    byte_reader reader(encoded);
+    auto obj = from_data(reader, prefix);
+    if (! obj) {
+        throw std::runtime_error(obj.error().message());
+    }
+    valid_ = true;
+    *this = std::move(obj.value());
 }
 
 // Operators.
@@ -151,6 +159,51 @@ bool script_basis::is_valid() const {
     return valid_;
 }
 
+
+// Deserialization
+//-----------------------------------------------------------------------------
+
+// static
+expect<script_basis> script_basis::from_data(byte_reader& reader, bool prefix) {
+    if ( ! prefix) {
+        auto const bytes = reader.read_remaining_bytes();
+        if ( ! bytes) {
+            return make_unexpected(bytes.error());
+        }
+        return script_basis {data_chunk(std::begin(*bytes), std::end(*bytes)), false};
+    }
+
+    auto const size = reader.read_size_little_endian();
+    if ( ! size) {
+        return make_unexpected(size.error());
+    }
+
+    // The max_script_size constant limits evaluation, but not all scripts
+    // evaluate, so use max_block_size to guard memory allocation here.
+    if (*size > static_absolute_max_block_size()) {
+        return make_unexpected(error::script_invalid_size);
+    }
+    auto const bytes = reader.read_bytes(*size);
+    if ( ! bytes) {
+        return make_unexpected(bytes.error());
+    }
+    return script_basis {data_chunk(std::begin(*bytes), std::end(*bytes)), false};
+}
+
+// static
+expect<script_basis> script_basis::from_data_with_size(byte_reader& reader, size_t size) {
+    // The max_script_size constant limits evaluation, but not all scripts evaluate, so use max_block_size to guard memory allocation here.
+    if (size > static_absolute_max_block_size()) {
+        return make_unexpected(error::script_invalid_size);
+    }
+
+    auto const bytes = reader.read_bytes(size);
+    if ( ! bytes) {
+        return make_unexpected(bytes.error());
+    }
+    return script_basis {data_chunk(std::begin(*bytes), std::end(*bytes)), false};
+}
+
 // Serialization.
 //-----------------------------------------------------------------------------
 
@@ -208,7 +261,7 @@ hash_digest signature_hash(transaction const& tx, uint32_t sighash_type) {
     // There is no rational interpretation of a signature hash for a coinbase.
     KTH_ASSERT( ! tx.is_coinbase());
 
-    auto serialized = tx.to_data(true, false);
+    auto serialized = tx.to_data(true);
     extend_data(serialized, to_little_endian(sighash_type));
     return bitcoin_hash(serialized);
 }
@@ -243,14 +296,19 @@ size_t preimage_size(size_t script_size) {
 }
 
 // private/static
-hash_digest script_basis::generate_version_0_signature_hash(transaction const& tx,
-                                                      uint32_t input_index,
-                                                      script_basis const& script_code,
-                                                      uint64_t value,
-                                                      uint8_t sighash_type) {
+std::pair<hash_digest, size_t> script_basis::generate_version_0_signature_hash(
+    transaction const& tx,
+    uint32_t input_index,
+    script_basis const& script_code,
+    uint64_t value,
+    uint8_t sighash_type,
+    uint32_t active_forks) {
+
     // Unlike unversioned algorithm this does not allow an invalid input index.
     KTH_ASSERT(input_index < tx.inputs().size());
     auto const& input = tx.inputs()[input_index];
+    auto const& prevout = input.previous_output().validation.cache;
+    KTH_ASSERT(prevout.is_valid());
     auto const size = preimage_size(script_code.serialized_size(true));
 
     data_chunk data;
@@ -263,19 +321,16 @@ hash_digest script_basis::generate_version_0_signature_hash(transaction const& t
     auto const any = (sighash_type & sighash_algorithm::anyone_can_pay) != 0;
 
 #if defined(KTH_CURRENCY_BCH)
-    auto const single = (sighash == sighash_algorithm::single || sighash == sighash_algorithm::cash_forkid_all);
-
-    //Note(kth: Not used for the moment:
-    // auto const none = (sighash == sighash_algorithm::none || sighash == sighash_algorithm::cash_forkid_all);
-
-    auto const all = (sighash == sighash_algorithm::all || sighash == sighash_algorithm::cash_forkid_all);
+    auto const single = sighash == sighash_algorithm::single ||
+                        sighash == sighash_algorithm::forkid_single ||
+                        sighash == sighash_algorithm::utxos_single;
+    auto const all = sighash == sighash_algorithm::all ||
+                     sighash == sighash_algorithm::forkid_all ||
+                     sighash == sighash_algorithm::utxos_all;
+    auto const utxos = (sighash_type & sighash_algorithm::utxos) != 0;
 #else
-    auto const single = (sighash == sighash_algorithm::single);
-
-    //Note(kth: Not used for the moment:
-    // auto const none = (sighash == sighash_algorithm::none);
-
-    auto const all = (sighash == sighash_algorithm::all);
+    auto const single = sighash == sighash_algorithm::single;
+    auto const all = sighash == sighash_algorithm::all;
 #endif
 
     // 1. transaction version (4-byte little endian).
@@ -284,33 +339,47 @@ hash_digest script_basis::generate_version_0_signature_hash(transaction const& t
     // 2. inpoints hash (32-byte hash).
     sink_w.write_hash( ! any ? tx.inpoints_hash() : null_hash);
 
-    // 3. sequences hash (32-byte hash).
+    // 3. Optional utxos hash (32-byte hash).
+    if (is_enabled(active_forks, domain::machine::rule_fork::bch_descartes) && utxos) {
+        sink_w.write_hash(tx.utxos_hash());
+    }
+
+    // 4. sequences hash (32-byte hash).
     sink_w.write_hash( ! any && all ? tx.sequences_hash() : null_hash);
 
-    // 4. outpoint (32-byte hash + 4-byte little endian).
+    // 5. outpoint (32-byte hash + 4-byte little endian).
     input.previous_output().to_data(sink_w);
 
-    // 5. script of the input (with prefix).
+    // 6. Optional token data (variable size).
+    if (is_enabled(active_forks, domain::machine::rule_fork::bch_descartes) && prevout.token_data().has_value()) {
+        auto const& token_data = prevout.token_data().value();
+        sink_w.write_byte(chain::encoding::PREFIX_BYTE);
+        chain::token::encoding::to_data(sink_w, token_data);
+    }
+
+    // 7. script of the input (with prefix).
     script_code.to_data(sink_w, true);
 
-    // 6. value of the output spent by this input (8-byte little endian).
+
+    // 8. value of the output spent by this input (8-byte little endian).
     sink_w.write_little_endian(value);
 
-    // 7. sequence of the input (4-byte little endian).
+    // 9. sequence of the input (4-byte little endian).
     sink_w.write_little_endian(input.sequence());
 
-    // 8. outputs hash (32-byte hash).
+    // 10. outputs hash (32-byte hash).
     sink_w.write_hash(all ? tx.outputs_hash() : (single && input_index < tx.outputs().size() ? bitcoin_hash(tx.outputs()[input_index].to_data()) : null_hash));
 
-    // 9. transaction locktime (4-byte little endian).
+    // 11. transaction locktime (4-byte little endian).
     sink_w.write_little_endian(tx.locktime());
 
-    // 10. sighash type of the signature (4-byte [not 1] little endian).
+    // 12. sighash type of the signature (4-byte [not 1] little endian).
     sink_w.write_4_bytes_little_endian(sighash_type);
 
     ostream.flush();
+
     KTH_ASSERT(data.size() == size);
-    return bitcoin_hash(data);
+    return {bitcoin_hash(data), data.size()};
 }
 
 // Utilities (static).
@@ -343,28 +412,6 @@ bool script_basis::is_relaxed_push(operation::list const& ops) {
 bool script_basis::is_coinbase_pattern(operation::list const& ops, size_t height) {
     return !ops.empty() && ops[0].is_nominal_push() && ops[0].data() == number(height).data();
 }
-
-//*****************************************************************************
-// CONSENSUS: this pattern is used to commit to bip141 witness data.
-//*****************************************************************************
-#if defined(KTH_SEGWIT_ENABLED)
-bool script_basis::is_commitment_pattern(operation::list const& ops) {
-    static auto const header = to_big_endian(witness_head);
-
-    // Bytes after commitment are optional with no consensus meaning (bip141).
-    // Commitment is not executable so invalid trailing operations are allowed.
-    return ops.size() > 1 && ops[0].code() == opcode::return_ && ops[1].code() == opcode::push_size_36 && std::equal(header.begin(), header.end(), ops[1].data().begin());
-}
-#endif
-
-//*****************************************************************************
-// CONSENSUS: this pattern is used in bip141 validation rules.
-//*****************************************************************************
-#if defined(KTH_SEGWIT_ENABLED)
-bool script_basis::is_witness_program_pattern(operation::list const& ops) {
-    return ops.size() == 2 && ops[0].is_version() && ops[1].data().size() >= min_witness_program && ops[1].data().size() <= max_witness_program;
-}
-#endif
 
 // The satoshi client enables configurable data size for policy.
 bool script_basis::is_null_data_pattern(operation::list const& ops) {
@@ -413,25 +460,31 @@ bool script_basis::is_pay_public_key_pattern(operation::list const& ops) {
     return ops.size() == 2 && is_public_key(ops[0].data()) && ops[1].code() == opcode::checksig;
 }
 
-bool script_basis::is_pay_key_hash_pattern(operation::list const& ops) {
-    return ops.size() == 5 && ops[0].code() == opcode::dup && ops[1].code() == opcode::hash160 && ops[2].data().size() == short_hash_size && ops[3].code() == opcode::equalverify && ops[4].code() == opcode::checksig;
+bool script_basis::is_pay_public_key_hash_pattern(operation::list const& ops) {
+    return ops.size() == 5 &&
+        ops[0].code() == opcode::dup &&
+        ops[1].code() == opcode::hash160 &&
+        ops[2].data().size() == short_hash_size &&
+        ops[3].code() == opcode::equalverify &&
+        ops[4].code() == opcode::checksig;
 }
 
 //*****************************************************************************
 // CONSENSUS: this pattern is used to activate bip16 validation rules.
 //*****************************************************************************
 bool script_basis::is_pay_script_hash_pattern(operation::list const& ops) {
-    return ops.size() == 3 && ops[0].code() == opcode::hash160 && ops[1].code() == opcode::push_size_20 && ops[2].code() == opcode::equal;
+    return ops.size() == 3 &&
+        ops[0].code() == opcode::hash160 &&
+        ops[1].code() == opcode::push_size_20 &&
+        ops[2].code() == opcode::equal;
 }
 
-//*****************************************************************************
-// CONSENSUS: this pattern is used to activate bip141 validation rules.
-//*****************************************************************************
-#if defined(KTH_SEGWIT_ENABLED)
-bool script_basis::is_pay_witness_script_hash_pattern(operation::list const& ops) {
-    return ops.size() == 2 && ops[0].code() == opcode::push_size_0 && ops[1].code() == opcode::push_size_32;
+bool script_basis::is_pay_script_hash_32_pattern(operation::list const& ops) {
+    return ops.size() == 3 &&
+        ops[0].code() == opcode::hash256 &&
+        ops[1].code() == opcode::push_size_32 &&
+        ops[2].code() == opcode::equal;
 }
-#endif
 
 // The first push is based on wacky satoshi op_check_multisig behavior that
 // we must perpetuate, though it's appearance here is policy not consensus.
@@ -447,11 +500,11 @@ bool script_basis::is_sign_public_key_pattern(operation::list const& ops) {
 //*****************************************************************************
 // CONSENSUS: this pattern is used to activate bip141 validation rules.
 //*****************************************************************************
-bool script_basis::is_sign_key_hash_pattern(operation::list const& ops) {
+bool script_basis::is_sign_public_key_hash_pattern(operation::list const& ops) {
     return ops.size() == 2 && is_endorsement(ops[0].data()) && is_public_key(ops[1].data());
 }
 
-// Ambiguous with is_sign_key_hash when second/last op is a public key.
+// Ambiguous with is_sign_public_key_hash when second/last op is a public key.
 // Ambiguous with is_sign_public_key_pattern when only op is an endorsement.
 bool script_basis::is_sign_script_hash_pattern(operation::list const& ops) {
     return !ops.empty() && is_push_only(ops) && !ops.back().data().empty();
@@ -462,8 +515,10 @@ operation::list script_basis::to_null_data_pattern(data_slice data) {
         return {};
     }
 
-    return operation::list{{opcode::return_},
-                           {to_chunk(data)}};
+    return operation::list{
+        {opcode::return_},
+        {to_chunk(data)}
+    };
 }
 
 operation::list script_basis::to_pay_public_key_pattern(data_slice point) {
@@ -471,11 +526,13 @@ operation::list script_basis::to_pay_public_key_pattern(data_slice point) {
         return {};
     }
 
-    return operation::list{{to_chunk(point)},
-                           {opcode::checksig}};
+    return operation::list{
+        {to_chunk(point)},
+        {opcode::checksig}
+    };
 }
 
-operation::list script_basis::to_pay_key_hash_pattern(short_hash const& hash) {
+operation::list script_basis::to_pay_public_key_hash_pattern(short_hash const& hash) {
     return operation::list{
         {opcode::dup},
         {opcode::hash160},
@@ -484,9 +541,39 @@ operation::list script_basis::to_pay_key_hash_pattern(short_hash const& hash) {
         {opcode::checksig}};
 }
 
+operation::list script_basis::to_pay_public_key_hash_pattern_unlocking(endorsement const& end, wallet::ec_public const& pubkey) {
+    // data_chunk endorsement(endorsement_size, 0);
+    data_chunk pubkey_data;
+    if ( ! pubkey.to_data(pubkey_data)) {
+        return operation::list {};
+    }
+    return operation::list {
+        operation(opcode::push_size_0),
+        operation(end),
+        operation(pubkey_data)
+    };
+}
+
+operation::list script_basis::to_pay_public_key_hash_pattern_unlocking_placeholder(size_t endorsement_size, size_t pubkey_size) {
+    data_chunk placeholder_signature(endorsement_size, 0);
+    data_chunk placeholder_pubkey(pubkey_size, 0);
+    return operation::list {
+        operation(opcode::push_size_0),
+        operation(std::move(placeholder_signature)),
+        operation(std::move(placeholder_pubkey))
+    };
+}
+
 operation::list script_basis::to_pay_script_hash_pattern(short_hash const& hash) {
     return operation::list{
         {opcode::hash160},
+        {to_chunk(hash)},
+        {opcode::equal}};
+}
+
+operation::list script_basis::to_pay_script_hash_32_pattern(hash_digest const& hash) {
+    return operation::list{
+        {opcode::hash256},
         {to_chunk(hash)},
         {opcode::equal}};
 }
@@ -550,59 +637,37 @@ inline size_t multisig_sigops(bool accurate, opcode code) {
 }
 
 
-//*****************************************************************************
-// CONSENSUS: this is a pointless, broken, premature optimization attempt.
-// The comparison and erase are not limited to a single operation and so can
-// erase arbitrary upstream data from the script.
-//*****************************************************************************
-void script_basis::find_and_delete_(data_chunk const& endorsement) {
-    // If this is empty it would produce an empty script but not operation.
-    // So we test it for empty prior to operation reserialization.
-    if (endorsement.empty()) {
-        return;
-    }
-
-    // The value must be serialized to script using non-minimal encoding.
-    // Non-minimally-encoded target values will therefore not match.
-    auto const value = operation(endorsement, false).to_data();
-
-    operation op;
-    data_source stream(bytes_);
-    istream_reader stream_r(stream);
-    std::vector<data_chunk::iterator> found;
-
-    // The exhaustion test handles stream end and op deserialization failure.
-    for (auto it = bytes_.begin(); !stream_r.is_exhausted();
-         it += stream_r ? op.serialized_size() : 0) {
-        // Track all found values for later deletion.
-        for (; starts_with(it, bytes_.end(), value); it += value.size()) {
-            stream_r.skip(value.size());
-            found.push_back(it);
-        }
-
-        // Read the next op code following last found value.
-        op.from_data(stream_r);
-    }
-
-    // Delete any found values, reversed to prevent iterator invalidation.
-    for (auto const it : reverse(found)) {
-        bytes_.erase(it, it + value.size());
-    }
-}
-
-// Concurrent read/write is not supported, so no critical section.
-void script_basis::find_and_delete(data_stack const& endorsements) {
-    for (auto const& endorsement : endorsements) {
-        find_and_delete_(endorsement);
-    }
-    bytes_.shrink_to_fit();
-}
-
 // ------------------------------------------------------------------
 
+// operation::list operations(script_basis const& script) {
+//     data_source istream(script.bytes());
+//     istream_reader stream_r(istream);
+//     auto const size = script.bytes().size();
+
+//     operation::list res;
+//     // One operation per byte is the upper limit of operations.
+//     res.reserve(size);
+
+//     // ************************************************************************
+//     // CONSENSUS: In the case of a coinbase script we must parse the entire
+//     // script, beyond just the BIP34 requirements, so that sigops can be
+//     // calculated from the script. These are counted despite being irrelevant.
+//     // In this case an invalid script is parsed to the extent possible.
+//     // ************************************************************************
+
+//     // If an op fails it is pushed to operations and the loop terminates.
+//     // To validate the ops the caller must test the last op.is_valid(), or may
+//     // text script.is_valid_operations(), which is done in script validation.
+//     while ( ! stream_r.is_exhausted()) {
+//         res.push_back(create<operation>(stream_r));
+//     }
+
+//     res.shrink_to_fit();
+//     return res;
+// }
+
 operation::list operations(script_basis const& script) {
-    data_source istream(script.bytes());
-    istream_reader stream_r(istream);
+    byte_reader reader(script.bytes());
     auto const size = script.bytes().size();
 
     operation::list res;
@@ -619,12 +684,26 @@ operation::list operations(script_basis const& script) {
     // If an op fails it is pushed to operations and the loop terminates.
     // To validate the ops the caller must test the last op.is_valid(), or may
     // text script.is_valid_operations(), which is done in script validation.
-    while ( ! stream_r.is_exhausted()) {
-        res.push_back(create<operation>(stream_r));
+    while ( ! reader.is_exhausted()) {
+        auto op = operation::from_data(reader);
+        if ( ! op) {
+            res.emplace_back(operation{});
+            continue;
+        }
+        res.emplace_back(std::move(*op));
     }
 
     res.shrink_to_fit();
     return res;
+}
+
+operation first_operation(script_basis const& script) {
+    byte_reader reader(script.bytes());
+    auto op = operation::from_data(reader);
+    if ( ! op) {
+        return operation{};
+    }
+    return *op;
 }
 
 } // namespace kth::domain::chain

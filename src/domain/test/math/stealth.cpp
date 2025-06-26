@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -74,7 +74,7 @@ TEST_CASE("stealth round trip", "[stealth]") {
 
     // Both parties therefore have the ability to generate the p2pkh address.
     // versioning: stealth_address::main corresponds to payment_address::main_p2pkh
-    wallet::payment_address address(stealth_public, wallet::payment_address::mainnet_p2kh);
+    wallet::payment_address address(wallet::ec_public{stealth_public}, wallet::payment_address::mainnet_p2kh);
     REQUIRE(address.encoded_legacy() == P2PKH_ADDRESS);
 }
 

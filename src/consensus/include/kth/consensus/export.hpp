@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2025 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -128,26 +128,6 @@ typedef enum verify_result_type {
 
 } verify_result;
 
-// BTC Flags
-// SCRIPT_VERIFY_NONE = 0,
-// SCRIPT_VERIFY_P2SH = (1U << 0),
-// SCRIPT_VERIFY_STRICTENC = (1U << 1),
-// SCRIPT_VERIFY_DERSIG = (1U << 2),
-// SCRIPT_VERIFY_LOW_S = (1U << 3),
-// SCRIPT_VERIFY_NULLDUMMY = (1U << 4),
-// SCRIPT_VERIFY_SIGPUSHONLY = (1U << 5),
-// SCRIPT_VERIFY_MINIMALDATA = (1U << 6),
-// SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS = (1U << 7),
-// SCRIPT_VERIFY_CLEANSTACK = (1U << 8),
-// SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY = (1U << 9),
-// SCRIPT_VERIFY_CHECKSEQUENCEVERIFY = (1U << 10),
-// SCRIPT_VERIFY_WITNESS = (1U << 11),
-// SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM = (1U << 12),
-// SCRIPT_VERIFY_MINIMALIF = (1U << 13),
-// SCRIPT_VERIFY_NULLFAIL = (1U << 14),
-// SCRIPT_VERIFY_WITNESS_PUBKEYTYPE = (1U << 15),
-// SCRIPT_VERIFY_CONST_SCRIPTCODE = (1U << 16),
-
 // BCH Flags
 // SCRIPT_VERIFY_NONE = 0,
 // SCRIPT_VERIFY_P2SH = (1U << 0),
@@ -171,6 +151,8 @@ typedef enum verify_result_type {
 // SCRIPT_NATIVE_INTROSPECTION = (1U << 25),
 // SCRIPT_ENABLE_P2SH_32 = (1U << 26),
 // SCRIPT_ENABLE_TOKENS = (1U << 27),
+// SCRIPT_ENABLE_MAY2025 = (1U << 28),
+// SCRIPT_VM_LIMITS_STANDARD = (1U << 29),
 
 /**
  * Flags to use when calling verify_script.
@@ -319,6 +301,17 @@ typedef enum verify_flags_type {
      * SCRIPT_ENABLE_TOKENS (BCH).
      */
     , verify_flags_enable_tokens = (1U << 27)
+
+    /**
+     * SCRIPT_ENABLE_MAY2025 (BCH).
+     */
+    , verify_flags_enable_may2025 = (1U << 28)
+
+    /**
+     * SCRIPT_VM_LIMITS_STANDARD (BCH).
+     */
+    , verify_flags_enable_vm_limits_standard = (1U << 29)
+
 #else
     // BTC only flags
 
@@ -347,29 +340,31 @@ typedef enum verify_flags_type {
 /**
  * Verify that the transaction input correctly spends the previous output,
  * considering any additional constraints specified by flags.
- * @param[in]  transaction         The transaction with the script to verify.
- * @param[in]  transaction_size    The byte length of the transaction.
- * @param[in]  prevout_script      The script public key to verify against.
- * @param[in]  prevout_script_size The byte length of the script public key.
- * @param[in]  prevout_value       The value of the output being spent. Just for BTC and LTC, not for BCH
- * @param[in]  tx_input_index      The zero-based index of the transaction
- *                                 input with signature to be verified.
- * @param[in]  flags               Verification constraint flags.
- * @param[in]  amount              . Just for BCH, not for BTC nor LTC.
- * @returns                        A script verification result code.
+ * @param[in]  transaction            The transaction with the script to verify.
+ * @param[in]  transaction_size       The byte length of the transaction.
+ * @param[in]  locking_script_data    The bytes of the locking script.
+ * @param[in]  locking_script_size    The byte length of the locking script.
+ * @param[in]  unlocking_script_data  The bytes of the unlocking script.
+ * @param[in]  unlocking_script_size  The byte length of the unlocking script.
+ * @param[in]  tx_input_index         The zero-based index of the transaction
+ *                                    input with signature to be verified.
+ * @param[in]  flags                  Verification constraint flags.
+ * @param[in]  amount               . Just for BCH, not for BTC nor LTC.
+ * @returns                           A script verification result code.
  */
 
-#if defined(KTH_CURRENCY_BCH)
- BCK_API verify_result_type verify_script(const unsigned char* transaction,
-    size_t transaction_size, const unsigned char* prevout_script,
-    size_t prevout_script_size, unsigned int tx_input_index,
-    unsigned int flags, size_t& sig_checks, int64_t amount, std::vector<std::vector<uint8_t>> coins);
-#else
- BCK_API verify_result_type verify_script(const unsigned char* transaction,
-    size_t transaction_size, const unsigned char* prevout_script,
-    size_t prevout_script_size, unsigned long long prevout_value,
-    unsigned int tx_input_index, unsigned int flags);
-#endif //KTH_CURRENCY_BCH
+ BCK_API verify_result_type verify_script(
+    const unsigned char* transaction,
+    size_t transaction_size,
+    const unsigned char* locking_script_data,
+    size_t locking_script_size,
+    const unsigned char* unlocking_script_data,
+    size_t unlocking_script_size,
+    unsigned int tx_input_index,
+    unsigned int flags,
+    size_t& sig_checks,
+    int64_t amount,
+    std::vector<std::vector<uint8_t>> coins);
 
 } // namespace kth::consensus
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -59,8 +59,9 @@ enum rule_fork : uint32_t {
     bch_descartes = 1U << 20,           //2023-May Hardfork - descartes - (1684152000)
     bch_lobachevski = 1U << 21,         //2024-May Hardfork - lobachevski - (1715774400)
     bch_galois = 1U << 22,              //2025-May Hardfork - galois - (1747310400)
-    bch_leibniz = 1U << 23,             //2025-May Hardfork - leibniz - (1778846400)
-    // bch_unnamed = 1U << 24,          //2026-May Hardfork - unnamed - (9999999999)
+    bch_leibniz = 1U << 23,             //2026-May Hardfork - leibniz - (1778846400)
+    bch_cantor = 1U << 24,              //2027-May Hardfork - cantor - (xxxxxxxxx)
+    // bch_unnamed = 1U << xx,          //20xx-May Hardfork - unnamed - (9999999999)
 #else
     // Just for segwit coins
     /// Segregated witness consensus layer (soft fork, feature).

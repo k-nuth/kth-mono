@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -97,6 +97,35 @@ data_chunk utxo_entry::to_data_with_fixed(domain::chain::output const& output, d
 void utxo_entry::to_data_with_fixed(std::ostream& stream, domain::chain::output const& output, data_chunk const& fixed) {
     ostream_writer sink(stream);
     to_data_with_fixed(sink, output, fixed);
+}
+
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<utxo_entry> utxo_entry::from_data(byte_reader& reader) {
+    auto output = domain::chain::output::from_data(reader, false);
+    if ( ! output) {
+        return make_unexpected(output.error());
+    }
+
+    auto const height = reader.read_little_endian<uint32_t>();
+    if ( ! height) {
+        return make_unexpected(height.error());
+    }
+
+    auto const median_time_past = reader.read_little_endian<uint32_t>();
+    if ( ! median_time_past) {
+        return make_unexpected(median_time_past.error());
+    }
+
+    auto const coinbase = reader.read_byte();
+    if ( ! coinbase) {
+        return make_unexpected(coinbase.error());
+    }
+
+    return utxo_entry(std::move(*output), *height, *median_time_past, *coinbase);
 }
 
 

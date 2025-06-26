@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,13 +12,14 @@
 #include <kth/domain/define.hpp>
 #include <kth/domain/message/block.hpp>
 #include <kth/domain/message/prefilled_transaction.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -27,7 +28,6 @@ class KD_API compact_block {
 public:
     using ptr = std::shared_ptr<compact_block>;
     using const_ptr = std::shared_ptr<const compact_block>;
-
     //using short_id = mini_hash;
     //using short_id_list = mini_hash_list;
     using short_id = uint64_t;
@@ -71,60 +71,8 @@ public:
     void set_transactions(prefilled_transaction::list const& value);
     void set_transactions(prefilled_transaction::list&& value);
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        reset();
-
-        if ( ! header_.from_data(source)) {
-            return false;
-        }
-
-        nonce_ = source.read_8_bytes_little_endian();
-        auto count = source.read_size_little_endian();
-
-        // Guard against potential for arbitary memory allocation.
-        if (count > static_absolute_max_block_size()) {
-            source.invalidate();
-        } else {
-            short_ids_.reserve(count);
-        }
-
-        //TODO: move to function
-        // Order is required.
-        for (size_t id = 0; id < count && source; ++id) {
-            uint32_t lsb = source.read_4_bytes_little_endian();
-            uint16_t msb = source.read_2_bytes_little_endian();
-            short_ids_.push_back((uint64_t(msb) << 32) | uint64_t(lsb));
-            //short_ids_.push_back(source.read_mini_hash());
-        }
-
-        count = source.read_size_little_endian();
-
-        // Guard against potential for arbitary memory allocation.
-        if (count > static_absolute_max_block_size()) {
-            source.invalidate();
-        } else {
-            transactions_.resize(count);
-        }
-
-        // NOTE: Witness flag is controlled by prefilled tx
-        // Order is required.
-        for (auto& tx : transactions_) {
-            if ( ! entity_from_data(tx, version, source)) {
-                break;
-            }
-        }
-
-        if (version < compact_block::version_minimum) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<compact_block> from_data(byte_reader& reader, uint32_t version);
 
     bool from_block(message::block const& block);
 

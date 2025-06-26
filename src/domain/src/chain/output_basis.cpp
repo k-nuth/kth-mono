@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -46,6 +46,52 @@ bool output_basis::is_valid() const {
            chain::is_valid(token_data_);
 }
 
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+expect<output_basis> output_basis::from_data(byte_reader& reader, bool /*wire*/) {
+    auto const value = reader.read_little_endian<uint64_t>();
+    if ( ! value) {
+        return make_unexpected(value.error());
+    }
+
+    auto const script_size_exp = reader.read_size_little_endian();
+    if ( ! script_size_exp) {
+        return make_unexpected(script_size_exp.error());
+    }
+    auto script_size = *script_size_exp;
+
+    auto const token_prefix_byte = reader.peek_byte();
+    if ( ! token_prefix_byte) {
+        return make_unexpected(token_prefix_byte.error());
+    }
+
+    token_data_opt token_data = std::nullopt;
+    auto const has_token_data = *token_prefix_byte == chain::encoding::PREFIX_BYTE;
+    if (has_token_data) {
+        reader.skip(1); // skip prefix byte
+        auto token = token::encoding::from_data(reader);
+        if ( ! token) {
+            return make_unexpected(token.error());
+        }
+        token_data.emplace(std::move(*token));
+
+        script_size -= token::encoding::serialized_size(token_data);
+        script_size -= 1; // prefix byte
+    }
+
+    auto script = script::from_data_with_size(reader, script_size);
+    if ( ! script) {
+        return make_unexpected(script.error());
+    }
+
+    return output_basis{
+        *value,
+        std::move(*script),
+        std::move(token_data)
+    };
+}
+
 // Serialization.
 //-----------------------------------------------------------------------------
 
@@ -71,7 +117,7 @@ void output_basis::to_data(data_sink& stream, bool wire) const {
 size_t output_basis::serialized_size(bool /*wire*/) const {
     return sizeof(value_) +
            script_.serialized_size(true) +
-           chain::encoding::serialized_size(token_data_) +
+           token::encoding::serialized_size(token_data_) +
            size_t(token_data_.has_value());
 }
 
@@ -102,6 +148,10 @@ void output_basis::set_script(chain::script&& x) {
     script_ = std::move(x);
 }
 
+chain::token_data_opt& output_basis::token_data() {
+    return token_data_;
+}
+
 chain::token_data_opt const& output_basis::token_data() const {
     return token_data_;
 }
@@ -118,34 +168,12 @@ void output_basis::set_token_data(chain::token_data_opt&& x) {
 //-----------------------------------------------------------------------------
 
 size_t output_basis::signature_operations(bool bip141) const {
-#if defined(KTH_SEGWIT_ENABLED)
-    // Penalize quadratic signature operations (bip141).
-    auto const sigops_factor = bip141 ? fast_sigops_factor : 1U;
-   // Count heavy sigops in the output script.
-    return script_.sigops(false) * sigops_factor;
-#else
     return script_.sigops(false);
-#endif
 }
 
 bool output_basis::is_dust(uint64_t minimum_output_value) const {
     // If provably unspendable it does not expand the unspent output set.
     return value_ < minimum_output_value && !script_.is_unspendable();
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-bool output_basis::extract_committed_hash(hash_digest& out) const {
-    auto const& ops = script_.operations();
-
-    if ( ! script::is_commitment_pattern(ops)) {
-        return false;
-    }
-
-    // The four byte offset for the witness commitment hash (bip141).
-    auto const start = ops[1].data().begin() + sizeof(witness_head);
-    std::copy_n(start, hash_size, out.begin());
-    return true;
-}
-#endif
 
 } // namespace kth::domain::chain

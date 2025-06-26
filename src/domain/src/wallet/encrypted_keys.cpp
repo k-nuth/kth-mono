@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -54,13 +54,13 @@ bool address_salt(ek_salt& salt, payment_address const& address) {
 
 static
 bool address_salt(ek_salt& salt, ec_compressed const& point, uint8_t version, bool compressed) {
-    payment_address address({point, compressed}, version);
+    payment_address address(ec_public{point, compressed}, version);
     return address ? address_salt(salt, address) : false;
 }
 
 static
 bool address_salt(ek_salt& salt, ec_secret const& secret, uint8_t version, bool compressed) {
-    payment_address address({secret, version, compressed});
+    payment_address address(ec_private{secret, version, compressed});
     return address ? address_salt(salt, address) : false;
 }
 
@@ -73,13 +73,13 @@ bool address_validate(const ek_salt& salt,
 
 static
 bool address_validate(const ek_salt& salt, ec_compressed const& point, uint8_t version, bool compressed) {
-    payment_address address({point, compressed}, version);
+    payment_address address(ec_public{point, compressed}, version);
     return address ? address_validate(salt, address) : false;
 }
 
 static
 bool address_validate(const ek_salt& salt, ec_secret const& secret, uint8_t version, bool compressed) {
-    payment_address address({secret, version, compressed});
+    payment_address address(ec_private{secret, version, compressed});
     return address ? address_validate(salt, address) : false;
 }
 

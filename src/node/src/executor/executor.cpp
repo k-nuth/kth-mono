@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -52,42 +52,11 @@ static constexpr int directory_exists = 0;
 static constexpr int directory_not_found = 2;
 static auto const mode = std::ofstream::out | std::ofstream::app;
 
-std::string_view microarchitecture() {
-    return KTH_MICROARCHITECTURE_STR;
-}
-
-std::string_view march_names() {
-#if defined(KTH_MARCH_NAMES_FULL_STR)
-    return KTH_MARCH_NAMES_FULL_STR;
-#else
-    return "unknown";
-#endif
-}
-
-std::string_view currency_symbol() {
-    return KTH_CURRENCY_SYMBOL_STR;
-}
-
-std::string_view currency() {
-    return KTH_CURRENCY_STR;
-}
-
-std::string_view db_type(kth::database::db_mode_type db_mode) {
-    std::string_view db_type_str;
-    if (db_mode == db_mode_type::full) {
-        return KTH_DB_TYPE_FULL;
-    }
-    if (db_mode == db_mode_type::blocks) {
-        return KTH_DB_TYPE_BLOCKS;
-    }
-    // db_mode == db_mode_type::pruned
-    return KTH_DB_TYPE_PRUNED;
-}
-
 std::promise<kth::code> executor::stopping_; //NOLINT
 
 executor::executor(kth::node::configuration const& config, bool stdout_enabled /*= true*/)
-    : config_(config)
+    : stdout_enabled_(stdout_enabled)
+    , config_(config)
 {
 #if ! defined(__EMSCRIPTEN__)
     auto& network = config_.network;
@@ -399,9 +368,35 @@ void executor::stop(kth::code const& ec) {
 // Utilities.
 // ----------------------------------------------------------------------------
 
+void executor::print_ascii_art() {
+    std::cout << "    ...\n";
+    std::cout << "    .-=*#%%=                            :-=+++*#:\n";
+    std::cout << "    :+*%%%@=                            .:--#@@#.\n";
+    std::cout << "       :%%@=                      .:.      :%@#.\n";
+    std::cout << "       .%%@=                    .*%%-     :#@%:\n";
+    std::cout << "       :%%@=       ..          .#@%=     .#@%-\n";
+    std::cout << "       :%%@= .=###**+.     -+++#%%%***.  +@%=  :=+*+-\n";
+    std::cout << "       :%%%-  :%%=:.       :--%@%*-::.  =%%= -+*=-%@@=\n";
+    std::cout << "       :%%%: :*+.   .::.     =%@*.     :%@#:++:   +@@+\n";
+    std::cout << "       :%%%*+#:    .#%%%=   -%@#.     .*%%%*:     *%@-\n";
+    std::cout << "       -%%%@@%*-   :#@@%=  :#@#.      +@%%+      :%%%.\n";
+    std::cout << "       =@%%-+%@%+.  .-=-  .#@%:.=*.  -%%%-      .#@%-\n";
+    std::cout << "       -@%%. :*%@#-      .*@%+=#%-  :%@#: .--  .*@%-\n";
+    std::cout << "     .:*@%%:   =%@@*-.   +@%%@%+.  .*@#.  *@@*=#@#:\n";
+    std::cout << "    .*#####*: -*#####*.  *%%*=.    .**:   :*#%#+-.\n";
+    std::cout << "    ........  ..  ....   ...                ..\n";
+    std::cout << "\n";
+    std::cout << "          High Performance Bitcoin Cash Node\n";
+    std::cout << "\n";
+}
+
 // Set up logging.
 void executor::initialize_output(std::string_view extra, db_mode_type db_mode) {
     auto const& file = config_.file;
+
+    if (stdout_enabled_) {
+        print_ascii_art();
+    }
 
     if (file.empty()) {
         LOG_INFO(LOG_NODE, KTH_USING_DEFAULT_CONFIG);
@@ -429,7 +424,7 @@ void executor::initialize_output(std::string_view extra, db_mode_type db_mode) {
     LOG_INFO(LOG_NODE, KTH_DEBUG_BUILD_INIT);
 #endif
 
-    LOG_INFO(LOG_NODE, fmt::format(KTH_NETWORK_INIT, name(kth::get_network(config_.network.identifier, config_.network.inbound_port == 488333)), config_.network.identifier));
+    LOG_INFO(LOG_NODE, fmt::format(KTH_NETWORK_INIT, name(kth::get_network(config_.network.identifier, config_.network.inbound_port == 48333)), config_.network.identifier));
     LOG_INFO(LOG_NODE, fmt::format(KTH_BLOCKCHAIN_CORES_INIT, kth::thread_ceiling(config_.chain.cores)));
     LOG_INFO(LOG_NODE, fmt::format(KTH_NETWORK_CORES_INIT, kth::thread_ceiling(config_.network.threads)));
 }

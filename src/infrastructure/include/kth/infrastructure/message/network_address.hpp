@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <kth/infrastructure/define.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
@@ -32,7 +33,8 @@ public:
         : timestamp_(timestamp)
         , services_(services)
         , ip_(ip)
-        , port_(port) {}
+        , port_(port)
+    {}
 
     network_address(network_address const& x) = default;
     network_address& operator=(network_address const& x) = default;
@@ -56,29 +58,8 @@ public:
 
     size_t serialized_size(uint32_t version, bool with_timestamp) const;
 
-    bool from_data(data_chunk const& data, uint32_t version, bool with_timestamp);
-    bool from_data(data_source& stream, uint32_t version, bool with_timestamp);
-
-    template <typename R>
-    bool from_data(R& source, uint32_t version, bool with_timestamp) {
-        reset();
-
-        if (with_timestamp) {
-            timestamp_ = source.read_4_bytes_little_endian();
-        }
-
-        services_ = source.read_8_bytes_little_endian();
-        auto ip = source.read_bytes(ip_.size());
-        port_ = source.read_2_bytes_big_endian();
-
-        if ( ! source) {
-            reset();
-        }
-
-        // TODO(legacy): add array to reader interface (can't use template).
-        std::move(ip.begin(), ip.end(), ip_.data());
-        return source;
-    }
+    static
+    expect<network_address> from_data(byte_reader& reader, uint32_t version, bool with_timestamp);
 
     data_chunk to_data(uint32_t version, bool with_timestamp) const;
     // void to_data(uint32_t version, std::ostream& stream, bool with_timestamp) const;
@@ -98,20 +79,6 @@ public:
 
     bool is_valid() const;
     void reset();
-
-    static
-    network_address factory_from_data(data_chunk const& data, uint32_t version, bool with_timestamp);
-
-    static
-    network_address factory_from_data(data_source& stream, uint32_t version, bool with_timestamp);
-
-    template <typename R>
-    static
-    network_address factory_from_data(R& source, uint32_t version, bool with_timestamp) {
-        network_address instance;
-        instance.from_data(source, version, with_timestamp);
-        return instance;
-    }
 
     static
     size_t satoshi_fixed_size(uint32_t version, bool with_timestamp);

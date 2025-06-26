@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -63,6 +63,73 @@ void version::reset() {
     start_height_ = 0;
     relay_ = false;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<message::version> version::from_data(byte_reader& reader, uint32_t version) {
+    auto const value = reader.read_little_endian<uint32_t>();
+    if ( ! value) {
+        return make_unexpected(value.error());
+    }
+    auto const services = reader.read_little_endian<uint64_t>();
+    if ( ! services) {
+        return make_unexpected(services.error());
+    }
+    auto const timestamp = reader.read_little_endian<uint64_t>();
+    if ( ! timestamp) {
+        return make_unexpected(timestamp.error());
+    }
+    auto const address_receiver = network_address::from_data(reader, version, false);
+    if ( ! address_receiver) {
+        return make_unexpected(address_receiver.error());
+    }
+    auto const address_sender = network_address::from_data(reader, version, false);
+    if ( ! address_sender) {
+        return make_unexpected(address_sender.error());
+    }
+    auto const nonce = reader.read_little_endian<uint64_t>();
+    if ( ! nonce) {
+        return make_unexpected(nonce.error());
+    }
+    auto user_agent = reader.read_string();
+    if ( ! user_agent) {
+        return make_unexpected(user_agent.error());
+    }
+    auto const start_height = reader.read_little_endian<uint32_t>();
+    if ( ! start_height) {
+        return make_unexpected(start_height.error());
+    }
+
+    auto const peer_bip37 = *value >= level::bip37;
+    auto const self_bip37 = version >= level::bip37;
+
+    // The relay field is optional at or above version 70001.
+    // But the peer doesn't know our version when it sends its version.
+    // This is a bug in the BIP37 design as it forces older peers to adapt to
+    // the expansion of the version message, which is a clear compat break.
+    // So relay is eabled if either peer is below 70001, it is not set, or
+    // peers are at/above 70001 and the field is set.
+    auto const relay = peer_bip37 != self_bip37 ||
+        reader.is_exhausted() ||
+        (self_bip37 && reader.read_byte().value_or(0) != 0);
+
+    return message::version {
+        *value,
+        *services,
+        *timestamp,
+        *address_receiver,
+        *address_sender,
+        *nonce,
+        std::move(*user_agent),
+        *start_height,
+        relay
+    };
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk version::to_data(uint32_t version) const {
     data_chunk data;

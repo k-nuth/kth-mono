@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,12 +13,13 @@
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
 #include <kth/infrastructure/message/network_address.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -101,9 +102,9 @@ public:
         // The node is capable and willing to handle bloom-filtered connections.
         node_bloom = (1U << 2),
 
-        // Independent of network protocol level.
-        // The node is capable of responding to witness inventory requests.
-        node_witness = (1U << 3),
+        // // Independent of network protocol level.
+        // // The node is capable of responding to witness inventory requests.
+        // node_witness = (1U << 3),
 
 #if defined(KTH_CURRENCY_BCH)
         node_network_cash = (1U << 5)  //TODO(kth): check what happens with node_network (or node_network_cash)
@@ -169,42 +170,8 @@ public:
 
     void set_relay(bool relay);
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        reset();
-
-        value_ = source.read_4_bytes_little_endian();
-        services_ = source.read_8_bytes_little_endian();
-        timestamp_ = source.read_8_bytes_little_endian();
-        address_receiver_.from_data(source, version, false);
-        address_sender_.from_data(source, version, false);
-        nonce_ = source.read_8_bytes_little_endian();
-        user_agent_ = source.read_string();
-        start_height_ = source.read_4_bytes_little_endian();
-
-        // HACK: disabled check due to inconsistent node implementation.
-        // The protocol expects duplication of the sender's services.
-        ////if (services_ != address_sender_.services())
-        ////    source.invalidate();
-
-        auto const peer_bip37 = (value_ >= level::bip37);
-        auto const self_bip37 = (version >= level::bip37);
-
-        // The relay field is optional at or above version 70001.
-        // But the peer doesn't know our version when it sends its version.
-        // This is a bug in the BIP37 design as it forces older peers to adapt to
-        // the expansion of the version message, which is a clear compat break.
-        // So relay is eabled if either peer is below 70001, it is not set, or
-        // peers are at/above 70001 and the field is set.
-        relay_ = (peer_bip37 != self_bip37) || source.is_exhausted() ||
-                 (self_bip37 && source.read_byte() != 0);
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<message::version> from_data(byte_reader& reader, uint32_t version);
 
     [[nodiscard]]
     data_chunk to_data(uint32_t version) const;

@@ -1,12 +1,11 @@
-// Copyright (c) 2022 The Bitcoin developers
+// Copyright (c) 2022-2024 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #pragma once
 
-#include <algorithm>
+#include <functional> // for std::equal_to, etc
 #include <memory>
-#include <type_traits>
 #include <utility>
 
 /// An optional that stores its value on the heap, rather than in-line, in
@@ -29,7 +28,7 @@ public:
 
     constexpr HeapOptional() noexcept = default;
     explicit HeapOptional(const T & t) { *this = t; }
-    explicit HeapOptional(T && t) noexcept { *this = t; }
+    explicit HeapOptional(T && t) noexcept { *this = std::move(t); }
 
     /// Construct the HeapOptional in-place using argument forwarding
     template <typename ...Args>
@@ -68,7 +67,7 @@ public:
     //    (only SFINAE-enabled if underlying type T supports these ops)
 
     auto operator==(const HeapOptional & o) const -> decltype(std::declval<std::equal_to<T>>()(std::declval<T>(),
-                                                                                              std::declval<T>())) {
+                                                                                               std::declval<T>())) {
         if (p && o.p) return std::equal_to{}(*p, *o.p); // compare by pointed-to value if both are not null
         return std::equal_to{}(p, o.p); // compare the unique_ptr's if either are null
     }
@@ -80,7 +79,7 @@ public:
     }
 
     auto operator!=(const HeapOptional & o) const -> decltype(std::declval<std::not_equal_to<T>>()(std::declval<T>(),
-                                                                                                  std::declval<T>())) {
+                                                                                                   std::declval<T>())) {
         if (p && o.p) return std::not_equal_to{}(*p, *o.p); // compare by pointed-to value if both are not null
         return std::not_equal_to{}(p, o.p); // compare the unique_ptr's if either are null
     }
@@ -92,7 +91,7 @@ public:
     }
 
     auto operator<(const HeapOptional & o) const -> decltype(std::declval<std::less<T>>()(std::declval<T>(),
-                                                                                         std::declval<T>())) {
+                                                                                          std::declval<T>())) {
         if (p && o.p) return std::less{}(*p, *o.p); // compare by pointed-to value if both are not null
         return std::less{}(p, o.p); // compare the unique_ptr's if either are null
     }

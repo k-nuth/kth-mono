@@ -11,7 +11,7 @@ Knuth is a high performance implementation of the Bitcoin protocol focused on us
 
 Knuth is a multi-crypto full node, but it is also a development platform.
 
-Knuth's core is written in C++20, on top of it we provide a set of libraries and modules written in various programming languages that you can use as basis for building your application.
+Knuth's core is written in C++23, on top of it we provide a set of libraries and modules written in various programming languages that you can use as basis for building your application.
 
 At the moment we have libraries in the following languages: [C++](https://github.com/k-nuth/node), [C](https://github.com/k-nuth/c-api), [C#](https://github.com/k-nuth/cs-api), [Python](https://github.com/k-nuth/py-api), [Javascript](https://github.com/k-nuth/js-api) and [Golang](https://github.com/k-nuth/go-api).
 You can build your own library in the language of your choice on top of our [C library](https://github.com/k-nuth/c-api).
@@ -50,7 +50,7 @@ $ conan config install https://github.com/k-nuth/ci-utils/raw/master/conan/confi
 2. Install the appropriate node executable:
 
 ```
-$ conan install --requires=kth/0.46.0 --update --deploy=direct_deploy
+$ conan install --requires=kth/0.58.0 --update --deploy=direct_deploy
 
 ```
 
@@ -84,7 +84,7 @@ You can contact us through our [Telegram](https://t.me/knuth_cash) and [Slack](h
 [badge.GithubActions]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fnode-exe%2Fbadge&style=for-the-badge
 [badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-node-exe.svg
 [badge.release]: https://img.shields.io/github/v/release/k-nuth/node-exe?display_name=tag&style=for-the-badge&color=3b009b&logo=bitcoincash
-[badge.cpp]: https://img.shields.io/badge/C++-20-blue.svg?logo=c%2B%2B&style=for-the-badge
+[badge.cpp]: https://img.shields.io/badge/C++-23-blue.svg?logo=c%2B%2B&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
 [badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slack&style=for-the-badge
 

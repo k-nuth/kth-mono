@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -38,6 +38,14 @@ using ec_signature = byte_array<ec_signature_size>;
 // DER encoded signature:
 static constexpr size_t max_der_signature_size = 72;
 using der_signature = data_chunk;
+
+// Compact encoded signature:
+static constexpr size_t compact_signature_size = 64;
+using compact_signature = byte_array<compact_signature_size>;
+
+// Schnorr encoded signature:
+static constexpr size_t schnorr_signature_size = 64;
+using schnorr_signature = byte_array<schnorr_signature_size>;
 
 /// DER encoded signature with sighash byte for contract endorsement:
 static constexpr size_t min_endorsement_size = 9;
@@ -96,10 +104,10 @@ KI_API bool ec_multiply(ec_secret& left, ec_secret const& right);
 // ----------------------------------------------------------------------------
 
 /// Convert an uncompressed public point to compressed.
-KI_API bool compress(ec_compressed& out, const ec_uncompressed& point);
+KI_API bool compress(ec_compressed& out, ec_uncompressed const& point);
 
 /// Convert a compressed public point to decompressed.
-KI_API bool decompress(ec_uncompressed& out, const ec_compressed& point);
+KI_API bool decompress(ec_uncompressed& out, ec_compressed const& point);
 
 /// Convert a secret to a compressed public point.
 KI_API bool secret_to_public(ec_compressed& out, ec_secret const& secret);
@@ -114,16 +122,16 @@ KI_API bool secret_to_public(ec_uncompressed& out, ec_secret const& secret);
 KI_API bool verify(ec_secret const& secret);
 
 /// Verify a point.
-KI_API bool verify(const ec_compressed& point);
+KI_API bool verify(ec_compressed const& point);
 
 /// Verify a point.
-KI_API bool verify(const ec_uncompressed& point);
+KI_API bool verify(ec_uncompressed const& point);
 
 // Detect public keys
 // ----------------------------------------------------------------------------
 
 /// Determine if the compressed public key is even (y-valued).
-bool is_even_key(const ec_compressed& point);
+bool is_even_key(ec_compressed const& point);
 
 /// Fast detection of compressed public key structure.
 bool is_compressed_key(data_slice point);
@@ -135,56 +143,53 @@ bool is_uncompressed_key(data_slice point);
 bool is_public_key(data_slice point);
 
 /// Fast detection of endorsement structure (DER with signature hash type).
-bool is_endorsement(const endorsement& endorsement);
+bool is_endorsement(endorsement const& endorsement);
 
 // DER parse/encode
 // ----------------------------------------------------------------------------
 
 /// Parse an endorsement into signature hash type and DER signature.
-KI_API bool parse_endorsement(uint8_t& sighash_type,
-    der_signature& der_signature, endorsement&& endorsement);
+KI_API bool parse_endorsement(uint8_t& sighash_type, der_signature& der_signature, endorsement&& endorsement);
 
 /// Parse a DER encoded signature with optional strict DER enforcement.
 /// Treat an empty DER signature as invalid, in accordance with BIP66.
-KI_API bool parse_signature(ec_signature& out,
-    const der_signature& der_signature, bool strict);
+KI_API bool parse_signature(ec_signature& out, der_signature const& der_signature, bool strict);
 
 /// Encode an EC signature as DER (strict).
-KI_API bool encode_signature(der_signature& out, const ec_signature& signature);
+KI_API bool encode_signature(der_signature& out, ec_signature const& signature);
+
+/// Encode an EC signature as compact.
+KI_API bool encode_signature(compact_signature& out, ec_signature const& signature);
 
 // EC sign/verify
 // ----------------------------------------------------------------------------
 
 /// Create a deterministic ECDSA signature using a private key.
-KI_API bool sign(ec_signature& out, ec_secret const& secret,
-    hash_digest const& hash);
+KI_API bool sign_ecdsa(ec_signature& out, ec_secret const& secret, hash_digest const& hash);
+
+/// Create a deterministic Schnorr signature using a private key.
+KI_API bool sign_schnorr(ec_signature& out, ec_secret const& secret, hash_digest const& hash);
 
 /// Verify an EC signature using a compressed point.
-KI_API bool verify_signature(const ec_compressed& point,
-    hash_digest const& hash, const ec_signature& signature);
+KI_API bool verify_signature(ec_compressed const& point, hash_digest const& hash, ec_signature const& signature);
 
 /// Verify an EC signature using an uncompressed point.
-KI_API bool verify_signature(const ec_uncompressed& point,
-    hash_digest const& hash, const ec_signature& signature);
+KI_API bool verify_signature(ec_uncompressed const& point, hash_digest const& hash, ec_signature const& signature);
 
 /// Verify an EC signature using a potential point.
-KI_API bool verify_signature(data_slice point, hash_digest const& hash,
-    const ec_signature& signature);
+KI_API bool verify_signature(data_slice point, hash_digest const& hash, ec_signature const& signature);
 
 // Recoverable sign/recover
 // ----------------------------------------------------------------------------
 
 /// Create a recoverable signature for use in message signing.
-KI_API bool sign_recoverable(recoverable_signature& out,
-    ec_secret const& secret, hash_digest const& hash);
+KI_API bool sign_recoverable(recoverable_signature& out, ec_secret const& secret, hash_digest const& hash);
 
 /// Recover the compressed point from a recoverable message signature.
-KI_API bool recover_public(ec_compressed& out,
-    const recoverable_signature& recoverable, hash_digest const& hash);
+KI_API bool recover_public(ec_compressed& out, recoverable_signature const& recoverable, hash_digest const& hash);
 
 /// Recover the uncompressed point from a recoverable message signature.
-KI_API bool recover_public(ec_uncompressed& out,
-    const recoverable_signature& recoverable, hash_digest const& hash);
+KI_API bool recover_public(ec_uncompressed& out, recoverable_signature const& recoverable, hash_digest const& hash);
 
 } // namespace kth
 

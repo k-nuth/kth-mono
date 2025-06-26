@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,10 +12,11 @@
 #include <string>
 #include <type_traits>
 
+#include <nonstd/expected.hpp>
+
 #include <kth/domain/chain/script_basis.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
-#include <kth/domain/multi_crypto_settings.hpp>
 
 #include <kth/domain/machine/operation.hpp>
 #include <kth/domain/machine/rule_fork.hpp>
@@ -31,30 +32,51 @@
 #include <kth/infrastructure/utility/thread.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
-#include <kth/domain/concepts.hpp>
 
+#include <kth/domain/concepts.hpp>
 namespace kth::domain::chain {
 
 class transaction;
 class witness;
+
+enum class endorsement_type {
+    ecdsa,
+    schnorr
+};
 
 class KD_API script : public script_basis {
 public:
     using operation = machine::operation;
     using rule_fork = machine::rule_fork;
     using script_pattern = infrastructure::machine::script_pattern;
+#if ! defined(KTH_CURRENCY_BCH)
     using script_version = infrastructure::machine::script_version;
+#endif // ! KTH_CURRENCY_BCH
 
     // Constructors.
     //-------------------------------------------------------------------------
 
     script() = default;
 
+    explicit
     script(operation::list const& ops);
+
+    explicit
     script(operation::list&& ops);
+
+    explicit
     script(data_chunk const& encoded, bool prefix);
+
     script(data_chunk&& encoded, bool prefix);
+
+    explicit
+    script(script_basis const& x);
+
+    explicit
+    script(script_basis&& x) noexcept;
+
+    // Special member functions.
+    //-------------------------------------------------------------------------
 
     script(script const& x);
     script(script&& x) noexcept;
@@ -63,6 +85,12 @@ public:
 
     // Deserialization.
     //-------------------------------------------------------------------------
+
+    static
+    expect<script> from_data(byte_reader& reader, bool wire);
+
+    static
+    expect<script> from_data_with_size(byte_reader& reader, size_t size);
 
     /// Deserialization invalidates the iterator.
     void from_operations(operation::list&& ops);
@@ -95,30 +123,52 @@ public:
     // size_t serialized_size(bool prefix) const;
     using script_basis::serialized_size;
     operation::list const& operations() const;
+    operation first_operation() const;
 
     // Signing.
     //-------------------------------------------------------------------------
 
     static
-    hash_digest generate_signature_hash(transaction const& tx,
+    std::pair<hash_digest, size_t> generate_signature_hash(transaction const& tx,
                                         uint32_t input_index,
                                         script const& script_code,
                                         uint8_t sighash_type,
+                                        uint32_t active_forks,
+#if ! defined(KTH_CURRENCY_BCH)
                                         script_version version = script_version::unversioned,
+#endif // ! KTH_CURRENCY_BCH
                                         uint64_t value = max_uint64);
 
     static
-    bool check_signature(ec_signature const& signature,
+    std::pair<bool, size_t> check_signature(ec_signature const& signature,
                             uint8_t sighash_type,
                             data_chunk const& public_key,
                             script const& script_code,
                             transaction const& tx,
                             uint32_t input_index,
+                            uint32_t active_forks,
+#if ! defined(KTH_CURRENCY_BCH)
                             script_version version = script_version::unversioned,
+#endif // ! KTH_CURRENCY_BCH
                             uint64_t value = max_uint64);
 
+    // static
+    // bool create_endorsement(endorsement& out, ec_secret const& secret, script const& prevout_script, transaction const& tx, uint32_t input_index, uint8_t sighash_type, script_version version = script_version::unversioned, uint64_t value = max_uint64);
+
     static
-    bool create_endorsement(endorsement& out, ec_secret const& secret, script const& prevout_script, transaction const& tx, uint32_t input_index, uint8_t sighash_type, script_version version = script_version::unversioned, uint64_t value = max_uint64);
+    nonstd::expected<endorsement, std::error_code> create_endorsement(
+        ec_secret const& secret,
+        script const& prevout_script,
+        transaction const& tx,
+        uint32_t input_index,
+        uint8_t sighash_type,
+        uint32_t active_forks,
+#if ! defined(KTH_CURRENCY_BCH)
+        script_version version = script_version::unversioned,
+#endif // ! KTH_CURRENCY_BCH
+        uint64_t value = max_uint64,
+        endorsement_type type = endorsement_type::ecdsa);
+
 
     // Utilities (static).
     //-------------------------------------------------------------------------
@@ -149,14 +199,6 @@ public:
     static
     bool is_coinbase_pattern(operation::list const& ops, size_t height);
 
-#if defined(KTH_SEGWIT_ENABLED)
-    static
-    bool is_commitment_pattern(operation::list const& ops);
-
-    static
-    bool is_witness_program_pattern(operation::list const& ops);
-#endif
-
     /// Common output patterns (psh and pwsh are also consensus).
     static
     bool is_null_data_pattern(operation::list const& ops);
@@ -168,10 +210,13 @@ public:
     bool is_pay_public_key_pattern(operation::list const& ops);
 
     static
-    bool is_pay_key_hash_pattern(operation::list const& ops);
+    bool is_pay_public_key_hash_pattern(operation::list const& ops);
 
     static
     bool is_pay_script_hash_pattern(operation::list const& ops);
+
+    static
+    bool is_pay_script_hash_32_pattern(operation::list const& ops);
 
     static
     bool is_pay_witness_script_hash_pattern(operation::list const& ops);
@@ -184,7 +229,7 @@ public:
     bool is_sign_public_key_pattern(operation::list const& ops);
 
     static
-    bool is_sign_key_hash_pattern(operation::list const& ops);
+    bool is_sign_public_key_hash_pattern(operation::list const& ops);
 
     static
     bool is_sign_script_hash_pattern(operation::list const& ops);
@@ -197,11 +242,19 @@ public:
     operation::list to_pay_public_key_pattern(data_slice point);
 
     static
-    operation::list to_pay_key_hash_pattern(short_hash const& hash);
+    operation::list to_pay_public_key_hash_pattern(short_hash const& hash);
+
+    static
+    operation::list to_pay_public_key_hash_pattern_unlocking(endorsement const& end, wallet::ec_public const& pubkey);
+
+    static
+    operation::list to_pay_public_key_hash_pattern_unlocking_placeholder(size_t endorsement_size, size_t pubkey_size);
 
     static
     operation::list to_pay_script_hash_pattern(short_hash const& hash);
 
+    static
+    operation::list to_pay_script_hash_32_pattern(hash_digest const& hash);
     static
     operation::list to_pay_multisig_pattern(uint8_t signatures, point_list const& points);
 
@@ -213,23 +266,34 @@ public:
 
     /// Common pattern detection.
     data_chunk witness_program() const;
+
+#if ! defined(KTH_CURRENCY_BCH)
     script_version version() const;
+#endif // ! KTH_CURRENCY_BCH
+
     script_pattern pattern() const;
     script_pattern output_pattern() const;
     script_pattern input_pattern() const;
 
     /// Consensus computations.
     size_t sigops(bool accurate) const;
-    void find_and_delete(data_stack const& endorsements);
     bool is_unspendable() const;
 
     void reset();
 
-#if defined(KTH_SEGWIT_ENABLED)
-    bool is_pay_to_witness(uint32_t forks) const;
-#endif
-
     bool is_pay_to_script_hash(uint32_t forks) const;
+
+    bool is_pay_to_script_hash_32(uint32_t forks) const;
+
+    // Validation.
+    //-----------------------------------------------------------------------------
+
+    //TODO: move to script_basis (?)
+    static
+    code verify(transaction const& tx, uint32_t input_index, uint32_t forks, script const& input_script, script const& prevout_script, uint64_t /*value*/);
+
+    static
+    code verify(transaction const& tx, uint32_t input, uint32_t forks);
 
 private:
     static
@@ -238,15 +302,10 @@ private:
     static
     data_chunk operations_to_data(operation::list const& ops);
 
+#if ! defined(KTH_CURRENCY_BCH)
     static
-    hash_digest generate_unversioned_signature_hash(transaction const& tx, uint32_t input_index, script const& script_code, uint8_t sighash_type);
-
-    static
-    hash_digest generate_version_0_signature_hash(transaction const& tx,
-                                                  uint32_t input_index,
-                                                  script const& script_code,
-                                                  uint64_t value,
-                                                  uint8_t sighash_type);
+    std::pair<hash_digest, size_t> generate_unversioned_signature_hash(transaction const& tx, uint32_t input_index, script const& script_code, uint8_t sighash_type);
+#endif // ! KTH_CURRENCY_BCH
 
     // These are protected by mutex.
     mutable bool cached_{false};

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -54,6 +54,44 @@ void get_blocks::reset() {
     start_hashes_.shrink_to_fit();
     stop_hash_.fill(0);
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<get_blocks> get_blocks::from_data(byte_reader& reader, uint32_t /*version*/) {
+    // Discard protocol version because it is stupid.
+    auto const skipped_version = reader.skip(4);
+    if ( ! skipped_version) {
+        return make_unexpected(skipped_version.error());
+    }
+
+    auto const count = reader.read_size_little_endian();
+    if ( ! count) {
+        return make_unexpected(count.error());
+    }
+
+    hash_list start_hashes;
+    start_hashes.reserve(*count);
+
+    for (size_t i = 0; i < *count; ++i) {
+        auto const start_hash = read_hash(reader);
+        if ( ! start_hash) {
+            return make_unexpected(start_hash.error());
+        }
+        start_hashes.emplace_back(*start_hash);
+    }
+
+    auto const stop_hash = read_hash(reader);
+    if ( ! stop_hash) {
+        return make_unexpected(stop_hash.error());
+    }
+
+    return get_blocks(std::move(start_hashes), *stop_hash);
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk get_blocks::to_data(uint32_t version) const {
     data_chunk data;

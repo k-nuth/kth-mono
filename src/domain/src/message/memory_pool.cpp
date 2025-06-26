@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -29,6 +29,22 @@ bool memory_pool::is_valid() const {
 void memory_pool::reset() {
     insufficient_version_ = true;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<memory_pool> memory_pool::from_data(byte_reader& reader, uint32_t version) {
+    if (version < memory_pool::version_minimum) {
+        return make_unexpected(error::unsupported_version);
+    }
+    auto const insufficient_version = false;
+    return memory_pool(insufficient_version);
+}
+
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk memory_pool::to_data(uint32_t version) const {
     data_chunk data;

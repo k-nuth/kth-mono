@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -27,13 +27,19 @@ enum class script_pattern
     /// Pay to Public Key Hash [P2PKH]
     /// Pubkey script: OP_DUP OP_HASH160 <PubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
     /// Signature script: <sig> <pubkey>
-    pay_key_hash,
+    pay_public_key_hash,
 
     /// Pay to Script Hash [P2SH/BIP16]
     /// The redeem script may be any pay type, but only multisig makes sense.
     /// Pubkey script: OP_HASH160 <Hash160(redeemScript)> OP_EQUAL
     /// Signature script: <sig>[sig][sig...] <redeemScript>
     pay_script_hash,
+
+    /// Pay to Script Hash 32
+    /// The redeem script may be any pay type, but only multisig makes sense.
+    /// Pubkey script: OP_HASH256 <Hash256(redeemScript)> OP_EQUAL
+    /// Signature script: <sig>[sig][sig...] <redeemScript>
+    pay_script_hash_32,
 
     /// Sign Multisig script [BIP11]
     sign_multisig,
@@ -42,7 +48,7 @@ enum class script_pattern
     sign_public_key,
 
     /// Sign Public Key Hash [P2PKH]
-    sign_key_hash,
+    sign_public_key_hash,
 
     /// Sign Script Hash [P2SH/BIP16]
     sign_script_hash,

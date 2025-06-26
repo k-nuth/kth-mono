@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -33,6 +33,21 @@ bool send_headers::is_valid() const {
 void send_headers::reset() {
     insufficient_version_ = true;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<send_headers> send_headers::from_data(byte_reader& reader, uint32_t version) {
+    if (version < send_headers::version_minimum) {
+        return make_unexpected(error::version_too_low);
+    }
+    auto const insufficient_version = false;
+    return send_headers(insufficient_version);
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk send_headers::to_data(uint32_t version) const {
     data_chunk data;

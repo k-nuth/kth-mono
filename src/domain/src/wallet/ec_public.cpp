@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,14 +26,6 @@ uint8_t const ec_public::mainnet_p2kh = 0x30;
 #else
 uint8_t const ec_public::mainnet_p2kh = 0x00;
 #endif
-
-ec_public::ec_public()
-    : point_(null_compressed_point)
-{}
-
-ec_public::ec_public(ec_public const& x)
-    : valid_(x.valid_), compress_(x.compress_), point_(x.point_) {
-}
 
 ec_public::ec_public(ec_private const& secret)
     : ec_public(from_private(secret)) {
@@ -173,7 +165,7 @@ bool ec_public::to_uncompressed(ec_uncompressed& out) const {
 }
 
 payment_address ec_public::to_payment_address(uint8_t version) const {
-    return {*this, version};
+    return payment_address{*this, version};
 }
 
 // Operators.

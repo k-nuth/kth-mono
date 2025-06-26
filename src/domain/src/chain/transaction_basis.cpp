@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -35,7 +35,6 @@
 #include <kth/infrastructure/utility/limits.hpp>
 #include <kth/infrastructure/utility/ostream_writer.hpp>
 
-// using namespace kth::domain::machine;
 using namespace kth::infrastructure::machine;
 
 namespace kth::domain::chain {
@@ -82,40 +81,102 @@ bool transaction_basis::is_valid() const {
     return (version_ != 0) || (locktime_ != 0) || !inputs_.empty() || !outputs_.empty();
 }
 
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<transaction_basis> transaction_basis::from_data(byte_reader& reader, bool wire /*= true*/) {
+    if (wire) {
+        // Wire (satoshi protocol) deserialization.
+        auto const version = reader.read_little_endian<uint32_t>();
+        if ( ! version) {
+            return make_unexpected(version.error());
+        }
+        auto inputs = read_collection<chain::input>(reader, wire);
+        if ( ! inputs) {
+            return make_unexpected(inputs.error());
+        }
+        auto outputs = read_collection<chain::output>(reader, wire);
+        if ( ! outputs) {
+            return make_unexpected(outputs.error());
+        }
+        auto const locktime = reader.read_little_endian<uint32_t>();
+        if ( ! locktime) {
+            return make_unexpected(locktime.error());
+        }
+        return transaction_basis {
+            *version,
+            *locktime,
+            std::move(*inputs),
+            std::move(*outputs)
+        };
+    }
+
+    // Database (outputs forward) serialization.
+    auto outputs = read_collection<chain::output>(reader, wire);
+    if ( ! outputs) {
+        return make_unexpected(outputs.error());
+    }
+    auto inputs = read_collection<chain::input>(reader, wire);
+    if ( ! inputs) {
+        return make_unexpected(inputs.error());
+    }
+    auto const locktime = reader.read_variable_little_endian();
+    if ( ! locktime) {
+        return make_unexpected(locktime.error());
+    }
+    auto const version = reader.read_variable_little_endian();
+    if ( ! version) {
+        return make_unexpected(version.error());
+    }
+
+    if (*locktime > max_uint32 || *version > max_uint32) {
+        return make_unexpected(error::invalid_size);
+    }
+
+    return transaction_basis {
+        uint32_t(*version),
+        uint32_t(*locktime),
+        std::move(*inputs),
+        std::move(*outputs)
+    };
+}
+
+
 // Serialization.
 //-----------------------------------------------------------------------------
 
 // Transactions with empty witnesses always use old serialization (bip144).
 // If no inputs are witness programs then witness hash is tx hash (bip141).
-data_chunk transaction_basis::to_data(bool wire, bool witness) const {
+data_chunk transaction_basis::to_data(bool wire) const {
     data_chunk data;
-    auto const size = serialized_size(wire, witness_val(witness));
+    auto const size = serialized_size(wire);
 
     // Reserve an extra byte to prevent full reallocation in the case of
     // generate_signature_hash extension by addition of the sighash_type.
     data.reserve(size + sizeof(uint8_t));
 
     data_sink ostream(data);
-    to_data(ostream, wire, witness_val(witness));
+    to_data(ostream, wire);
 
     ostream.flush();
     KTH_ASSERT(data.size() == size);
     return data;
 }
 
-void transaction_basis::to_data(data_sink& stream, bool wire, bool witness) const {
+void transaction_basis::to_data(data_sink& stream, bool wire) const {
     ostream_writer sink_w(stream);
-    to_data(sink_w, wire, witness_val(witness));
+    to_data(sink_w, wire);
 }
 
 // Size.
 //-----------------------------------------------------------------------------
 
-size_t transaction_basis::serialized_size(bool wire, bool witness) const {
+size_t transaction_basis::serialized_size(bool wire) const {
     // Returns space for the witness although not serialized by input.
     // Returns witness space if specified even if input not segregated.
-    auto const ins = [wire, witness](size_t size, input const& input) {
-        return size + input.serialized_size(wire, witness_val(witness));
+    auto const ins = [wire](size_t size, input const& input) {
+        return size + input.serialized_size(wire);
     };
 
     auto const outs = [wire](size_t size, output const& output) {
@@ -130,11 +191,6 @@ size_t transaction_basis::serialized_size(bool wire, bool witness) const {
          + infrastructure::message::variable_uint_size(outputs_.size())
          + std::accumulate(inputs_.begin(), inputs_.end(), size_t{0}, ins)
          + std::accumulate(outputs_.begin(), outputs_.end(), size_t{0}, outs)
-
-#if defined(KTH_SEGWIT_ENABLED)
-         + (wire && witness_val(witness) ? sizeof(witness_marker) : 0)
-         + (wire && witness_val(witness) ? sizeof(witness_flag) : 0)
-#endif
         ;
 }
 
@@ -189,18 +245,6 @@ void transaction_basis::set_outputs(output::list&& value) {
     outputs_ = std::move(value);
 }
 
-// Utilities.
-//-----------------------------------------------------------------------------
-
-#if defined(KTH_SEGWIT_ENABLED)
-// Clear witness from all inputs (does not change default transaction hash).
-void transaction_basis::strip_witness() {
-    auto const strip = [](input& input) {
-        input.strip_witness();
-    };
-    std::for_each(inputs_.begin(), inputs_.end(), strip);
-}
-#endif
 
 // Validation helpers.
 //-----------------------------------------------------------------------------
@@ -270,9 +314,7 @@ bool transaction_basis::is_locktime_conflict() const {
 
 // Returns max_size_t in case of overflow.
 size_t transaction_basis::signature_operations(bool bip16, bool bip141) const {
-#if ! defined(KTH_SEGWIT_ENABLED)
     bip141 = false;  // No segwit
-#endif
     auto const in = [bip16, bip141](size_t total, input const& input) {
         // This includes BIP16 p2sh additional sigops if prevout is cached.
         return ceiling_add(total, input.signature_operations(bip16, bip141));
@@ -285,14 +327,6 @@ size_t transaction_basis::signature_operations(bool bip16, bool bip141) const {
     return std::accumulate(inputs_.begin(), inputs_.end(), size_t{0}, in) +
            std::accumulate(outputs_.begin(), outputs_.end(), size_t{0}, out);
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-size_t transaction_basis::weight() const {
-    // Block weight is 3 * Base size * + 1 * Total size (bip141).
-    return base_size_contribution * serialized_size(true, false) +
-           total_size_contribution * serialized_size(true, true);
-}
-#endif
 
 bool transaction_basis::is_missing_previous_outputs() const {
     auto const missing = [](input const& input) {
@@ -411,7 +445,7 @@ code transaction_basis::check(uint64_t total_output_value, size_t max_block_size
         // TODO(legacy): reduce by header, txcount and smallest coinbase size for height.
     }
 
-    if (transaction_pool && serialized_size(true, false) >= max_block_size) {
+    if (transaction_pool && serialized_size(true) >= max_block_size) {
         return error::transaction_size_limit;
 
         // We cannot know if bip16/bip141 is enabled here so we do not check it.
@@ -439,17 +473,12 @@ size_t transaction_basis::min_tx_size(chain_state const& state) const {
 }
 
 // These checks assume that prevout caching is completed on all tx.inputs.
-code transaction_basis::accept(chain_state const& state, bool is_segregated, bool is_overspent, bool is_duplicated /*= false*/, bool transaction_pool /*= true*/) const {
+code transaction_basis::accept(chain_state const& state, bool is_overspent, bool is_duplicated /*= false*/, bool transaction_pool /*= true*/) const {
     auto const bip16 = state.is_enabled(kth::domain::machine::rule_fork::bip16_rule);
     auto const bip30 = state.is_enabled(kth::domain::machine::rule_fork::bip30_rule);
     auto const bip68 = state.is_enabled(kth::domain::machine::rule_fork::bip68_rule);
     auto const network = state.network();
-
-#if ! defined(KTH_SEGWIT_ENABLED)
     auto const bip141 = false;  // No segwit
-#else
-    auto const bip141 = state.is_enabled(kth::domain::machine::rule_fork::bip141_rule);
-#endif
 
     auto const revert_bip30 = state.is_enabled(kth::domain::machine::rule_fork::allow_collisions);
 
@@ -458,18 +487,9 @@ code transaction_basis::accept(chain_state const& state, bool is_segregated, boo
     }
 
 #if defined(KTH_CURRENCY_BCH)
-    if (serialized_size(true, false) < min_tx_size(state)) {
+    if (serialized_size(true) < min_tx_size(state)) {
         return error::transaction_size_limit;
     }
-#endif
-
-#if defined(KTH_SEGWIT_ENABLED)
-    // A segregated tx should appear empty if bip141 is not enabled.
-    if ( ! bip141 && is_segregated) {
-        return error::empty_transaction;
-    }
-#else
-    (void)is_segregated;
 #endif
 
     if (transaction_pool && !is_final(state.height(), state.median_time_past())) {
@@ -512,15 +532,10 @@ code transaction_basis::accept(chain_state const& state, bool is_segregated, boo
 #if defined(KTH_CURRENCY_BCH)
     if ( ! state.is_fermat_enabled()) {
 #endif
-
-#if defined(KTH_SEGWIT_ENABLED)
-        // bip141 discounts segwit sigops by increasing limit and legacy weight.
-        auto const max_sigops = bip141 ? max_fast_sigops : get_max_block_sigops(network);
-#else
         auto const max_sigops = state.is_lobachevski_enabled() ?
             state.dynamic_max_block_sigops() :
             static_max_block_sigops(network);
-#endif
+
 
         if (transaction_pool && signature_operations(bip16, bip141) > max_sigops) {
             return error::transaction_embedded_sigop_limit;
@@ -529,16 +544,7 @@ code transaction_basis::accept(chain_state const& state, bool is_segregated, boo
         }
 #if defined(KTH_CURRENCY_BCH)
     }
-#endif
 
-
-#if defined(KTH_SEGWIT_ENABLED)
-    if (transaction_pool && bip141 && weight() > max_block_weight) {
-        return error::transaction_weight_limit;
-    }
-#endif
-
-#if defined(KTH_CURRENCY_BCH)
     if (state.is_descartes_enabled()) {
         // CHIP 2021-01 Restrict Transaction Version. Enabled in 2023-May-15
         if (version_ > transaction_version_max || version_ < transaction_version_min) {
@@ -562,31 +568,8 @@ bool transaction_basis::is_standard() const {
     });
 }
 
-hash_digest hash_non_witness(transaction_basis const& tx) {
+hash_digest hash(transaction_basis const& tx) {
     return bitcoin_hash(tx.to_data(true));
-}
-
-#if defined(KTH_SEGWIT_ENABLED)
-hash_digest hash_witness(transaction_basis const& tx) {
-    // precondition: tx.is_segregated()
-    return tx.is_coinbase() ? null_hash : bitcoin_hash(tx.to_data(true, true));
-}
-#endif
-
-hash_digest hash(transaction_basis const& tx, bool witness) {
-
-#if defined(KTH_SEGWIT_ENABLED)
-    // // Witness hashing must be disabled for non-segregated txs.
-    // if (witness) witness = is_segregated(tx);
-
-    if (witness) {
-        return hash_witness(tx);
-    }
-#else
-    (void)witness;
-#endif
-
-    return hash_non_witness(tx);
 }
 
 hash_digest outputs_hash(transaction_basis const& tx) {
@@ -599,6 +582,10 @@ hash_digest inpoints_hash(transaction_basis const& tx) {
 
 hash_digest sequences_hash(transaction_basis const& tx) {
     return to_sequences(tx);
+}
+
+hash_digest utxos_hash(transaction_basis const& tx) {
+    return to_utxos(tx);
 }
 
 hash_digest to_outputs(transaction_basis const& tx) {
@@ -667,6 +654,34 @@ hash_digest to_sequences(transaction_basis const& tx) {
     return bitcoin_hash(data);
 }
 
+hash_digest to_utxos(transaction_basis const& tx) {
+    auto const sum = [&](size_t total, input const& input) {
+        auto const& prevout = input.previous_output().validation.cache;
+        auto const missing = !prevout.is_valid();
+        total += missing ? 0 : prevout.serialized_size();
+        return total;
+    };
+
+    auto const& ins = tx.inputs();
+    auto const size = std::accumulate(ins.begin(), ins.end(), size_t(0), sum);
+
+    data_chunk data;
+    data.reserve(size);
+    data_sink ostream(data);
+    ostream_writer sink_w(ostream);
+
+    auto const write = [&](input const& input) {
+        auto const& prevout = input.previous_output().validation.cache;
+        auto const missing = !prevout.is_valid();
+        if (missing) return;
+        prevout.to_data(sink_w);
+    };
+
+    std::for_each(ins.begin(), ins.end(), write);
+    ostream.flush();
+    KTH_ASSERT(data.size() == size);
+    return bitcoin_hash(data);
+}
 
 // Returns max_uint64 in case of overflow.
 uint64_t total_input_value(transaction_basis const& tx) {
@@ -699,16 +714,5 @@ uint64_t fees(transaction_basis const& tx) {
 bool is_overspent(transaction_basis const& tx) {
     return ! tx.is_coinbase() && total_output_value(tx) > total_input_value(tx);
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-bool is_segregated(transaction_basis const& tx) {
-    auto const segregated = [](input const& input) {
-        return input.is_segregated();
-    };
-
-    // If no block tx is has witness data the commitment is optional (bip141).
-    return std::any_of(tx.inputs().begin(), tx.inputs().end(), segregated);
-}
-#endif
 
 } // namespace kth::domain::chain

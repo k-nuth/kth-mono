@@ -23,7 +23,7 @@ $ conan config install https://github.com/k-nuth/ci-utils/raw/master/conan/confi
 2. Install the appropriate library:
 
 ```
-$ conan install --requires=c-api/0.49.0 --update
+$ conan install --requires=c-api/0.67.0 --update
 ```
 
 ### "Hello, Knuth!":
@@ -125,7 +125,7 @@ _Note: Here we are building the code using the GNU Compiler Collection (GCC) on 
 To build and run the code example, first you have to create a tool file called `conanfile.txt` in orded to manage the dependencies of the code:
 
 ```sh
-$ printf "[requires]\nc-api/0.49.0\n[options]\nc-api:shared=True\n[imports]\ninclude/kth, *.h -> ./include/kth\ninclude/kth, *.hpp -> ./include/kth\nlib, *.so -> ./lib\n" > conanfile.txt
+$ printf "[requires]\nc-api/0.67.0\n[options]\nc-api:shared=True\n[imports]\ninclude/kth, *.h -> ./include/kth\ninclude/kth, *.hpp -> ./include/kth\nlib, *.so -> ./lib\n" > conanfile.txt
 ```
 
 Then, run the following command to bring the dependencies to the local directory:
@@ -161,7 +161,7 @@ Each of our modules has its own Github repository, but in case you want to creat
 [badge.GithubActions]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fc-api%2Fbadge&style=for-the-badge
 [badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-c-api.svg
 [badge.release]: https://img.shields.io/github/v/release/k-nuth/c-api?display_name=tag&style=for-the-badge&color=A8B9CC&logo=c
-[badge.c]: https://img.shields.io/badge/C-11-blue.svg?logo=c&style=for-the-badge
+[badge.c]: https://img.shields.io/badge/C-23-blue.svg?logo=c&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
 [badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slack&style=for-the-badge
 

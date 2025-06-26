@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -39,6 +39,23 @@ bool not_found::operator==(not_found const& x) const {
 
 bool not_found::operator!=(not_found const& x) const {
     return (static_cast<inventory>(*this) != static_cast<inventory>(x));
+}
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<not_found> not_found::from_data(byte_reader& reader, uint32_t version) {
+    auto inv = inventory::from_data(reader, version);
+    if ( ! inv) {
+        return make_unexpected(inv.error());
+    }
+
+    if (version < not_found::version_minimum) {
+        return make_unexpected(error::unsupported_version);
+    }
+
+    return not_found(std::move(*inv));
 }
 
 } // namespace kth::domain::message

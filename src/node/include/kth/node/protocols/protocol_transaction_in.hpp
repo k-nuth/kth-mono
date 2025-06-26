@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -42,11 +42,6 @@ private:
     const uint64_t minimum_relay_fee_;
     bool const relay_from_peer_;
     bool const refresh_pool_;
-
-#if defined(KTH_SEGWIT_ENABLED)
-    bool const require_witness_;
-    bool const peer_witness_;
-#endif
 };
 
 } // namespace kth::node

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -58,7 +58,7 @@ input::input(input const& x)
     : input(x.value_) {}
 
 input::input(chain::input_point const& value)
-    : value_({value, {}, max_input_sequence}) {}
+    : value_(chain::input{value, {}, max_input_sequence}) {}
 
 input::operator chain::input const&() const {
     return value_;

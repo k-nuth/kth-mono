@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -158,68 +158,6 @@ TEST_CASE("get data  factory from data 3  valid input  success", "[get data]") {
     REQUIRE(data.size() == result.serialized_size(version));
     REQUIRE(expected.serialized_size(version) == result.serialized_size(version));
 }
-
-#if defined(KTH_SEGWIT_ENABLED)
-TEST_CASE("get data  to witness  error  unchanged", "[get data]") {
-    static auto const expected = inventory_vector::type_id::error;
-    get_data instance{{expected, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == expected);
-}
-
-TEST_CASE("get data  to witness  filtered block  unchanged", "[get data]") {
-    static auto const expected = inventory_vector::type_id::filtered_block;
-    get_data instance{{expected, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == expected);
-}
-
-TEST_CASE("get data  to witness  compact block  unchanged", "[get data]") {
-    static auto const expected = inventory_vector::type_id::compact_block;
-    get_data instance{{expected, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == expected);
-}
-
-#if defined(KTH_SEGWIT_ENABLED)
-TEST_CASE("get data  to witness  witness transaction  unchanged", "[get data]") {
-    static auto const expected = inventory_vector::type_id::witness_transaction;
-    get_data instance{{expected, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == expected);
-}
-
-TEST_CASE("get data  to witness  witness block  unchanged", "[get data]") {
-    static auto const expected = inventory_vector::type_id::witness_block;
-    get_data instance{{expected, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == expected);
-}
-#endif
-
-TEST_CASE("get data  to witness  block  expected", "[get data]") {
-    get_data instance{{inventory_vector::type_id::block, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == inventory_vector::type_id::witness_block);
-}
-
-TEST_CASE("get data  to witness  transaction  expected", "[get data]") {
-    get_data instance{{inventory_vector::type_id::transaction, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == inventory_vector::type_id::witness_transaction);
-}
-
-TEST_CASE("get data  to witness  block error transaction  expected", "[get data]") {
-    get_data instance{
-        {inventory_vector::type_id::block, {}},
-        {inventory_vector::type_id::error, {}},
-        {inventory_vector::type_id::transaction, {}}};
-    instance.to_witness();
-    REQUIRE(instance.inventories()[0].type() == inventory_vector::type_id::witness_block);
-    REQUIRE(instance.inventories()[1].type() == inventory_vector::type_id::error);
-    REQUIRE(instance.inventories()[2].type() == inventory_vector::type_id::witness_transaction);
-}
-#endif // KTH_CURRENCY_BCH
 
 TEST_CASE("get data  operator assign equals  always  matches equivalent", "[get data]") {
     static auto const hash = hash_literal("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b");

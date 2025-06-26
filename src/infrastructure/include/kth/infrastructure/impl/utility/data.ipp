@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -119,7 +119,7 @@ template <typename Source>
 bool starts_with(const typename Source::const_iterator& begin,
     const typename Source::const_iterator& end, const Source& value) {
     auto const length = std::distance(begin, end);
-    return length >= 0 && static_cast<size_t>(length) >= value.size() &&
+    return length >= 0 && size_t(length) >= value.size() &&
         std::equal(value.begin(), value.end(), begin);
 }
 

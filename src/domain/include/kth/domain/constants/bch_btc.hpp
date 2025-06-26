@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,15 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 
-// #include <kth/domain/define.hpp>
-// #include <kth/domain/multi_crypto_settings.hpp>
-// #include <kth/domain/version.hpp>
-
-// #include <kth/infrastructure/compat.hpp>
 #include <kth/infrastructure/config/checkpoint.hpp>
-// #include <kth/infrastructure/constants.hpp>
-// #include <kth/infrastructure/math/hash.hpp>
-// #include <kth/infrastructure/message/network_address.hpp>
 
 namespace kth {
 

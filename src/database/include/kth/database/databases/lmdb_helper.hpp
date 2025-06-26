@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,12 +6,6 @@
 #define KTH_DATABASE_LMDB_HELPER_HPP_
 
 #include <utility>
-
-// #if defined(KTH_USE_LIBMDBX)
-// #include <mdbx.h>
-// #else
-// #include <lmdb.h>
-// #endif
 
 #include <kth/database/databases/generic_db.hpp>
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2022 The Bitcoin developers
+// Copyright (c) 2017-2024 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -103,6 +103,8 @@ class GenericHashWriter {
     const int nType;
     const int nVersion;
 
+    size_t nBytesWritten{};
+
 public:
     GenericHashWriter(int nTypeIn, int nVersionIn)
         : nType(nTypeIn), nVersion(nVersionIn) {}
@@ -112,6 +114,7 @@ public:
 
     void write(const char *pch, size_t size) {
         ctx.Write({UInt8Cast(pch), size});
+        nBytesWritten += size;
     }
 
     // invalidates the object
@@ -135,6 +138,11 @@ public:
         ::Serialize(*this, obj);
         return (*this);
     }
+
+    /// Returns the total number of bytes written across all previous calls to write() above.
+    /// Note: We could have named this .size() but if we did, then it might then not be so obvious what this method
+    /// returns in that case (is it the resulting hash size or the bytes written size?).
+    size_t GetNumBytesWritten() const { return nBytesWritten; }
 };
 
 /** A writer stream (for serialization) that computes a double sha-256 hash. */

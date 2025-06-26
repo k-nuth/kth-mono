@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2021 The Bitcoin developers
+// Copyright (c) 2017-2022 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,7 +24,7 @@ std::vector<BlockHash> CCoinsView::GetHeadBlocks() const {
 bool CCoinsView::BatchWrite(CCoinsMap &mapCoins, const BlockHash &hashBlock) {
     return false;
 }
-CCoinsViewCursor *CCoinsView::Cursor() const {
+CCoinsViewCursor *CCoinsView::Cursor(bool snapshot) const {
     return nullptr;
 }
 bool CCoinsView::HaveCoin(const COutPoint &outpoint) const {
@@ -52,8 +52,8 @@ bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins,
                                   const BlockHash &hashBlock) {
     return base->BatchWrite(mapCoins, hashBlock);
 }
-CCoinsViewCursor *CCoinsViewBacked::Cursor() const {
-    return base->Cursor();
+CCoinsViewCursor *CCoinsViewBacked::Cursor(bool snapshot) const {
+    return base->Cursor(snapshot);
 }
 size_t CCoinsViewBacked::EstimateSize() const {
     return base->EstimateSize();

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,12 +13,13 @@
 #include <kth/domain/chain/header.hpp>
 #include <kth/domain/define.hpp>
 #include <kth/domain/message/version.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -76,24 +77,8 @@ public:
         return !(x == y);
     }
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) {
-        if ( ! chain::header::from_data(source)) {
-            return false;
-        }
-
-        // The header message must trail a zero byte (yes, it's stoopid).
-        // bitcoin.org/en/developer-reference#headers
-        if (version != version::level::canonical && source.read_byte() != 0x00) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<header> from_data(byte_reader& reader, uint32_t version);
 
     data_chunk to_data(uint32_t version) const;
     void to_data(uint32_t version, data_sink& stream) const;

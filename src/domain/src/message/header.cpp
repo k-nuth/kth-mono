@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -51,6 +51,33 @@ header& header::operator=(header const& x) {
     chain::header::operator=(x);
     return *this;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<header> header::from_data(byte_reader& reader, uint32_t version) {
+    auto header = chain::header::from_data(reader);
+    if ( ! header) {
+        return make_unexpected(header.error());
+    }
+
+    // The header message must trail a zero byte (yes, it's stoopid).
+    // bitcoin.org/en/developer-reference#headers
+    if (version != version::level::canonical) {
+        auto const trail = reader.read_byte();
+        if ( ! trail) {
+            return make_unexpected(trail.error());
+        }
+        if (*trail != 0x00) {
+            return make_unexpected(error::version_too_new);
+        }
+    }
+    return header;
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk header::to_data(uint32_t version) const {
     data_chunk data;

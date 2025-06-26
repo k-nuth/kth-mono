@@ -1,13 +1,13 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(infrastructure VERSION 0 LANGUAGES CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
@@ -66,7 +66,10 @@ set(Boost_DEBUG ON)
 
 
 find_package(Threads REQUIRED)
-find_package(secp256k1 REQUIRED)
+
+if (NOT GLOBAL_BUILD)
+  find_package(secp256k1 REQUIRED)
+endif()
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   find_package(Boost COMPONENTS program_options REQUIRED)
@@ -80,11 +83,22 @@ find_package(spdlog REQUIRED)
 find_package(expected-lite REQUIRED)
 find_package(ctre REQUIRED)
 
+if (WITH_ICU)
+  find_package(ICU REQUIRED)
+endif()
+
 
 include(CheckCXXCompilerFlag)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/ci_utils/cmake)
 include(KnuthTools)
+
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -matomics -mbulk-memory")
+  _add_cxx_compile_flag(-matomics _has_matomics_flag)
+  _add_cxx_compile_flag(-mbulk-memory _has_mbulk_memory_flag)
+endif()
 
 if (NOT MSVC)
   _add_c_compile_flag(-Wall _has_all_warning_flag)
@@ -214,6 +228,8 @@ set(kth_sources_just_legacy
         src/wallet/mnemonic.cpp
 
         src/wallet/uri.cpp
+
+        src/utility/pseudo_random.cpp
     )
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
@@ -228,6 +244,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     src/utility/socket.cpp
 
     src/utility/pseudo_random_broken_do_not_use.cpp
+
     src/utility/threadpool.cpp
 
     src/utility/work.cpp
@@ -286,6 +303,7 @@ set(kth_headers
     include/kth/infrastructure/compat.h
     include/kth/infrastructure/compat.hpp
     include/kth/infrastructure/constants.hpp
+    # include/kth/infrastructure/concepts.hpp
     include/kth/infrastructure/define.hpp
     include/kth/infrastructure/error.hpp
     include/kth/infrastructure/handlers.hpp
@@ -333,6 +351,7 @@ set(kth_headers
     include/kth/infrastructure/math/uint256.hpp
 
     include/kth/infrastructure/impl/utility/array_slice.ipp
+
     include/kth/infrastructure/impl/utility/collection.ipp
     include/kth/infrastructure/impl/utility/data.ipp
     include/kth/infrastructure/impl/utility/deserializer.ipp
@@ -362,6 +381,7 @@ set(kth_headers
     include/kth/infrastructure/utility/assert.hpp
     include/kth/infrastructure/utility/atomic.hpp
     include/kth/infrastructure/utility/binary.hpp
+    # include/kth/infrastructure/utility/byte_reader.hpp
     include/kth/infrastructure/utility/collection.hpp
     include/kth/infrastructure/utility/color.hpp
     include/kth/infrastructure/utility/conditional_lock.hpp
@@ -385,7 +405,11 @@ set(kth_headers
     include/kth/infrastructure/utility/pending.hpp
     include/kth/infrastructure/utility/png.hpp
     include/kth/infrastructure/utility/prioritized_mutex.hpp
+
+    include/kth/infrastructure/utility/pseudo_random.hpp
     include/kth/infrastructure/utility/pseudo_random_broken_do_not_use.hpp
+
+
     include/kth/infrastructure/utility/reader.hpp
     include/kth/infrastructure/utility/resubscriber.hpp
     include/kth/infrastructure/utility/scope_lock.hpp
@@ -448,7 +472,7 @@ endif()
 
 add_library(${PROJECT_NAME} ${MODE} ${kth_sources} ${kth_headers})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 if (ENABLE_POSITION_INDEPENDENT_CODE)
     set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -481,6 +505,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC secp256k1::secp256k1)
 target_link_libraries(${PROJECT_NAME} PUBLIC nonstd::expected-lite)
 target_link_libraries(${PROJECT_NAME} PUBLIC ctre::ctre)
 
+if (WITH_ICU)
+  target_link_libraries(${PROJECT_NAME} PUBLIC ICU::icuuc)
+endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
@@ -532,7 +559,7 @@ if (WITH_TESTS)
     test/utility/data.cpp
     test/utility/endian.cpp
     test/utility/operators.cpp
-
+    test/utility/pseudo_random.cpp
     test/utility/serializer.cpp
     test/utility/stream.cpp
     test/utility/thread.cpp
@@ -542,6 +569,7 @@ if (WITH_TESTS)
     test/wallet/mnemonic.cpp
     test/wallet/uri.cpp
 
+    # test/utility/pseudo_random.cpp
   )
 
   if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")

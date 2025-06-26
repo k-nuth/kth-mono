@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,6 +12,7 @@
 #include "secp256k1_initializer.hpp"
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
+#include <secp256k1_schnorr.h>
 
 #include <kth/infrastructure/math/hash.hpp>
 #include <kth/infrastructure/utility/assert.hpp>
@@ -251,7 +252,7 @@ bool parse_signature(ec_signature& out, const der_signature& der_signature, bool
     return valid;
 }
 
-bool encode_signature(der_signature& out, const ec_signature& signature) {
+bool encode_signature(der_signature& out, ec_signature const& signature) {
     // Copy to avoid exposing external types.
     secp256k1_ecdsa_signature sign;
     std::copy_n(signature.begin(), ec_signature_size, std::begin(sign.data));
@@ -260,8 +261,7 @@ bool encode_signature(der_signature& out, const ec_signature& signature) {
     auto size = max_der_signature_size;
     out.resize(size);
 
-    if (secp256k1_ecdsa_signature_serialize_der(context, out.data(), &size,
-        &sign) != 1) {
+    if (secp256k1_ecdsa_signature_serialize_der(context, out.data(), &size, &sign) != 1) {
         return false;
     }
 
@@ -269,18 +269,54 @@ bool encode_signature(der_signature& out, const ec_signature& signature) {
     return true;
 }
 
+bool encode_signature(compact_signature& out, ec_signature const& signature) {
+    // Copy to avoid exposing external types.
+    secp256k1_ecdsa_signature sign;
+    std::copy_n(signature.begin(), ec_signature_size, std::begin(sign.data));
+
+    auto const context = signing.context();
+
+    if (secp256k1_ecdsa_signature_serialize_compact(context, out.data(), &sign) != 1) {
+        return false;
+    }
+    return true;
+}
+
+
 // EC sign/verify
 // ----------------------------------------------------------------------------
 
-bool sign(ec_signature& out, ec_secret const& secret, hash_digest const& hash) {
+bool sign_ecdsa(ec_signature& out, ec_secret const& secret, hash_digest const& hash) {
     secp256k1_ecdsa_signature signature;
     auto const context = signing.context();
 
-    if (secp256k1_ecdsa_sign(context, &signature, hash.data(), secret.data(), secp256k1_nonce_function_rfc6979, nullptr) != 1) {
+    if (secp256k1_ecdsa_sign(
+        context,
+        &signature,
+        hash.data(),
+        secret.data(),
+        secp256k1_nonce_function_rfc6979,
+        nullptr) != 1) {
         return false;
     }
 
     std::copy_n(std::begin(signature.data), out.size(), out.begin());
+    return true;
+}
+
+bool sign_schnorr(ec_signature& out, ec_secret const& secret, hash_digest const& hash) {
+    auto const context = signing.context();
+
+    if (secp256k1_schnorr_sign(
+        context,
+        out.data(),
+        hash.data(),
+        secret.data(),
+        secp256k1_nonce_function_rfc6979,
+        nullptr) != 1) {
+        return false;
+    }
+
     return true;
 }
 

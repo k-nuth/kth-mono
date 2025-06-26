@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -114,7 +114,7 @@ TEST_CASE("message  magic to recovery id  invalid  false", "[message  recovery m
 TEST_CASE("message  sign message  compressed  expected", "[message  sign message]") {
     auto const compressed = true;
     auto const secret = base16_literal(SECRET);
-    const payment_address address({secret, 0x00, compressed});
+    payment_address const address(ec_private{secret, 0x00, compressed});
     auto const message = to_chunk(std::string("Compressed"));
     message_signature out_signature;
     REQUIRE(sign_message(out_signature, message, secret, compressed));
@@ -124,7 +124,7 @@ TEST_CASE("message  sign message  compressed  expected", "[message  sign message
 TEST_CASE("message  sign message  uncompressed  expected", "[message  sign message]") {
     auto const compressed = false;
     auto const secret = base16_literal(SECRET);
-    const payment_address address({secret, 0x00, compressed});
+    payment_address const address(ec_private{secret, 0x00, compressed});
     auto const message = to_chunk(std::string("Uncompressed"));
     message_signature out_signature;
     REQUIRE(sign_message(out_signature, message, secret, compressed));
@@ -133,7 +133,7 @@ TEST_CASE("message  sign message  uncompressed  expected", "[message  sign messa
 
 TEST_CASE("message  sign message secret  compressed  expected", "[message  sign message]") {
     ec_private secret(WIF_COMPRESSED);
-    const payment_address address(secret);
+    payment_address const address(secret);
     auto const message = to_chunk(std::string("Compressed"));
     message_signature out_signature;
     REQUIRE(sign_message(out_signature, message, secret));
@@ -142,7 +142,7 @@ TEST_CASE("message  sign message secret  compressed  expected", "[message  sign 
 
 TEST_CASE("message  sign message wif  compressed  expected", "[message  sign message]") {
     ec_private secret(WIF_COMPRESSED);
-    const payment_address address(secret);
+    payment_address const address(secret);
     auto const message = to_chunk(std::string("Compressed"));
     message_signature out_signature;
     REQUIRE(sign_message(out_signature, message, secret, secret.compressed()));
@@ -151,7 +151,7 @@ TEST_CASE("message  sign message wif  compressed  expected", "[message  sign mes
 
 TEST_CASE("message  sign message wif  uncompressed  expected", "[message  sign message]") {
     ec_private secret(WIF_UNCOMPRESSED);
-    const payment_address address(secret);
+    payment_address const address(secret);
     auto const message = to_chunk(std::string("Uncompressed"));
     message_signature out_signature;
     REQUIRE(sign_message(out_signature, message, secret, secret.compressed()));
@@ -160,54 +160,54 @@ TEST_CASE("message  sign message wif  uncompressed  expected", "[message  sign m
 
 // End Test Suite
 
-// Start Test Suite: message  verify message
+// Start Test Suite: message verify message
 
-TEST_CASE("message  verify message  compressed  expected", "[message  verify message]") {
-    const payment_address address(base16_literal(SECRET));
+TEST_CASE("message verify message compressed expected", "[message verify message]") {
+    payment_address const address(ec_private{base16_literal(SECRET)});
     auto const message = to_chunk(std::string("Compressed"));
     auto const signature = base16_literal(SIGNATURE_COMPRESSED);
     REQUIRE(verify_message(message, address, signature));
 }
 
-TEST_CASE("message  verify message  uncompressed  expected", "[message  verify message]") {
-    const payment_address address({base16_literal(SECRET), 0x00, false});
+TEST_CASE("message verify message uncompressed expected", "[message verify message]") {
+    payment_address const address(ec_private{base16_literal(SECRET), 0x00, false});
     auto const message = to_chunk(std::string("Uncompressed"));
     auto const signature = base16_literal(SIGNATURE_UNCOMPRESSED);
     REQUIRE(verify_message(message, address, signature));
 }
 
-TEST_CASE("message  verify message wif  compressed  round trip", "[message  verify message]") {
+TEST_CASE("message verify message wif compressed round trip", "[message verify message]") {
     ec_private secret(WIF_COMPRESSED);
-    const payment_address address(secret);
+    payment_address const address(secret);
     auto const message = to_chunk(std::string("Compressed"));
     auto const signature = base16_literal(SIGNATURE_WIF_COMPRESSED);
     REQUIRE(verify_message(message, address, signature));
 }
 
-TEST_CASE("message  verify message wif  uncompressed  round trip", "[message  verify message]") {
+TEST_CASE("message verify message wif uncompressed round trip", "[message verify message]") {
     ec_private secret(WIF_UNCOMPRESSED);
-    const payment_address address(secret);
+    payment_address const address(secret);
     auto const message = to_chunk(std::string("Uncompressed"));
     auto const signature = base16_literal(SIGNATURE_WIF_UNCOMPRESSED);
     REQUIRE(verify_message(message, address, signature));
 }
 
-TEST_CASE("message  verify message  electrum compressed  okay", "[message  verify message]") {
+TEST_CASE("message verify message electrum compressed okay", "[message verify message]") {
     message_signature signature;
     REQUIRE(decode_base16(signature, ELECTRUM_SIGNATURE));
 
     // Address of the compressed public key of the message signer.
-    const payment_address address("1PeChFbhxDD9NLbU21DfD55aQBC4ZTR3tE");
+    payment_address const address("1PeChFbhxDD9NLbU21DfD55aQBC4ZTR3tE");
     auto const message = to_chunk(std::string("Nakomoto"));
     REQUIRE(verify_message(message, address, signature));
 }
 
-TEST_CASE("message  verify message  electrum incorrect address  false", "[message  verify message]") {
+TEST_CASE("message verify message electrum incorrect address false", "[message verify message]") {
     message_signature signature;
     REQUIRE(decode_base16(signature, ELECTRUM_SIGNATURE));
 
     // Address of the uncompressed public key of the message signer (incorrect).
-    const payment_address address("1Em1SX7qQq1pTmByqLRafhL1ypx2V786tP");
+    payment_address const address("1Em1SX7qQq1pTmByqLRafhL1ypx2V786tP");
     auto const message = to_chunk(std::string("Nakomoto"));
     REQUIRE( ! verify_message(message, address, signature));
 }

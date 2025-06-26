@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <fmt/ostream.h>
+// #include <fmt/ostream.h>
 
 #include <kth/infrastructure/config/authority.hpp>
 #include <kth/infrastructure/define.hpp>
@@ -159,6 +159,14 @@ private:
 
 } // namespace kth::infrastructure::config
 
-template <> struct fmt::formatter<kth::infrastructure::config::endpoint> : ostream_formatter {};
+// template <> struct fmt::formatter<kth::infrastructure::config::endpoint> : ostream_formatter {};
+
+template <>
+struct fmt::formatter<kth::infrastructure::config::endpoint> : fmt::formatter<std::string> {
+    template <typename FormatContext>
+    auto format(kth::infrastructure::config::endpoint const& value, FormatContext& ctx) const {
+        return fmt::formatter<std::string>::format(value.to_string(), ctx);
+    }
+};
 
 #endif

@@ -30,18 +30,53 @@ runs:
       VERSION=$(echo "${{ inputs.github-ref }}" | sed -e 's,.*/\(.*\),\1,')
       [[ "${{ inputs.github-ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-      # [ "$VERSION" == "main" ] && VERSION=latest
-      # [ "$VERSION" == "master" ] && VERSION=latest
-      # [ "$VERSION" == "dev" ] && VERSION=test
-      # [ "$VERSION" == "merge" ] && VERSION=$(echo "${{ inputs.unique-alt-id }}")
+      echo "Raw VERSION from ref: $VERSION"
+      echo "Github ref: ${{ inputs.github-ref }}"
 
-      # "0.16.0-commit.${{ github.run_number }}"
-      [ "$VERSION" == "main" ] && VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
-      [ "$VERSION" == "master" ] && VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
-      [ "$VERSION" == "dev" ] && VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
-      [ "$VERSION" == "merge" ] && VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
+      # Handle release branches (release/v1.2.3 -> 1.2.3)
+      if [[ "${{ inputs.github-ref }}" == "refs/heads/release/"* ]]; then
+        VERSION=$(echo $VERSION | sed -e 's/^release\///' -e 's/^v//')
+        echo "Release branch detected, using version: $VERSION"
+        
+        # Check if conanfile.py has a hardcoded version (it shouldn't for dynamic versioning)
+        CONAN_VERSION_LINE=$(grep -E '^\s*version\s*=' conanfile.py || echo "")
+        if [ ! -z "$CONAN_VERSION_LINE" ]; then
+          CONAN_VERSION=$(echo "$CONAN_VERSION_LINE" | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/')
+          echo "⚠️  WARNING: Found hardcoded version in conanfile.py: $CONAN_VERSION"
+          echo "  Release branch version: $VERSION"
+          echo "  For dynamic versioning, consider removing the hardcoded version."
+          echo "  The --version parameter will override the hardcoded version."
+        else
+          echo "✅ Conanfile.py uses dynamic versioning (no hardcoded version found)"
+        fi
+        
+      # Handle hotfix branches (hotfix/v1.2.4 -> 1.2.4)
+      elif [[ "${{ inputs.github-ref }}" == "refs/heads/hotfix/"* ]]; then
+        VERSION=$(echo $VERSION | sed -e 's/^hotfix\///' -e 's/^v//')
+        echo "Hotfix branch detected, using version: $VERSION"
+        
+        # Check if conanfile.py has a hardcoded version (it shouldn't for dynamic versioning)
+        CONAN_VERSION_LINE=$(grep -E '^\s*version\s*=' conanfile.py || echo "")
+        if [ ! -z "$CONAN_VERSION_LINE" ]; then
+          CONAN_VERSION=$(echo "$CONAN_VERSION_LINE" | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/')
+          echo "⚠️  WARNING: Found hardcoded version in conanfile.py: $CONAN_VERSION"
+          echo "  Hotfix branch version: $VERSION"
+          echo "  For dynamic versioning, consider removing the hardcoded version."
+          echo "  The --version parameter will override the hardcoded version."
+        else
+          echo "✅ Conanfile.py uses dynamic versioning (no hardcoded version found)"
+        fi
+        
+      # Handle main/master/dev branches
+      elif [ "$VERSION" == "main" ] || [ "$VERSION" == "master" ] || [ "$VERSION" == "dev" ]; then
+        VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
+        echo "Development branch detected, using version: $VERSION"
+      # Handle merge/PR
+      elif [ "$VERSION" == "merge" ]; then
+        VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
+        echo "Merge/PR detected, using version: $VERSION"
+      fi
 
-      echo "VERSION: $VERSION"
-
+      echo "Final VERSION: $VERSION"
       echo "version=$VERSION" >> $GITHUB_OUTPUT
     shell: bash

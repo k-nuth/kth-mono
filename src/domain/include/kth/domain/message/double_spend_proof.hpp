@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -12,13 +12,14 @@
 #include <kth/domain/define.hpp>
 // #include <kth/domain/message/block.hpp>
 // #include <kth/domain/message/prefilled_transaction.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -59,6 +60,7 @@ public:
             push_data.clear();
         }
 
+        //TODO: use <=> operator
         friend
         bool operator==(spender const& x, spender const& y) {
             return x.version == y.version &&
@@ -97,24 +99,8 @@ public:
             sink.write_bytes(push_data);
         }
 
-        template <typename R, KTH_IS_READER(R)>
-        bool from_data(R& source) {
-            reset();
-
-            version = source.read_4_bytes_little_endian();
-            out_sequence = source.read_4_bytes_little_endian();
-            locktime = source.read_4_bytes_little_endian();
-            prev_outs_hash = source.read_hash();
-            sequence_hash = source.read_hash();
-            outputs_hash = source.read_hash();
-            push_data = source.read_bytes();
-
-            if ( ! source) {
-                reset();
-            }
-
-            return source;
-        }
+        static
+        expect<spender> from_data(byte_reader& reader, uint32_t /*version*/);
     };
 
     double_spend_proof() = default;
@@ -156,28 +142,8 @@ public:
         spender2_.to_data(sink);
     }
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t /*version*/) {
-        reset();
-
-        if ( ! out_point_.from_data(source)) {
-            return false;
-        }
-
-        if ( ! spender1_.from_data(source)) {
-            return false;
-        }
-
-        if ( ! spender2_.from_data(source)) {
-            return false;
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<double_spend_proof> from_data(byte_reader& reader, uint32_t /*version*/);
 
     [[nodiscard]]
     bool is_valid() const;

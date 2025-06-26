@@ -1,14 +1,14 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 
 project(database VERSION 0 LANGUAGES CXX C)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
@@ -18,9 +18,8 @@ option(WITH_TOOLS "Compile with tools." OFF)
 option(WITH_MEASUREMENTS "Measurements enabled." OFF)
 option(DB_READONLY_MODE "Readonly DB mode enabled." OFF)
 option(JUST_KTH_SOURCES "Just Knuth source code to be linted." OFF)
-option(USE_LIBMDBX "Uses libmdbx DB library." OFF)
 
-option(GLOBAL_BUILD "" OFF)
+option(GLOBAL_BUILD "" ON)
 
 set(MARCH_ID "" CACHE STRING "Specify the Microarchitecture ID (x86_64|...).")
 message( STATUS "Knuth: Compiling for Microarchitecture ID ${MARCH_ID}")
@@ -37,10 +36,6 @@ endif()
 
 if (JUST_KTH_SOURCES)
   message(STATUS "Knuth: Just Knuth source code to be linted: enabled")
-endif()
-
-if (USE_LIBMDBX)
-  add_definitions(-DKTH_USE_LIBMDBX)
 endif()
 
 set(LOG_LIBRARY "boost" CACHE STRING "Setting for the logging library (boost|spdlog|binlog).")
@@ -81,6 +76,12 @@ include(CheckCXXCompilerFlag)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/ci_utils/cmake)
 include(KnuthTools)
 
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -matomics -mbulk-memory")
+  _add_cxx_compile_flag(-matomics _has_matomics_flag)
+  _add_cxx_compile_flag(-mbulk-memory _has_mbulk_memory_flag)
+endif()
 
 if (NOT MSVC)
   _add_c_compile_flag(-Wall _has_all_warning_flag)
@@ -175,7 +176,7 @@ set(kth_headers
 
 add_library(${PROJECT_NAME} ${MODE} ${kth_sources} ${kth_headers})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 20 CXX_STANDARD_REQUIRED TRUE)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX CXX_STANDARD 23 CXX_STANDARD_REQUIRED TRUE)
 
 
 if (ENABLE_POSITION_INDEPENDENT_CODE)

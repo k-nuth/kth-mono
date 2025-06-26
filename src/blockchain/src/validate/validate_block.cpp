@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -382,7 +382,7 @@ void validate_block::dump(code const& ec, transaction const& tx, uint32_t input_
         " inpoint      : {}:{}\n"
         " transaction  : {}",
         LOG_BLOCKCHAIN, height, ec.message(), forks, hash, prevout.index(), encode_base16(script)
-        , prevout.validation.cache.value(), tx_hash, input_index, encode_base16(tx.to_data(true, true)));
+        , prevout.validation.cache.value(), tx_hash, input_index, encode_base16(tx.to_data(true)));
 }
 
 } // namespace kth::blockchain

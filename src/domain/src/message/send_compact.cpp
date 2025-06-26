@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -44,6 +44,32 @@ void send_compact::reset() {
     high_bandwidth_mode_ = false;
     version_ = 0;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<send_compact> send_compact::from_data(byte_reader& reader, uint32_t version) {
+    auto const mode = reader.read_byte();
+    if ( ! mode) {
+        return make_unexpected(mode.error());
+    }
+    if (*mode > 1) {
+        return make_unexpected(error::illegal_value);
+    }
+    auto const protocol_version = reader.read_little_endian<uint64_t>();
+    if ( ! protocol_version) {
+        return make_unexpected(protocol_version.error());
+    }
+    if (version < send_compact::version_minimum) {
+        return make_unexpected(error::version_too_low);
+    }
+    return send_compact(*mode, *protocol_version);
+}
+
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk send_compact::to_data(uint32_t version) const {
     data_chunk data;

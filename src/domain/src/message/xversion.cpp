@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -30,6 +30,20 @@ bool xversion::is_valid() const {
 }
 
 void xversion::reset() {}
+
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<xversion> xversion::from_data(byte_reader& reader, uint32_t version) {
+    //TODO(fernando): we are skiping the message for the moment.
+    reader.skip_remaining();
+    return xversion();
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 // data_chunk xversion::to_data(uint32_t version) const {
 //     data_chunk data;

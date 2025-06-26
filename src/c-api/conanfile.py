@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2023 Knuth Project developers.
+# Copyright (c) 2016-2024 Knuth Project developers.
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,7 @@ class KnuthCAPIConan(KnuthConanFileV2):
     url = "https://github.com/k-nuth/c-api"
     description = "Bitcoin Full Node Library with C interface"
     settings = "os", "compiler", "build_type", "arch"
+    package_type = "library"
 
     options = {
         "shared": [True, False],
@@ -71,15 +72,19 @@ class KnuthCAPIConan(KnuthConanFileV2):
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
     def requirements(self):
         if not self.options.no_compilation and self.settings.get_safe("compiler") is not None:
-            self.requires("node/0.46.0", transitive_headers=True, transitive_libs=True)
+            self.requires("node/0.58.0", transitive_headers=True, transitive_libs=True)
+            # if self.settings.os == "Emscripten":
+            #     self.requires("domain/0.45.0", transitive_headers=True, transitive_libs=True)
+            # else:
+            #     self.requires("node/0.58.0", transitive_headers=True, transitive_libs=True)
 
     def build_requirements(self):
         if self.options.tests:
-            self.test_requires("catch2/3.6.0")
+            self.test_requires("catch2/3.7.1")
 
     def config_options(self):
         KnuthConanFileV2.config_options(self)
@@ -137,6 +142,7 @@ class KnuthCAPIConan(KnuthConanFileV2):
 
     def build(self):
         cmake = CMake(self)
+        cmake.verbose = True
         cmake.configure()
         if not self.options.cmake_export_compile_commands:
             cmake.build()

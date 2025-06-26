@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,7 +17,8 @@ TEST_CASE("operation  constructor 1  always  returns default initialized", "[ope
 
     REQUIRE( ! instance.is_valid());
     REQUIRE(instance.data().empty());
-    REQUIRE(instance.code() == opcode::disabled_xor);
+    // REQUIRE(instance.code() == opcode::disabled_xor);
+    REQUIRE(instance.code() == opcode::invalidopcode);
 }
 
 TEST_CASE("operation  constructor 2  valid input  returns input initialized", "[operation]") {

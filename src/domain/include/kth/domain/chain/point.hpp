@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,6 +15,7 @@
 #include <kth/domain/chain/point_iterator.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
+#include <kth/domain/deserialization.hpp>
 #include <kth/infrastructure/math/hash.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
@@ -22,7 +23,7 @@
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::chain {
@@ -76,29 +77,9 @@ public:
     // Deserialization.
     //-------------------------------------------------------------------------
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, bool wire = true) {
-        reset();
 
-        valid_ = true;
-        hash_ = source.read_hash();
-
-        if (wire) {
-            index_ = source.read_4_bytes_little_endian();
-        } else {
-            index_ = source.read_2_bytes_little_endian();
-
-            if (index_ == max_uint16) {
-                index_ = null_index;
-            }
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<point> from_data(byte_reader& reader, bool wire = true);
 
     // constexpr
     [[nodiscard]]

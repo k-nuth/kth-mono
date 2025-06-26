@@ -40,7 +40,7 @@ Each of our modules has its own Github repository, but in case you want to creat
 <!-- [badge.GhA]: https://github.com/k-nuth/infrastructure/workflows/Build%20and%20Test/badge.svg?branch=master&style=for-the-badge -->
 [badge.version]: https://badge.fury.io/gh/k-nuth%2Finfrastructure.svg
 [badge.release]: https://img.shields.io/github/v/release/k-nuth/infrastructure?display_name=tag&style=for-the-badge&color=00599C&logo=cplusplus
-[badge.cpp]: https://img.shields.io/badge/C++-20-blue.svg?logo=c%2B%2B&style=for-the-badge
+[badge.cpp]: https://img.shields.io/badge/C++-23-blue.svg?logo=c%2B%2B&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
 [badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slack&style=for-the-badge
 <!-- [badge.Gitter]: https://img.shields.io/badge/gitter-join%20chat-blue.svg -->

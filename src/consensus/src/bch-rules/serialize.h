@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2017-2022 The Bitcoin developers
+// Copyright (c) 2017-2023 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -19,6 +19,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <type_traits>
@@ -282,6 +283,14 @@ template <typename Stream, size_t N>
 inline void Serialize(Stream &s, const std::array<uint8_t, N> &a) {
     s.write(CharCast(a.data()), N);
 }
+template <typename Stream, typename Obj>
+inline void Serialize(Stream &s, const std::optional<Obj> &optObj) {
+    const uint8_t has_value = optObj.has_value() ? 1u : 0u;
+    Serialize(s, has_value);
+    if (has_value) {
+        Serialize(s, *optObj);
+    }
+}
 #ifndef CHAR_EQUALS_INT8
 // TODO Get rid of bare char
 template <typename Stream> inline void Unserialize(Stream &s, char &a) {
@@ -350,6 +359,21 @@ template <typename Stream, size_t N>
 inline void Unserialize(Stream &s, std::array<uint8_t, N> &a) {
     s.read(CharCast(a.data()), N);
 }
+template <typename Stream, typename Obj>
+inline void Unserialize(Stream &s, std::optional<Obj> &optObj) {
+    const uint8_t has_value = ser_readdata8(s);
+    if (has_value > 1u) {
+        // we only support 0 or 1 in this position, throw on anything else
+        throw std::ios_base::failure("Non-canonical optional encoding");
+    }
+    if (!has_value) {
+        optObj.reset();
+    } else {
+        if (!optObj) optObj.emplace();
+        Unserialize(s, *optObj);
+    }
+}
+
 #ifndef CHAR_EQUALS_INT8
 template <typename Stream, size_t N>
 inline void Unserialize(Stream &s, char (&a)[N]) {

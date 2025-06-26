@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,21 @@
 #include <kth/infrastructure/utility/ostream_writer.hpp>
 
 namespace kth::domain::chain {
+
+namespace detail {
+
+#pragma pack(push, 1)
+struct header_packed {
+    uint32_t version;
+    byte previous_block_hash[32];
+    byte merkle_root[32];
+    uint32_t timestamp;
+    uint32_t bits;
+    uint32_t nonce;
+};
+#pragma pack(pop)
+
+} // namespace detail
 
 // Use system clock because we require accurate time of day.
 using wall_clock = std::chrono::system_clock;
@@ -64,6 +79,22 @@ bool header_basis::is_valid() const {
 
 // Serialization.
 //-----------------------------------------------------------------------------
+
+expect<header_basis> header_basis::from_data(byte_reader& reader, bool /*wire*/) {
+    auto const packed_exp = reader.read_packed<detail::header_packed>();
+    if ( ! packed_exp) {
+        return make_unexpected(packed_exp.error());
+    }
+    auto const& packed = *packed_exp;
+    header_basis header;
+    header.set_version(packed.version);
+    std::memcpy(header.previous_block_hash_.data(), packed.previous_block_hash, hash_size);
+    std::memcpy(header.merkle_.data(), packed.merkle_root, hash_size);
+    header.set_timestamp(packed.timestamp);
+    header.set_bits(packed.bits);
+    header.set_nonce(packed.nonce);
+    return header;
+}
 
 data_chunk header_basis::to_data(bool wire) const {
     data_chunk data;

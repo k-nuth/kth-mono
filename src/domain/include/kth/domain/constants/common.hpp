@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,7 +9,6 @@
 #include <cstdint>
 
 // #include <kth/domain/define.hpp>
-// #include <kth/domain/multi_crypto_settings.hpp>
 // #include <kth/domain/version.hpp>
 
 // #include <kth/infrastructure/compat.hpp>
@@ -35,11 +34,26 @@ constexpr size_t max_counted_ops = 201;
 constexpr size_t max_stack_size = 1000;
 constexpr size_t max_script_size = 10000;
 // constexpr size_t max_push_data_size = 520;
+constexpr size_t max_push_data_size_legacy = 520;
 constexpr size_t max_script_public_keys = 20;
 constexpr size_t multisig_default_sigops = 20;
-constexpr size_t max_number_size = 4;
+constexpr size_t max_number_size_32_bits = 4;
+constexpr size_t max_number_size_64_bits = 8;
 constexpr size_t max_check_locktime_verify_number_size = 5;
 constexpr size_t max_check_sequence_verify_number_size = 5;
+
+// The below constants are used after activation of the May 2025 upgrade (Targeted VM Limits CHIP)
+namespace may2025 {
+
+    // Maximum number of bytes pushable to the stack
+    constexpr size_t max_push_data_size = max_script_size;      // BCHN: MAX_SCRIPT_ELEMENT_SIZE
+    // Base cost for each executed opcode; no opcodes incur a cost less than this, but some may incur more.
+    constexpr size_t opcode_cost = 100u;                        // BCHN: OPCODE_COST
+    // Conditional stack depth limit (max depth of OP_IF and friends)
+    constexpr size_t max_conditional_stack_depth = 100u;        // BCHN: MAX_CONDITIONAL_STACK_DEPTH
+    // Each sigcheck done by an input adds this amount to the total op cost
+    constexpr uint64_t sig_check_cost_factor = 26'000u;         // BCHN: SIG_CHECK_COST_FACTOR
+}
 
 // Policy.
 constexpr size_t max_null_data_size = 80;

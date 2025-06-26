@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -58,7 +58,6 @@ private:
     kth::atomic<hash_digest> last_locator_top_;
     std::atomic<bool> compact_to_peer_;
     std::atomic<bool> headers_to_peer_;
-    bool const enable_witness_;
     std::atomic<bool> compact_high_bandwidth_;
     std::atomic<uint64_t> compact_version_;
 };

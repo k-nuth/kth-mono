@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -55,6 +55,38 @@ void headers::reset() {
     elements_.clear();
     elements_.shrink_to_fit();
 }
+
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<headers> headers::from_data(byte_reader& reader, uint32_t version) {
+    auto const count = reader.read_variable_little_endian();
+    if ( ! count) {
+        return make_unexpected(count.error());
+    }
+    if (*count > max_get_headers) {
+        return make_unexpected(error::version_too_new);
+    }
+    header::list elements;
+    elements.reserve(*count);
+    for (size_t i = 0; i < *count; ++i) {
+        auto element = header::from_data(reader, version);
+        if ( ! element) {
+            return make_unexpected(element.error());
+        }
+        elements.push_back(std::move(*element));
+    }
+
+    if (version < headers::version_minimum) {
+        return make_unexpected(error::version_too_new);
+    }
+    return headers(std::move(elements));
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk headers::to_data(uint32_t version) const {
     data_chunk data;

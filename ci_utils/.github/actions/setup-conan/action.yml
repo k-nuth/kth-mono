@@ -23,3 +23,6 @@ runs:
 
     - run: conan config install -t dir ./ci_utils/.conan
       shell: bash
+
+    - run: conan remote update conancenter --url="https://center2.conan.io"
+      shell: bash

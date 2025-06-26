@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -34,7 +34,7 @@ size_t heading::maximum_size() {
 // Post-Witness:
 // The maximum block size inclusive of witness is greater than 1,800,003, so
 // with witness-enabled block size (4,000,000).
-size_t heading::maximum_payload_size(uint32_t /*unused*/, bool witness, uint32_t magic, bool is_chipnet) {
+size_t heading::maximum_payload_size(uint32_t /*unused*/, uint32_t magic, bool is_chipnet) {
     /*    static constexpr
     size_t vector = sizeof(uint32_t) + hash_size;
     static constexpr
@@ -42,11 +42,7 @@ size_t heading::maximum_payload_size(uint32_t /*unused*/, bool witness, uint32_t
     static_assert(maximum <= max_size_t, "maximum_payload_size overflow");
 */
 
-#if defined(KTH_SEGWIT_ENABLED)
-    return witness_val(witness) ? max_block_weight : max_payload_size;
-#else
     return get_max_payload_size(get_network(magic, is_chipnet));
-#endif
 }
 
 size_t heading::satoshi_fixed_size() {
@@ -81,6 +77,33 @@ void heading::reset() {
     payload_size_ = 0;
     checksum_ = 0;
 }
+
+// Deserialization.
+//-----------------------------------------------------------------------------
+
+// static
+expect<heading> heading::from_data(byte_reader& reader, uint32_t /*version*/) {
+    auto const magic = reader.read_little_endian<uint32_t>();
+    if ( ! magic) {
+        return make_unexpected(magic.error());
+    }
+    auto const command = reader.read_string(command_size);
+    if ( ! command) {
+        return make_unexpected(command.error());
+    }
+    auto const payload_size = reader.read_little_endian<uint32_t>();
+    if ( ! payload_size) {
+        return make_unexpected(payload_size.error());
+    }
+    auto const checksum = reader.read_little_endian<uint32_t>();
+    if ( ! checksum) {
+        return make_unexpected(checksum.error());
+    }
+    return heading(*magic, std::move(*command), *payload_size, *checksum);
+}
+
+// Serialization.
+//-----------------------------------------------------------------------------
 
 data_chunk heading::to_data() const {
     data_chunk data;

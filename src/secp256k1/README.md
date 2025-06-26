@@ -74,7 +74,7 @@ $ conan config install https://github.com/k-nuth/ci-utils/raw/master/conan/confi
 2. Install the appropriate library:
 
 ```
-$ conan install --requires=secp256k1/0.19.0 --update
+$ conan install --requires=secp256k1/0.22.0 --update
 ```
 
 For more more detailed instructions, please refer to our [documentation](https://kth.cash/docs/).
@@ -95,7 +95,7 @@ Each of our modules has its own Github repository, but in case you want to creat
 <!-- [badge.GhA]: https://github.com/k-nuth/secp256k1/workflows/Build%20and%20Test/badge.svg?branch=master&style=for-the-badge -->
 [badge.version]: https://badge.fury.io/gh/k-nuth%2Fsecp256k1.svg
 [badge.release]: https://img.shields.io/github/v/release/k-nuth/secp256k1?display_name=tag&style=for-the-badge&color=00599C&logo=c
-[badge.cpp]: https://img.shields.io/badge/C++-20-blue.svg?logo=c%2B%2B&style=for-the-badge
+[badge.cpp]: https://img.shields.io/badge/C++-23-blue.svg?logo=c%2B%2B&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
 [badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slack&style=for-the-badge
 <!-- [badge.Gitter]: https://img.shields.io/badge/gitter-join%20chat-blue.svg -->

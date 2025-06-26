@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,10 +11,11 @@
 
 #include <kth/domain/message/get_blocks.hpp>
 #include <kth/infrastructure/math/hash.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -31,22 +32,8 @@ public:
     bool operator==(get_headers const& x) const;
     bool operator!=(get_headers const& x) const;
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source, uint32_t version) { /*override*/  //TODO(fernando): check if this function is used in a run-time-polymorphic way
-        if ( ! get_blocks::from_data(source, version)) {
-            return false;
-        }
-
-        if (version < get_headers::version_minimum) {
-            source.invalidate();
-        }
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<get_headers> from_data(byte_reader& reader, uint32_t version);
 
     static
     std::string const command;

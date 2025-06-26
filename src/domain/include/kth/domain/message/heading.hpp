@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,13 +15,14 @@
 #include <kth/domain/constants.hpp>
 #include <kth/domain/define.hpp>
 #include <kth/infrastructure/math/checksum.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/infrastructure/utility/container_sink.hpp>
 #include <kth/infrastructure/utility/container_source.hpp>
 #include <kth/infrastructure/utility/data.hpp>
 #include <kth/infrastructure/utility/reader.hpp>
 #include <kth/infrastructure/utility/writer.hpp>
 
-#include <kth/domain/utils.hpp>
+
 #include <kth/domain/concepts.hpp>
 
 namespace kth::domain::message {
@@ -66,7 +67,7 @@ public:
     size_t maximum_size();
 
     static
-    size_t maximum_payload_size(uint32_t version, bool witness, uint32_t magic, bool is_chipnet);
+    size_t maximum_payload_size(uint32_t version, uint32_t magic, bool is_chipnet);
 
     static
     size_t satoshi_fixed_size();
@@ -104,20 +105,8 @@ public:
     [[nodiscard]]
     message_type type() const;
 
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source) {
-        reset();
-        magic_ = source.read_4_bytes_little_endian();
-        command_ = source.read_string(command_size);
-        payload_size_ = source.read_4_bytes_little_endian();
-        checksum_ = source.read_4_bytes_little_endian();
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<heading> from_data(byte_reader& reader, uint32_t /*version*/);
 
     [[nodiscard]]
     data_chunk to_data() const;

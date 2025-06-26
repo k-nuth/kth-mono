@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -29,16 +29,6 @@ using namespace kth::network;
 using namespace boost::adaptors;
 using namespace std::placeholders;
 
-//TODO(fernando): it is repeater everywhere
-inline
-bool is_witness(uint64_t services) {
-#if defined(KTH_CURRENCY_BCH)
-    return false;
-#else
-    return (services & version::service::node_witness) != 0;
-#endif
-}
-
 protocol_transaction_out::protocol_transaction_out(full_node& network, channel::ptr channel, safe_chain& chain)
     : protocol_events(network, channel, NAME)
     , chain_(chain)
@@ -49,8 +39,6 @@ protocol_transaction_out::protocol_transaction_out(full_node& network, channel::
     // TODO: move relay to a derived class protocol_transaction_out_70001.
     , relay_to_peer_(peer_version()->relay())
 
-    // Witness requests must be allowed if advertising the service.
-    , enable_witness_(is_witness(network.network_settings().services))
     , CONSTRUCT_TRACK(protocol_transaction_out)
 {}
 
@@ -164,19 +152,8 @@ void protocol_transaction_out::send_next_data(inventory_ptr inventory) {
     auto const& entry = inventory->inventories().back();
 
     switch (entry.type()) {
-#if defined(KTH_SEGWIT_ENABLED)
-        case inventory::type_id::witness_transaction: {
-            if ( ! enable_witness_) {
-                stop(error::channel_stopped);
-                return;
-            }
-            chain_.fetch_transaction(entry.hash(), false, true, BIND5(send_transaction, _1, _2, _3, _4, inventory));
-            break;
-        }
-#endif // defined(KTH_SEGWIT_ENABLED)
-
         case inventory::type_id::transaction: {
-            chain_.fetch_transaction(entry.hash(), false, false, BIND5(send_transaction, _1, _2, _3, _4, inventory));
+            chain_.fetch_transaction(entry.hash(), false, BIND5(send_transaction, _1, _2, _3, _4, inventory));
             break;
         } default: {
             KTH_ASSERT_MSG(false, "improperly-filtered inventory");
@@ -265,15 +242,7 @@ bool protocol_transaction_out::handle_transaction_pool(code const& ec, transacti
     }
 
     inventory::type_id id;
-#if defined(KTH_CURRENCY_BCH)
     id = inventory::type_id::transaction;
-#else
-    if (message->is_segregated()) {
-        id = inventory::type_id::witness_transaction;
-    } else {
-        id = inventory::type_id::transaction;
-    }
-#endif
     inventory const announce {{id, message->hash()}};
     SEND2(announce, handle_send, _1, announce.command);
 

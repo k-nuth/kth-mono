@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Knuth Project developers.
+// Copyright (c) 2016-2024 Knuth Project developers.
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -40,26 +40,8 @@ public:
         factory_to_data(sink,id_, point_, point_kind_, height_, index_, value_or_checksum_ );
     }
 
-    bool from_data(const data_chunk& data);
-    bool from_data(std::istream& stream);
-
-    template <typename R, KTH_IS_READER(R)>
-    bool from_data(R& source) {
-        reset();
-
-        id_ = source.read_8_bytes_little_endian();
-        point_.from_data(source, false);
-        point_kind_ = static_cast<domain::chain::point_kind>(source.read_byte()),
-        height_ = source.read_4_bytes_little_endian();
-        index_ = source.read_4_bytes_little_endian();
-        value_or_checksum_ = source.read_8_bytes_little_endian();
-
-        if ( ! source) {
-            reset();
-        }
-
-        return source;
-    }
+    static
+    expect<history_entry> from_data(byte_reader& reader);
 
     static
     data_chunk factory_to_data(uint64_t id, domain::chain::point const& point, domain::chain::point_kind kind, uint32_t height, uint32_t index, uint64_t value_or_checksum);
