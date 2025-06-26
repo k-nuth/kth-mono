@@ -17,41 +17,62 @@ conan lock create conanfile.py --version="${VERSION}" --update
 git add conan.lock
 git commit -m "release: update conan.lock for version ${VERSION}"
 # create a PR for the release
-gh pr create --title "Release ${VERSION}" --body "Release ${VERSION} of the project" --base master --head "release-${VERSION}"
-# squash merge the PR, do not delete the branch
-gh pr merge --squash --auto --merge "release-${VERSION}"
+gh pr create --title "release: ${VERSION}" --body "release: ${VERSION}" --base master --head "release/${VERSION}"
 # we need to give time to GhA to run the build and publish the package
 # wait for the build to finish
-echo "Waiting for the build to finish..."
+
+echo "Waiting for the build to finish for branch: release/${VERSION}"
 while true; do
-    status=$(gh run list --limit 1 --json status --jq '.[0].status')
+    # Get workflow runs for the current branch, including event type
+    run_info=$(gh run list --branch "release/${VERSION}" --workflow "Build and Test" --limit 5 --json status,conclusion,url,number,event)
+    
+    if [ -z "$run_info" ] || [ "$run_info" == "[]" ]; then
+        echo "No workflow runs found for branch release/${VERSION}. Waiting..."
+        sleep 30
+        continue
+    fi
+    
+    # Find the most recent run that was triggered by 'push' (not 'pull_request')
+    push_run=$(echo "$run_info" | jq -r '.[] | select(.event == "push") | . | @base64' | head -1)
+    
+    if [ -z "$push_run" ]; then
+        echo "No push-triggered workflow runs found for branch release/${VERSION}. Waiting..."
+        sleep 30
+        continue
+    fi
+    
+    # Decode the base64 encoded JSON
+    push_run_decoded=$(echo "$push_run" | base64 --decode)
+    
+    status=$(echo "$push_run_decoded" | jq -r '.status')
+    conclusion=$(echo "$push_run_decoded" | jq -r '.conclusion')
+    url=$(echo "$push_run_decoded" | jq -r '.url')
+    run_number=$(echo "$push_run_decoded" | jq -r '.number')
+    event=$(echo "$push_run_decoded" | jq -r '.event')
+    
+    echo "Workflow run #${run_number} (${event}): status=${status}, conclusion=${conclusion}"
+    echo "URL: ${url}"
+    
     if [ "$status" == "completed" ]; then
-        echo "Build completed successfully."
-        break
+        if [ "$conclusion" == "success" ]; then
+            echo "✅ Build completed successfully!"
+            break
+        else
+            echo "❌ Build completed but failed with conclusion: ${conclusion}"
+            echo "Please check the workflow at: ${url}"
+            exit 1
+        fi
     else
-        echo "Build is still in progress. Waiting..."
+        echo "🔄 Build is still in progress (${status}). Waiting..."
         sleep 30
     fi
 done
+
+# squash merge the PR, do not delete the branch
+gh pr merge --squash --auto "release/${VERSION}"
 
 # remove the release branch locally and remotely
 git push origin --delete "release-${VERSION}"
 git branch -D "release-${VERSION}"
 git checkout master
 git pull origin master
-
-
-
-
-# conan lock create conanfile.py --version "${VERSION}" --lockfile=conan.lock --lockfile-out=build/conan.lock
-# conan install conanfile.py --lockfile=build/conan.lock -of build --build=missing
-
-# cmake --preset conan-release \
-#          -DCMAKE_VERBOSE_MAKEFILE=ON \
-#          -DGLOBAL_BUILD=ON \
-#          -DCMAKE_BUILD_TYPE=Release
-
-# cmake --build --preset conan-release -j4 \
-#          -DCMAKE_VERBOSE_MAKEFILE=ON \
-#          -DGLOBAL_BUILD=ON \
-#          -DCMAKE_BUILD_TYPE=Release
