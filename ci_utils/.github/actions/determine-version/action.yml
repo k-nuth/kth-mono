@@ -67,6 +67,13 @@ runs:
           echo "✅ Conanfile.py uses dynamic versioning (no hardcoded version found)"
         fi
         
+      # Handle development branches that should upload packages (dev-publish/feature-name -> feature-name-dev.run_number)
+      elif [[ "${{ inputs.github-ref }}" == "refs/heads/dev-publish/"* ]]; then
+        FEATURE_NAME=$(echo $VERSION | sed -e 's/^dev-publish\///')
+        VERSION=$(echo "$LAST_TAG-dev-$FEATURE_NAME.${{ inputs.run-number }}")
+        echo "🚀 Development publish branch detected, using version: $VERSION"
+        echo "   This will create uploadable development packages"
+        
       # Handle main/master/dev branches
       elif [ "$VERSION" == "main" ] || [ "$VERSION" == "master" ] || [ "$VERSION" == "dev" ]; then
         VERSION=$(echo "$LAST_TAG-commit.${{ inputs.run-number }}")
