@@ -84,8 +84,8 @@ git push origin "v${VERSION}"
 # create GitHub release
 echo "Creating GitHub release v${VERSION}..."
 gh release create "v${VERSION}" \
-    --title "Release ${VERSION}" \
-    --notes "Release version ${VERSION}" \
+    --title "v${VERSION}" \
+    --generate-notes \
     --latest
 
 echo "✅ Release v${VERSION} created successfully!"
