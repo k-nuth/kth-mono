@@ -13,7 +13,7 @@ required_conan_version = ">=2.0"
 
 class KnuthNodeExeConan(KnuthConanFileV2):
     name = "kth"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/kth"
     description = "Bitcoin full node executable"
     settings = "os", "compiler", "build_type", "arch"

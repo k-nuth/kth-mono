@@ -12,7 +12,7 @@ from kthbuild import KnuthConanFileV2, option_on_off
 required_conan_version = ">=2.0"
 class KnuthNetworkConan(KnuthConanFileV2):
     name = "network"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/network"
     description = "Crypto P2P Network Library"
     settings = "os", "compiler", "build_type", "arch"

@@ -13,7 +13,7 @@ required_conan_version = ">=2.0"
 
 class KnuthDatabaseConan(KnuthConanFileV2):
     name = "database"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/database/tree/conan-build/conanfile.py"
     description = "High Performance Blockchain Database"
     settings = "os", "compiler", "build_type", "arch"

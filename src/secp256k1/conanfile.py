@@ -14,7 +14,7 @@ required_conan_version = ">=2.0"
 
 class Secp256k1Conan(KnuthConanFileV2):
     name = "secp256k1"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/secp256k1"
     description = "Optimized C library for EC operations on curve secp256k1"
     settings = "os", "compiler", "build_type", "arch"

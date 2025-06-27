@@ -12,7 +12,7 @@ required_conan_version = ">=2.0"
 
 class KnuthInfrastructureConan(KnuthConanFileV2):
     name = "infrastructure"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/knuth/infrastructure"
     description = "Multicrypto Cross-Platform C++ Development Toolkit"
     settings = "os", "compiler", "build_type", "arch"

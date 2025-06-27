@@ -13,7 +13,7 @@ required_conan_version = ">=2.0"
 
 class KnuthCAPIConan(KnuthConanFileV2):
     name = "c-api"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/c-api"
     description = "Bitcoin Full Node Library with C interface"
     settings = "os", "compiler", "build_type", "arch"
