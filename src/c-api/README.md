@@ -1,9 +1,6 @@
-<!-- <a target="_blank" href="http://semver.org">![Version][badge.version]</a> -->
-<!-- <a target="_blank" href="https://cirrus-ci.com/github/k-nuth/c-api">![Build Status][badge.Cirrus]</a> -->
-
 <img width="200px" src="https://raw.githubusercontent.com/k-nuth/misc/master/images/KTH-and-C.svg" />
 
-# C API <a target="_blank" href="https://github.com/k-nuth/c-api/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/c-api/actions">![Build status][badge.GithubActions]</a> <a href="#">![C][badge.c]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a> <a target="_blank" href="https://k-nuth.slack.com/">![Slack][badge.slack]</a>
+# C API <a target="_blank" href="https://github.com/k-nuth/kth-mono/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/kth-mono/actions">![Build status][badge.GithubActions]</a> <a href="#">![C][badge.c]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a>
 
 > Bitcoin full node as a C Programming Language library
 
@@ -151,18 +148,15 @@ For more more detailed instructions, please refer to our [documentation](https:/
 
 ## Issues
 
-Each of our modules has its own Github repository, but in case you want to create an issue, please do so in our [main repository](https://github.com/k-nuth/kth/issues).
+Each of our modules has its own Github repository, but in case you want to create an issue, please do so in our [main repository](https://github.com/k-nuth/kth-mono/issues).
 
 
 <!-- Links -->
-[badge.Travis]: https://travis-ci.org/k-nuth/c-api.svg?branch=master
-[badge.Appveyor]: https://ci.appveyor.com/api/projects/status/github/k-nuth/c-api?svg=true&branch=master
-[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/c-api.svg?branch=master
-[badge.GithubActions]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fc-api%2Fbadge&style=for-the-badge
-[badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-c-api.svg
-[badge.release]: https://img.shields.io/github/v/release/k-nuth/c-api?display_name=tag&style=for-the-badge&color=A8B9CC&logo=c
+[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/kth-mono.svg?branch=master
+[badge.GithubActions]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fkth-mono%2Fbadge&style=for-the-badge
+[badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-mono.svg
+[badge.release]: https://img.shields.io/github/v/release/k-nuth/kth-mono?display_name=tag&style=for-the-badge&color=A8B9CC&logo=c
 [badge.c]: https://img.shields.io/badge/C-23-blue.svg?logo=c&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
-[badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slack&style=for-the-badge
 
 <!-- [badge.Gitter]: https://img.shields.io/badge/gitter-join%20chat-blue.svg -->
