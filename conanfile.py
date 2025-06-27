@@ -14,7 +14,6 @@ required_conan_version = ">=2.0"
 
 class KthRecipe(KnuthConanFileV2):
     # version is set dynamically via --version parameter
-    # version="0.68.0"
     name = "kth"
     license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/kth-mono"
@@ -106,7 +105,7 @@ class KthRecipe(KnuthConanFileV2):
     def validate(self):
         KnuthConanFileV2.validate(self)
         if self.info.settings.compiler.cppstd:
-            check_min_cppstd(self, "20")
+            check_min_cppstd(self, "23")
 
     def requirements(self):
         self.requires("boost/1.86.0", transitive_headers=True, transitive_libs=True)
