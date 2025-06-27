@@ -1,0 +1,123 @@
+name: Cosmetic Changes
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.md'
+      - '**.txt'
+      - '**/LICENSE*'
+      - '**/CHANGELOG*'
+      - 'doc/**'
+      - '.github/workflows/cosmetic-changes.yml'
+
+jobs:
+  cosmetic-check:
+    # Solo ejecutar para branches con prefijos cosméticos
+    if: startsWith(github.head_ref, 'docs/') || 
+        startsWith(github.head_ref, 'style/') || 
+        startsWith(github.head_ref, 'chore/') || 
+        startsWith(github.head_ref, 'noci/')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Validate cosmetic changes
+        run: |
+          echo "✅ Validating cosmetic changes only..."
+          echo "Branch: ${{ github.head_ref }}"
+          echo "Files changed: ${{ github.event.pull_request.changed_files }}"
+          
+          # Verificar que solo se cambien archivos permitidos para cambios cosméticos
+          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
+          
+          echo "Changed files:"
+          cat changed_files.txt
+          
+          # Lista de patrones permitidos para cambios cosméticos
+          ALLOWED_PATTERNS=(
+            "*.md"
+            "*.txt" 
+            "*.rst"
+            "LICENSE*"
+            "CHANGELOG*"
+            "NOTICE*"
+            "AUTHORS*"
+            "CONTRIBUTORS*"
+            "doc/*"
+            "docs/*"
+            ".github/workflows/cosmetic-changes.yml"
+          )
+          
+          # Función para verificar si un archivo coincide con los patrones permitidos
+          is_cosmetic_file() {
+            local file="$1"
+            for pattern in "${ALLOWED_PATTERNS[@]}"; do
+              if [[ $file == $pattern ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+          
+          # Verificar todos los archivos cambiados
+          non_cosmetic_files=()
+          while IFS= read -r file; do
+            if ! is_cosmetic_file "$file"; then
+              non_cosmetic_files+=("$file")
+            fi
+          done < changed_files.txt
+          
+          if [ ${#non_cosmetic_files[@]} -gt 0 ]; then
+            echo "❌ ERROR: Detected non-cosmetic changes in a cosmetic branch:"
+            printf '%s\n' "${non_cosmetic_files[@]}"
+            echo ""
+            echo "💡 Suggestion: Either:"
+            echo "   1. Move non-cosmetic changes to a regular feature branch"
+            echo "   2. Rename this branch to not use cosmetic prefixes (docs/, style/, chore/, noci/)"
+            exit 1
+          fi
+          
+          echo "✅ All changes are cosmetic. Skipping heavy CI pipeline."
+          
+      - name: Run basic linting on markdown
+        if: success()
+        run: |
+          echo "🔍 Running basic markdown validation..."
+          
+          # Verificar que los archivos markdown no tengan errores básicos
+          find . -name "*.md" -not -path "./src/*/.*" | while read -r file; do
+            echo "Checking $file..."
+            
+            # Verificar que no hay líneas extremadamente largas (más de 200 caracteres)
+            if grep -n ".\{200\}" "$file" > /dev/null; then
+              echo "⚠️  Warning: Long lines found in $file"
+            fi
+            
+            # Verificar enlaces rotos básicos (solo formato)
+            if grep -n "\]\(\s*\)" "$file" > /dev/null; then
+              echo "⚠️  Warning: Possible broken links in $file"
+            fi
+          done
+          
+          echo "✅ Basic markdown validation completed"
+
+  auto-approve:
+    # Auto-aprobar PRs cosméticos de contributors confiables
+    if: startsWith(github.head_ref, 'docs/') || 
+        startsWith(github.head_ref, 'style/') ||
+        startsWith(github.head_ref, 'chore/')
+    runs-on: ubuntu-latest
+    needs: cosmetic-check
+    
+    steps:
+      - name: Auto-approve cosmetic changes
+        if: contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.actor) ||
+            github.actor == github.repository_owner
+        uses: juliangruber/approve-pull-request-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ github.event.pull_request.number }}
