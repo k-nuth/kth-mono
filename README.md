@@ -1,7 +1,7 @@
 <!-- <a target="_blank" href="http://semver.org">![Version][badge.version]</a> -->
-<!-- <a target="_blank" href="https://cirrus-ci.com/github/k-nuth/node-exe">![Build Status][badge.Cirrus]</a> -->
+<!-- <a target="_blank" href="https://cirrus-ci.com/github/k-nuth/kth-mono">![Build Status][badge.Cirrus]</a> -->
 
-# knuth <a target="_blank" href="https://github.com/k-nuth/node-exe/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/node-exe/actions">![Build status][badge.GithubActions]</a> <a href="#">![CPP][badge.cpp]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a> <a target="_blank" href="https://k-nuth.slack.com/">![Slack][badge.slack]</a>
+# knuth <a target="_blank" href="https://github.com/k-nuth/kth-mono/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/kth-mono/actions">![Build status][badge.GithubActions]</a> <a href="#">![CPP][badge.cpp]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a> <a target="_blank" href="https://k-nuth.slack.com/">![Slack][badge.slack]</a>
 
 > High performance Bitcoin development platform.
 
@@ -51,7 +51,7 @@ $ conan config install https://github.com/k-nuth/ci-utils/raw/master/conan/confi
 2. Install the appropriate node executable:
 
 ```
-$ conan install --requires=kth/0.46.0 --update --deploy=direct_deploy
+$ conan install --requires=kth/0.68.0 --update --deploy=direct_deploy
 ```
 
 3. Run the node:
@@ -86,12 +86,12 @@ To report security issues please contact:
 Fernando Pelliccioni (fpelliccioni@gmail.com) - GPG Fingerprint: 8C1C 3163 AAE1 0EFA 704C 8A00 FE77 07B7 4C29 E389
 
 <!-- Links -->
-[badge.Travis]: https://travis-ci.org/k-nuth/node-exe.svg?branch=master
-[badge.Appveyor]: https://ci.appveyor.com/api/projects/status/github/k-nuth/node-exe?svg=true&branch=master
-[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/node-exe.svg?branch=master
-[badge.GithubActions]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fnode-exe%2Fbadge&style=for-the-badge
-[badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-node-exe.svg
-[badge.release]: https://img.shields.io/github/v/release/k-nuth/node-exe?display_name=tag&style=for-the-badge&color=3b009b&logo=bitcoincash
+[badge.Travis]: https://travis-ci.org/k-nuth/kth-mono.svg?branch=master
+[badge.Appveyor]: https://ci.appveyor.com/api/projects/status/github/k-nuth/kth-mono?svg=true&branch=master
+[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/kth-mono.svg?branch=master
+[badge.GithubActions]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fkth-mono%2Fbadge&style=for-the-badge
+[badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-kth-mono.svg
+[badge.release]: https://img.shields.io/github/v/release/k-nuth/kth-mono?display_name=tag&style=for-the-badge&color=3b009b&logo=bitcoincash
 [badge.cpp]: https://img.shields.io/badge/C++-23-blue.svg?logo=c%2B%2B&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegramlogo=slack&style=for-the-badge
 [badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slacklogo=slack&style=for-the-badge
