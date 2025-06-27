@@ -91,19 +91,80 @@ gh pr merge --squash --auto "release/${VERSION}"
 git checkout master
 git pull origin master
 
-# create and push the version tag
-echo "Creating tag v${VERSION}..."
+# Step 1: Create temporary release to generate notes
+echo "Creating temporary release to generate notes..."
+TEMP_TAG="temp-v${VERSION}"
+git tag -a "${TEMP_TAG}" -m "Temporary tag for release notes generation"
+git push origin "${TEMP_TAG}"
+
+gh release create "${TEMP_TAG}" \
+    --title "temp-v${VERSION}" \
+    --generate-notes \
+    --prerelease
+
+# Step 2: Extract the generated notes
+echo "Extracting generated release notes..."
+RELEASE_NOTES=$(gh release view "${TEMP_TAG}" --json body -q '.body')
+
+if [ -z "$RELEASE_NOTES" ]; then
+    echo "❌ Failed to extract release notes"
+    exit 1
+fi
+
+# Step 3: Update local release notes file
+echo "Updating local release notes file..."
+NOTES_FILE="doc/release-notes/release-notes.md"
+
+# Create a backup
+cp "$NOTES_FILE" "${NOTES_FILE}.backup"
+
+# Prepare the new release notes entry
+NEW_ENTRY="# version ${VERSION}
+
+You can install Knuth node version v${VERSION} [using these instructions](https://kth.cash/#download).
+
+${RELEASE_NOTES}
+
+"
+
+# Add the new entry at the top of the file (after any existing content)
+{
+    echo "$NEW_ENTRY"
+    cat "$NOTES_FILE"
+} > "${NOTES_FILE}.tmp" && mv "${NOTES_FILE}.tmp" "$NOTES_FILE"
+
+echo "✅ Updated release notes file"
+
+# Step 4: Commit the updated release notes
+git add "$NOTES_FILE"
+git commit -m "docs: update release notes for v${VERSION}"
+git push origin master
+
+# Step 5: Clean up temporary release and tag
+echo "Cleaning up temporary release..."
+gh release delete "${TEMP_TAG}" --yes
+git tag -d "${TEMP_TAG}"
+git push origin --delete "${TEMP_TAG}"
+
+# Step 6: Create the real release with the processed notes
+echo "Creating final release v${VERSION}..."
 git tag -a "v${VERSION}" -m "Release version ${VERSION}"
 git push origin "v${VERSION}"
 
-# create GitHub release
-echo "Creating GitHub release v${VERSION}..."
+# Get the updated notes from the file for the final release
+FINAL_NOTES=$(awk "
+    /^# version ${VERSION}$/ { found=1; next }
+    /^# version / && found { exit }
+    found && NF > 0 { print }
+" "$NOTES_FILE" | sed '/^$/d')
+
 gh release create "v${VERSION}" \
     --title "v${VERSION}" \
-    --generate-notes \
+    --notes "$FINAL_NOTES" \
     --latest
 
 echo "✅ Release v${VERSION} created successfully!"
+echo "✅ Release notes have been updated in $NOTES_FILE"
 
 # remove the release branch locally and remotely
 git push origin --delete "release-${VERSION}"
