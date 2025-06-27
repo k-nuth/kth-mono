@@ -13,7 +13,7 @@ required_conan_version = ">=2.0"
 
 class KnuthBlockchainConan(KnuthConanFileV2):
     name = "blockchain"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/blockchain/blob/conan-build/conanfile.py"
     description = "Knuth Blockchain Library"
     settings = "os", "compiler", "build_type", "arch"

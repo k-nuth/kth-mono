@@ -14,7 +14,7 @@ required_conan_version = ">=2.0"
 
 class KnuthConsensusConan(KnuthConanFileV2):
     name = "consensus"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/consensus"
     description = "Bitcoin Consensus Library"
     settings = "os", "compiler", "build_type", "arch"

@@ -16,7 +16,7 @@ class KthRecipe(KnuthConanFileV2):
     # version is set dynamically via --version parameter
     # version="0.68.0"
     name = "kth"
-    license = "http://www.boost.org/users/license.html"
+    license = "https://opensource.org/licenses/MIT"
     url = "https://github.com/k-nuth/kth-mono"
     description = "Bitcoin Cross-Platform C++ Development Toolkit"
     settings = "os", "compiler", "build_type", "arch"
