@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# VERSION=$(cat conanfile.py | grep "version" | cut -d '"' -f 2)
-VERSION="0.68.0"
+if [ -z "$1" ]; then
+    echo "Usage: $0 <version>"
+    exit 1
+fi
+VERSION="$1"
 
 echo "Building version: ${VERSION}"
 
@@ -10,6 +13,18 @@ git stash
 git pull origin master
 git stash pop
 git checkout -b "release/${VERSION}"
+
+# Update README versions before creating the release
+echo "Updating README files to version: ${VERSION}"
+./scripts/update_readme_versions.sh "${VERSION}"
+
+# Commit README updates
+if git diff --quiet src/*/README.md; then
+    echo "No README changes needed"
+else
+    git add src/*/README.md
+    git commit -m "docs: update README versions to ${VERSION}"
+fi
 
 rm -rf build
 rm -rf conan.lock
