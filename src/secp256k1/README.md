@@ -1,7 +1,4 @@
-<!-- <a target="_blank" href="http://semver.org">![Version][badge.version]</a> -->
-<!-- <a target="_blank" href="https://cirrus-ci.com/github/k-nuth/secp256k1">![Build Status][badge.Cirrus]</a> -->
-
-# secp256k1 <a target="_blank" href="https://github.com/k-nuth/secp256k1/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/secp256k1/actions">![Build status][badge.GhA]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a> <a target="_blank" href="https://k-nuth.slack.com/">![Slack][badge.slack]</a>
+# secp256k1 <a target="_blank" href="https://github.com/k-nuth/kth-mono/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/kth-mono/actions">![Build status][badge.GhA]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a>
 
 > Optimized C library for EC operations on curve secp256k1.
 
@@ -81,22 +78,18 @@ For more more detailed instructions, please refer to our [documentation](https:/
 
 ## About this library
 
-This library can be used stand-alone, but it is probably convenient for you to use one of our main projects, [look over here](https://github.com/k-nuth/kth/).
+This library can be used stand-alone, but it is probably convenient for you to use one of our main projects, [look over here](https://github.com/k-nuth/kth-mono/).
 
 ## Issues
 
-Each of our modules has its own Github repository, but in case you want to create an issue, please do so in our [main repository](https://github.com/k-nuth/kth/issues).
+Each of our modules has its own Github repository, but in case you want to create an issue, please do so in our [main repository](https://github.com/k-nuth/kth-mono/issues).
 
 <!-- Links -->
-[badge.Travis]: https://travis-ci.org/k-nuth/secp256k1.svg?branch=master
-[badge.Appveyor]: https://ci.appveyor.com/api/projects/status/github/k-nuth/secp256k1?svg=true&branch=master
-[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/secp256k1.svg?branch=master
-[badge.GhA]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fsecp256k1%2Fbadge&style=for-the-badge
-<!-- [badge.GhA]: https://github.com/k-nuth/secp256k1/workflows/Build%20and%20Test/badge.svg?branch=master&style=for-the-badge -->
-[badge.version]: https://badge.fury.io/gh/k-nuth%2Fsecp256k1.svg
-[badge.release]: https://img.shields.io/github/v/release/k-nuth/secp256k1?display_name=tag&style=for-the-badge&color=00599C&logo=c
+[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/kth-mono.svg?branch=master
+[badge.GhA]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fkth-mono%2Fbadge&style=for-the-badge
+[badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-mono.svg
+[badge.release]: https://img.shields.io/github/v/release/k-nuth/kth-mono?display_name=tag&style=for-the-badge&color=00599C&logo=c
 [badge.cpp]: https://img.shields.io/badge/C++-23-blue.svg?logo=c%2B%2B&style=for-the-badge
 [badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
-[badge.slack]: https://img.shields.io/badge/slack-badge-orange.svg?logo=slack&style=for-the-badge
 <!-- [badge.Gitter]: https://img.shields.io/badge/gitter-join%20chat-blue.svg -->
 
