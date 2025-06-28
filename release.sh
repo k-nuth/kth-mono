@@ -12,39 +12,41 @@ echo "Building version: ${VERSION}"
 # Cleanup previous release attempts (if any)
 echo "🧹 Cleaning up previous release artifacts..."
 
+# First, ensure we're on master branch
+echo "🔄 Ensuring we're on master branch..."
+git checkout master 2>/dev/null || true
+
 # Delete local release branch if it exists
 if git branch --list "release/${VERSION}" | grep -q "release/${VERSION}"; then
-    echo "Deleting local branch release/${VERSION}"
+    echo "🗑️  Deleting local branch release/${VERSION}"
     git branch -D "release/${VERSION}" 2>/dev/null || true
 fi
 
 # Delete remote release branch if it exists
 if git ls-remote --heads origin "release/${VERSION}" | grep -q "release/${VERSION}"; then
-    echo "Deleting remote branch release/${VERSION}"
+    echo "🗑️  Deleting remote branch release/${VERSION}"
     git push origin --delete "release/${VERSION}" 2>/dev/null || true
 fi
 
 # Delete local tag if it exists
 if git tag --list "v${VERSION}" | grep -q "v${VERSION}"; then
-    echo "Deleting local tag v${VERSION}"
+    echo "🗑️  Deleting local tag v${VERSION}"
     git tag -d "v${VERSION}" 2>/dev/null || true
 fi
 
-# Delete remote tag if it exists
+# Delete remote tag if it exists  
 if git ls-remote --tags origin "v${VERSION}" | grep -q "v${VERSION}"; then
-    echo "Deleting remote tag v${VERSION}"
+    echo "🗑️  Deleting remote tag v${VERSION}"
     git push origin --delete "v${VERSION}" 2>/dev/null || true
 fi
 
 # Delete GitHub release if it exists
 if gh release view "v${VERSION}" >/dev/null 2>&1; then
-    echo "Deleting GitHub release v${VERSION}"
+    echo "🗑️  Deleting GitHub release v${VERSION}"
     gh release delete "v${VERSION}" --yes 2>/dev/null || true
 fi
 
 echo "✅ Cleanup completed"
-
-git checkout master
 
 # Smart stash handling - only stash if there are changes, and track if we did
 STASH_CREATED=false
@@ -70,37 +72,93 @@ git checkout -b "release/${VERSION}"
 echo "Updating README files to version: ${VERSION}"
 ./scripts/update_readme_versions.sh "${VERSION}"
 
+# Track if we made any changes
+CHANGES_MADE=false
+
 # Commit README updates
-if git diff --quiet src/*/README.md; then
-    echo "No README changes needed"
-else
-    git add src/*/README.md
+echo "Checking for README changes..."
+if git status --porcelain | grep -q "^ M\|^M\|^ A\|^A"; then
+    echo "📝 Changes detected in working directory:"
+    git status --short
+    echo "Committing README version updates..."
+    git add .
     git commit -m "docs: update README versions to ${VERSION}"
+    CHANGES_MADE=true
+else
+    echo "📝 No changes detected - README files likely already have version ${VERSION}"
 fi
 
 rm -rf build
 rm -rf conan.lock
 
+echo "🔒 Creating conan.lock for version ${VERSION}..."
 conan lock create conanfile.py --version="${VERSION}" --update
 
-git add conan.lock
-git commit -m "release: update conan.lock for version ${VERSION}"
+echo "🔒 Checking conan.lock changes..."
+if git status --porcelain | grep -q "conan.lock"; then
+    echo "📝 conan.lock was updated, committing..."
+    git add conan.lock
+    git commit -m "release: update conan.lock for version ${VERSION}"
+    CHANGES_MADE=true
+else
+    echo "📝 No conan.lock changes detected"
+    # Add anyway in case it's a new file
+    git add conan.lock 2>/dev/null || true
+    if git diff --cached --quiet; then
+        echo "📝 No changes to commit for conan.lock"
+    else
+        echo "📝 Committing new conan.lock..."
+        git commit -m "release: update conan.lock for version ${VERSION}"
+        CHANGES_MADE=true
+    fi
+fi
 git push origin "release/${VERSION}"
 
-# Try to create PR, but don't fail if it already exists
-echo "Creating or checking PR for release/${VERSION}..."
-if ! gh pr create --title "release: ${VERSION}" --body "release: ${VERSION}" --base master --head "release/${VERSION}" 2>/dev/null; then
-    echo "PR might already exist. Checking existing PR..."
-    existing_pr=$(gh pr list --head "release/${VERSION}" --base master --json number,title,url --jq '.[0]')
-    if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
-        pr_number=$(echo "$existing_pr" | jq -r '.number')
-        pr_title=$(echo "$existing_pr" | jq -r '.title')
-        pr_url=$(echo "$existing_pr" | jq -r '.url')
-        echo "✅ Found existing PR #${pr_number}: ${pr_title}"
-        echo "URL: ${pr_url}"
+# Only create PR if we made changes, otherwise just use the branch for CI
+if [ "$CHANGES_MADE" = true ]; then
+    echo "📋 Changes were made, creating PR for release/${VERSION}..."
+    if ! gh pr create --title "release: ${VERSION}" --body "release: ${VERSION}" --base master --head "release/${VERSION}" 2>/dev/null; then
+        echo "PR creation failed. Checking if PR already exists..."
+        
+        # Check for existing PR with more robust approach
+        existing_prs=$(gh pr list --head "release/${VERSION}" --base master --json number,title,url 2>/dev/null || echo "[]")
+        
+        if [ "$existing_prs" != "[]" ] && [ -n "$existing_prs" ]; then
+            pr_number=$(echo "$existing_prs" | jq -r '.[0].number // empty')
+            pr_title=$(echo "$existing_prs" | jq -r '.[0].title // empty')
+            pr_url=$(echo "$existing_prs" | jq -r '.[0].url // empty')
+            
+            if [ -n "$pr_number" ]; then
+                echo "✅ Found existing PR #${pr_number}: ${pr_title}"
+                echo "URL: ${pr_url}"
+            else
+                echo "❌ Failed to create PR and no existing PR found"
+                echo "Debug info - existing_prs: $existing_prs"
+                exit 1
+            fi
+        else
+            echo "❌ Failed to create PR and no existing PR found"
+            echo "Debug info - existing_prs: $existing_prs"
+            exit 1
+        fi
     else
-        echo "❌ Failed to create PR and no existing PR found"
-        exit 1
+        echo "✅ PR created successfully for release/${VERSION}"
+    fi
+else
+    echo "📋 No changes made - skipping PR creation"
+    echo "🚀 Branch release/${VERSION} pushed for CI to build and upload Conan packages"
+    
+    # Check if there's already a PR from a previous run
+    existing_prs=$(gh pr list --head "release/${VERSION}" --base master --json number,title,url 2>/dev/null || echo "[]")
+    if [ "$existing_prs" != "[]" ] && [ -n "$existing_prs" ]; then
+        pr_number=$(echo "$existing_prs" | jq -r '.[0].number // empty')
+        pr_title=$(echo "$existing_prs" | jq -r '.[0].title // empty')
+        pr_url=$(echo "$existing_prs" | jq -r '.[0].url // empty')
+        
+        if [ -n "$pr_number" ]; then
+            echo "📋 Found existing PR #${pr_number}: ${pr_title}"
+            echo "URL: ${pr_url}"
+        fi
     fi
 fi
 
