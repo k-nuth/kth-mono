@@ -9,6 +9,41 @@ VERSION="$1"
 
 echo "Building version: ${VERSION}"
 
+# Cleanup previous release attempts (if any)
+echo "🧹 Cleaning up previous release artifacts..."
+
+# Delete local release branch if it exists
+if git branch --list "release/${VERSION}" | grep -q "release/${VERSION}"; then
+    echo "Deleting local branch release/${VERSION}"
+    git branch -D "release/${VERSION}" 2>/dev/null || true
+fi
+
+# Delete remote release branch if it exists
+if git ls-remote --heads origin "release/${VERSION}" | grep -q "release/${VERSION}"; then
+    echo "Deleting remote branch release/${VERSION}"
+    git push origin --delete "release/${VERSION}" 2>/dev/null || true
+fi
+
+# Delete local tag if it exists
+if git tag --list "v${VERSION}" | grep -q "v${VERSION}"; then
+    echo "Deleting local tag v${VERSION}"
+    git tag -d "v${VERSION}" 2>/dev/null || true
+fi
+
+# Delete remote tag if it exists
+if git ls-remote --tags origin "v${VERSION}" | grep -q "v${VERSION}"; then
+    echo "Deleting remote tag v${VERSION}"
+    git push origin --delete "v${VERSION}" 2>/dev/null || true
+fi
+
+# Delete GitHub release if it exists
+if gh release view "v${VERSION}" >/dev/null 2>&1; then
+    echo "Deleting GitHub release v${VERSION}"
+    gh release delete "v${VERSION}" --yes 2>/dev/null || true
+fi
+
+echo "✅ Cleanup completed"
+
 git checkout master
 git stash
 git pull origin master
@@ -168,5 +203,5 @@ echo "✅ Release v${VERSION} created successfully!"
 echo "✅ Release notes have been updated in $NOTES_FILE"
 
 # remove the release branch locally and remotely
-git push origin --delete "release-${VERSION}"
-git branch -D "release-${VERSION}"
+git push origin --delete "release/${VERSION}"
+git branch -D "release/${VERSION}"
