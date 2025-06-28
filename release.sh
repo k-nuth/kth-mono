@@ -71,12 +71,27 @@ git add conan.lock
 git commit -m "release: update conan.lock for version ${VERSION}"
 git push origin "release/${VERSION}"
 
-gh pr create --title "release: ${VERSION}" --body "release: ${VERSION}" --base master --head "release/${VERSION}"
+# Try to create PR, but don't fail if it already exists
+echo "Creating or checking PR for release/${VERSION}..."
+if ! gh pr create --title "release: ${VERSION}" --body "release: ${VERSION}" --base master --head "release/${VERSION}" 2>/dev/null; then
+    echo "PR might already exist. Checking existing PR..."
+    existing_pr=$(gh pr list --head "release/${VERSION}" --base master --json number,title,url --jq '.[0]')
+    if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
+        pr_number=$(echo "$existing_pr" | jq -r '.number')
+        pr_title=$(echo "$existing_pr" | jq -r '.title')
+        pr_url=$(echo "$existing_pr" | jq -r '.url')
+        echo "✅ Found existing PR #${pr_number}: ${pr_title}"
+        echo "URL: ${pr_url}"
+    else
+        echo "❌ Failed to create PR and no existing PR found"
+        exit 1
+    fi
+fi
 
 echo "Waiting for the build to finish for branch: release/${VERSION}"
 while true; do
     # Get workflow runs for the current branch, including event type
-    run_info=$(gh run list --branch "release/${VERSION}" --workflow "Build and Test" --limit 5 --json status,conclusion,url,number,event)
+    run_info=$(gh run list --branch "release/${VERSION}" --workflow "Build and Test" --limit 10 --json status,conclusion,url,number,event,createdAt)
     
     if [ -z "$run_info" ] || [ "$run_info" == "[]" ]; then
         echo "No workflow runs found for branch release/${VERSION}. Waiting..."
@@ -85,7 +100,23 @@ while true; do
     fi
     
     # Find the most recent run that was triggered by 'push' (not 'pull_request')
-    push_run=$(echo "$run_info" | jq -r '.[] | select(.event == "push") | . | @base64' | head -1)
+    # Sort by creation time and filter out cancelled/failed runs from previous attempts
+    push_run=$(echo "$run_info" | jq -r '
+        .[] | 
+        select(.event == "push") | 
+        select(.status == "in_progress" or .status == "queued" or (.status == "completed" and .conclusion == "success")) |
+        . | @base64
+    ' | head -1)
+    
+    # If no active/successful push run found, look for the most recent push run regardless of status
+    if [ -z "$push_run" ]; then
+        echo "No active push-triggered workflow runs found. Checking most recent push run..."
+        push_run=$(echo "$run_info" | jq -r '
+            .[] | 
+            select(.event == "push") | 
+            . | @base64
+        ' | head -1)
+    fi
     
     if [ -z "$push_run" ]; then
         echo "No push-triggered workflow runs found for branch release/${VERSION}. Waiting..."
@@ -101,18 +132,33 @@ while true; do
     url=$(echo "$push_run_decoded" | jq -r '.url')
     run_number=$(echo "$push_run_decoded" | jq -r '.number')
     event=$(echo "$push_run_decoded" | jq -r '.event')
+    created_at=$(echo "$push_run_decoded" | jq -r '.createdAt')
     
     echo "Workflow run #${run_number} (${event}): status=${status}, conclusion=${conclusion}"
+    echo "Created: ${created_at}"
     echo "URL: ${url}"
     
     if [ "$status" == "completed" ]; then
         if [ "$conclusion" == "success" ]; then
             echo "✅ Build completed successfully!"
             break
+        elif [ "$conclusion" == "cancelled" ]; then
+            echo "⚠️ Most recent workflow was cancelled. This might be from a previous release attempt."
+            echo "Waiting for a new workflow to start or checking if there's a more recent one..."
+            sleep 30
+            continue
         else
             echo "❌ Build completed but failed with conclusion: ${conclusion}"
             echo "Please check the workflow at: ${url}"
-            exit 1
+            
+            # Ask user if they want to continue waiting for a new run or exit
+            echo "This might be from a previous release attempt. Continue waiting? (y/n)"
+            read -r response
+            if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+                exit 1
+            fi
+            sleep 30
+            continue
         fi
     else
         echo "🔄 Build is still in progress (${status}). Waiting..."
