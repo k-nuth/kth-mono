@@ -45,9 +45,25 @@ fi
 echo "✅ Cleanup completed"
 
 git checkout master
-git stash
+
+# Smart stash handling - only stash if there are changes, and track if we did
+STASH_CREATED=false
+if ! git diff-index --quiet HEAD --; then
+    echo "📦 Stashing local changes..."
+    git stash push -m "release script temporary stash for ${VERSION}"
+    STASH_CREATED=true
+else
+    echo "📦 No local changes to stash"
+fi
+
 git pull origin master
-git stash pop
+
+# Only pop if we actually created a stash
+if [ "$STASH_CREATED" = true ]; then
+    echo "📦 Restoring stashed changes..."
+    git stash pop
+fi
+
 git checkout -b "release/${VERSION}"
 
 # Update README versions before creating the release
