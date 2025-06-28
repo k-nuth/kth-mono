@@ -1,3 +1,273 @@
+# version 0.58.0
+
+You can install Knuth node version v0.58.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.58.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.57.0...v0.58.0
+
+**C++ Library (v0.58.0):**
+Changes:
+* feat: 2025-may post upgrade changes by @fpelliccioni in https://github.com/k-nuth/node/pull/40
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.57.0...v0.58.0
+
+**C API (v0.67.0):**
+Changes:
+* feat: 2025-may post upgrade changes by @fpelliccioni in https://github.com/k-nuth/c-api/pull/51
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.66.0...v0.67.0
+# version 0.57.0
+
+You can install Knuth node version v0.57.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.57.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.56.0...v0.57.0
+
+**C++ Library (v0.57.0):**
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.56.0...v0.57.0
+
+**C API (v0.66.0):**
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.65.0...v0.66.0
+# version 0.56.0
+
+You can install Knuth node version v0.56.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.56.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.55.0...v0.56.0
+
+**C++ Library (v0.56.0):**
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.55.0...v0.56.0
+
+**C API (v0.65.0):**
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.64.0...v0.65.0
+# version 0.55.0
+
+You can install Knuth node version v0.55.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.55.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.54.0...v0.55.0
+
+**C++ Library (v0.55.0):**
+Changes:
+* feat: better logs by @fpelliccioni in https://github.com/k-nuth/node/pull/38
+* fix: logging by @fpelliccioni in https://github.com/k-nuth/node/pull/39
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.54.0...v0.55.0
+
+**C API (v0.64.0):**
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.63.0...v0.64.0
+# version 0.54.0
+
+You can install Knuth node version v0.54.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.54.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.53.0...v0.54.0
+
+**C++ Library (v0.54.0):**
+Changes:
+* feat: refactor domain objects deserialization by @fpelliccioni in https://github.com/k-nuth/node/pull/37
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.53.0...v0.54.0
+
+**C API (v0.63.0):**
+Changes:
+* feat: refactor domain objects deserialization by @fpelliccioni in https://github.com/k-nuth/c-api/pull/29
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.62.0...v0.63.0
+# version 0.53.0
+
+You can install Knuth node version v0.53.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.53.0):**
+Changes:
+* feat: use ubuntu 24.04 in node-exe by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/20
+
+
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.52.0...v0.53.0
+
+**C++ Library (v0.53.0):**
+Changes:
+* feat: use ubuntu 24.04 in node by @fpelliccioni in https://github.com/k-nuth/node/pull/36
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.52.0...v0.53.0
+
+**C API (v0.62.0):**
+Changes:
+* feat: VM improvements by @fpelliccioni in https://github.com/k-nuth/c-api/pull/49
+* feat: use ubuntu 24.04 in c-api by @fpelliccioni in https://github.com/k-nuth/c-api/pull/50
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.61.0...v0.62.0
+# version 0.52.0
+
+You can install Knuth node version v0.52.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.52.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.51.0...v0.52.0
+
+**C++ Library (v0.52.0):**
+Changes:
+* feat: vm improvements by @fpelliccioni in https://github.com/k-nuth/node/pull/35
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.51.0...v0.52.0
+
+**C API (v0.61.0):**
+Changes:
+* feat: partial restore of knuth vm by @fpelliccioni in https://github.com/k-nuth/c-api/pull/47
+* feat: vm improvements by @fpelliccioni in https://github.com/k-nuth/c-api/pull/48
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.60.0...v0.61.0
+# version 0.51.0
+
+You can install Knuth node version v0.51.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.51.0):**
+Changes:
+* feat: use executor info by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/19
+
+
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.50.0...v0.51.0
+
+**C++ Library (v0.51.0):**
+Changes:
+* feat: report all blocks by @fpelliccioni in https://github.com/k-nuth/node/pull/34
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.50.0...v0.51.0
+
+**C API (v0.60.0):**
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.59.0...v0.60.0
+# version 0.50.0
+
+You can install Knuth node version v0.50.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.50.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.49.0...v0.50.0
+
+**C++ Library (v0.50.0):**
+Changes:
+* feat: build information extended by @fpelliccioni in https://github.com/k-nuth/node/pull/33
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.49.0...v0.50.0
+
+**C API (v0.56.0):**
+Changes:
+* feat: build info improved by @fpelliccioni in https://github.com/k-nuth/c-api/pull/41
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.55.0...v0.56.0
+
+**C API (v0.55.0):**
+Changes:
+* feat: build info extended by @fpelliccioni in https://github.com/k-nuth/c-api/pull/39
+* fix: compiler warning about sprintf by @fpelliccioni in https://github.com/k-nuth/c-api/pull/40
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.54.0...v0.55.0
+# version 0.49.0
+
+You can install Knuth node version v0.49.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.49.0):**
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.48.0...v0.49.0
+
+**C++ Library (v0.49.0):**
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.48.0...v0.49.0
+
+**C API (v0.52.0):**
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.51.0...v0.52.0
+# version 0.48.0
+
+You can install Knuth node version v0.48.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.48.0):**
+Changes:
+* feat: replace conan center url in node-exe by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/18
+
+
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.47.0...v0.48.0
+
+**C++ Library (v0.48.0):**
+Changes:
+* feat: replace conan center url in node by @fpelliccioni in https://github.com/k-nuth/node/pull/32
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.47.0...v0.48.0
+
+**C API (v0.51.0):**
+Changes:
+* feat: replace conan center url in c-api by @fpelliccioni in https://github.com/k-nuth/c-api/pull/34
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.50.0...v0.51.0
+# version 0.47.0
+
+You can install Knuth node version v0.47.0 [using these instructions](https://kth.cash/#download).
+
+This release includes the following features and fixes:
+
+**Node Executable (v0.47.0):**
+Changes:
+* feat: c++23 support by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/13
+* doc: c++23 support by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/14
+* feat: build system improvements by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/15
+* feat: copyright 2024 in node-exe by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/16
+* feat: support c++23 features in node-exe by @fpelliccioni in https://github.com/k-nuth/node-exe/pull/17
+
+
+**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.46.0...v0.47.0
+
+**C++ Library (v0.47.0):**
+Changes:
+* feat: c++23 support by @fpelliccioni in https://github.com/k-nuth/node/pull/26
+* doc: c++23 support by @fpelliccioni in https://github.com/k-nuth/node/pull/27
+* feat: build system improvements by @fpelliccioni in https://github.com/k-nuth/node/pull/29
+* feat: copyright 2024 in node by @fpelliccioni in https://github.com/k-nuth/node/pull/30
+* feat: support c++23 features in node by @fpelliccioni in https://github.com/k-nuth/node/pull/31
+
+
+**Full Changelog**: https://github.com/k-nuth/node/compare/v0.46.0...v0.47.0
+
+**C API (v0.50.0):**
+Changes:
+* feat: c++23 support by @fpelliccioni in https://github.com/k-nuth/c-api/pull/28
+* feat: build system improvements by @fpelliccioni in https://github.com/k-nuth/c-api/pull/30
+* feat: support c++23 features in c-api by @fpelliccioni in https://github.com/k-nuth/c-api/pull/33
+
+
+**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.49.0...v0.50.0
+
 # version 0.46.0
 
 You can install Knuth node version v0.46.0 [using these instructions](https://kth.cash/#download).
