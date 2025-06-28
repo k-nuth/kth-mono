@@ -1,25 +1,61 @@
-# version 0.58.0
+# Versioning Gap Explanation (v0.59.0 - v0.67.0)
 
-You can install Knuth node version v0.58.0 [using these instructions](https://kth.cash/#download).
+## � Missing Versions in Node-exe and Node Repositories
 
-This release includes the following features and fixes:
+**Notice:** You may observe that versions 0.59.0 through 0.67.0 are not listed in the release notes below for `node-exe` and `node` repositories. This section explains why.
 
-**Node Executable (v0.58.0):**
-**Full Changelog**: https://github.com/k-nuth/node-exe/compare/v0.57.0...v0.58.0
+### What Happened During v0.59.0 - v0.67.0
 
-**C++ Library (v0.58.0):**
-Changes:
-* feat: 2025-may post upgrade changes by @fpelliccioni in https://github.com/k-nuth/node/pull/40
+Until June 2025, the Knuth project operated as **separate repositories** with independent versioning:
 
+- **`c-api` repository**: Actively released versions 0.59.0 → 0.67.0
+- **`node` repository**: Remained stable at v0.58.0 (no new releases needed)
+- **`node-exe` repository**: Remained stable at v0.58.0 (no new releases needed)
 
-**Full Changelog**: https://github.com/k-nuth/node/compare/v0.57.0...v0.58.0
+### Architecture Transition: Multi-repo → Mono-repo
 
-**C API (v0.67.0):**
-Changes:
-* feat: 2025-may post upgrade changes by @fpelliccioni in https://github.com/k-nuth/c-api/pull/51
+**Starting with v0.68.0**, the Knuth project **transitioned to a mono-repository architecture**:
 
+- **Before**: Multiple independent repositories with separate release cycles
+- **After**: Single mono-repository (`kth-mono`) with unified versioning
+- **Result**: All components now share the same version number and release cycle
 
-**Full Changelog**: https://github.com/k-nuth/c-api/compare/v0.66.0...v0.67.0
+### Why This Change
+
+1. **Simplified Management**: Single repository, single version, single release process
+2. **Improved Coordination**: All components evolve together with consistent versioning
+3. **Better Developer Experience**: One codebase, one build system, one release cycle
+4. **Easier Dependency Management**: No more version compatibility matrices between repos
+
+### C-API Releases During Multi-repo Period
+
+The following versions were released **only for the C-API repository** before the mono-repo transition:
+
+| Version | Release Date | Key Changes |
+|---------|--------------|-------------|
+| v0.67.0 | June 2025    | 2025-may post upgrade changes |
+| v0.66.0 | May 2025     | General improvements |
+| v0.65.0 | May 2025     | Maintenance updates |
+| v0.64.0 | May 2025     | Better logging functionality |
+| v0.63.0 | May 2025     | Domain objects deserialization refactor |
+| v0.62.0 | April 2025   | VM improvements + Ubuntu 24.04 support |
+| v0.61.0 | February 2025| VM restoration and enhancements |
+| v0.60.0 | January 2025 | Build improvements |
+| v0.59.0 | December 2024| Extended build info and VM features |
+
+### Historical Reference
+
+For complete release notes from the multi-repo era, see:
+- [C-API Release History](https://github.com/k-nuth/c-api/releases)
+- [Node Release History](https://github.com/k-nuth/node/releases)
+- [Node-exe Release History](https://github.com/k-nuth/node-exe/releases)
+
+### Moving Forward
+
+**Starting with v0.68.0**: All development happens in the mono-repository with unified versioning. This eliminates version gaps and ensures all components are released together with coordinated changes.
+
+---
+
 # version 0.57.0
 
 You can install Knuth node version v0.57.0 [using these instructions](https://kth.cash/#download).
@@ -557,7 +593,7 @@ This release includes the following features and fixes:
 
 # version 0.9.0
 
-You can install Knuth node version 0.9.0 [using these instructions](https://kth.cash/#download).
+You can install Knuth node version 0.9.0 [using these instructions](https://kth.cash/#download`.
 
 This release includes the following features and fixes:
 
@@ -624,7 +660,7 @@ This release includes the following features and fixes:
 
 # version 0.5.0
 
-You can install Knuth node version 0.5.0 [using these instructions](https://kth.cash/#download).
+You can install Knuth node version 0.5.0 [using these instructions](https://kth.cash/#download`.
 
 This release includes the following features and fixes:
 
@@ -758,4 +794,52 @@ At the MTP time of 1589544000 (May 15, 2020 12:00:00 UTC) the following behavior
 
 - First release
 - [Bitcoin Cash (BCH)](https://www.bitcoincash.org/) 2019-Nov-15 hard fork support (Multisig Schnorr Signatures).
+
+# Versioning History Note (v0.59.0 - v0.67.0)
+
+## 📝 Missing Versions Explanation
+
+**Important:** You may notice that versions 0.59.0 through 0.67.0 are not listed above for `node-exe` and `node` repositories. This is intentional and explained below.
+
+### What Happened During v0.59.0 - v0.67.0
+
+During this period (December 2024 - May 2025), the Knuth project used **different versioning schemes** across repositories:
+
+- **`c-api` repository**: Continued releasing versions 0.59.0 → 0.67.0 with active development
+- **`node` and `node-exe` repositories**: Remained at v0.58.0 with no new releases
+
+### Why This Happened
+
+1. **Development Focus**: Most active development occurred in the C-API layer
+2. **Stable Core**: The C++ node library and executable were stable and didn't require updates
+3. **API Evolution**: The C-API needed frequent updates for new features and improvements
+4. **Independent Releases**: Each repository was released independently based on actual changes
+
+### C-API Versions During This Period
+
+The following versions were released **only for the C-API repository**:
+
+| Version | Release Date | Key Changes |
+|---------|--------------|-------------|
+| v0.67.0 | June 2025    | 2025-may post upgrade changes |
+| v0.66.0 | May 2025     | (Release notes available in c-api repo) |
+| v0.65.0 | May 2025     | (Release notes available in c-api repo) |
+| v0.64.0 | May 2025     | Better logs and logging fixes |
+| v0.63.0 | May 2025     | Domain objects deserialization refactor |
+| v0.62.0 | April 2025   | VM improvements and Ubuntu 24.04 support |
+| v0.61.0 | February 2025| Partial restore of Knuth VM and improvements |
+| v0.60.0 | January 2025 | (Release notes available in c-api repo) |
+| v0.59.0 | December 2024| Build info extensions and VM features |
+| v0.58.0 | December 2024| VM API extensions |
+
+### For Detailed Information
+
+To see the complete release notes for these C-API versions, please visit:
+- [C-API Release History](https://github.com/k-nuth/c-api/releases)
+
+### Moving Forward
+
+Starting with **v0.68.0**, all repositories use unified versioning to avoid this confusion and ensure clear version correspondence across all components.
+
+---
 
