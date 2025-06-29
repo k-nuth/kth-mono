@@ -190,6 +190,57 @@ If you find a problem in any other platform, please [let us know](https://github
 
 Any protocol change can be introduced in Knuth much faster and more efficiently than in reference implementations.
 
+## Version History & Repository Transition
+
+### 📊 Current Version: 0.68.0 (Mono-repository)
+
+**Starting with v0.68.0 (June 2025)**, all Knuth components are released from this unified mono-repository with synchronized versioning.
+
+### 🔄 Repository Architecture Evolution
+
+**Before v0.68.0**: Multi-repository architecture with independent release cycles
+- Components were developed in separate repositories
+- Each repository had its own version numbering and release schedule
+- Different components could have different versions (e.g., C-API v0.67.0, Node v0.58.0)
+
+**From v0.68.0**: Mono-repository architecture with unified versioning
+- All components unified in this single repository (`kth-mono`)
+- Synchronized version numbers across all components
+- Single release process for all components
+
+### 📋 Version Gap Explanation (v0.59.0 - v0.67.0)
+
+You may notice that Node and Node-exe components appear to "skip" versions 0.59.0 through 0.67.0. Here's why:
+
+During the multi-repository period (2024-2025):
+- **C-API**: Actively released versions 0.59.0 → 0.67.0 with regular updates
+- **Node & Node-exe**: Remained stable at v0.58.0 (no new releases needed)
+- **Other components**: Various independent version numbers
+
+### 📍 Finding Older Versions
+
+If you need access to pre-mono-repository versions:
+
+**C-API versions ≤ 0.67.0:**
+- Repository: [`k-nuth/c-api`](https://github.com/k-nuth/c-api/releases)
+- Available versions: 0.47.0 → 0.67.0
+
+**Node & Node-exe versions ≤ 0.58.0:**
+- Node Repository: [`k-nuth/node`](https://github.com/k-nuth/node/releases)  
+- Node-exe Repository: [`k-nuth/node-exe`](https://github.com/k-nuth/node-exe/releases)
+- Available versions: 0.47.0 → 0.58.0
+
+**All versions ≥ 0.68.0:**
+- Repository: **This repository** ([`k-nuth/kth-mono`](https://github.com/k-nuth/kth-mono/releases))
+- Unified versioning for all components
+
+### 🎯 Benefits of Mono-repository
+
+1. **Simplified Management**: Single repository, single version, single release process
+2. **Improved Coordination**: All components evolve together with consistent versioning  
+3. **Better Developer Experience**: One codebase, one build system, one release cycle
+4. **Easier Dependency Management**: No more version compatibility matrices between components
+
 ## Donation
 
 Knuth is a community backed project developed. Donations received will be used to subsidize development costs for general maintenance and support of our implementation.
