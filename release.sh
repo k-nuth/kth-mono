@@ -267,6 +267,10 @@ if [ -z "$RELEASE_NOTES" ]; then
     exit 1
 fi
 
+# Replace temporary tag references with final tag in the release notes
+echo "Fixing references in release notes..."
+RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed "s/temp-v${VERSION}/v${VERSION}/g")
+
 # Step 3: Update local release notes file
 echo "Updating local release notes file..."
 NOTES_FILE="doc/release-notes/release-notes.md"
@@ -302,21 +306,16 @@ gh release delete "${TEMP_TAG}" --yes
 git tag -d "${TEMP_TAG}"
 git push origin --delete "${TEMP_TAG}"
 
-# Step 6: Create the real release with the processed notes
+# Step 6: Create the real release with auto-generated notes
 echo "Creating final release v${VERSION}..."
 git tag -a "v${VERSION}" -m "Release version ${VERSION}"
 git push origin "v${VERSION}"
 
-# Get the updated notes from the file for the final release
-FINAL_NOTES=$(awk "
-    /^# version ${VERSION}$/ { found=1; next }
-    /^# version / && found { exit }
-    found && NF > 0 { print }
-" "$NOTES_FILE" | sed '/^$/d')
-
+# Create the final release with auto-generated notes (not copied text)
+# This ensures GitHub generates the correct "Full Changelog" link
 gh release create "v${VERSION}" \
     --title "v${VERSION}" \
-    --notes "$FINAL_NOTES" \
+    --generate-notes \
     --latest
 
 echo "✅ Release v${VERSION} created successfully!"
