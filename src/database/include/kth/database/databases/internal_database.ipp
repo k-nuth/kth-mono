@@ -259,7 +259,13 @@ utxo_entry internal_database_basis<Clock>::get_utxo(domain::chain::output_point 
         return utxo_entry{};
     }
 
-    return domain::create_old<utxo_entry>(db_value_to_data_chunk(value));
+    auto data = db_value_to_data_chunk(value);
+    byte_reader reader(data);
+    auto res = utxo_entry::from_data(reader);
+    if ( ! res) {
+        return utxo_entry{};
+    }
+    return *res;
 }
 
 template <typename Clock>
@@ -407,13 +413,21 @@ domain::chain::header::list internal_database_basis<Clock>::get_headers(uint32_t
     }
 
     auto data = db_value_to_data_chunk(value);
-    list.push_back(domain::create_old<domain::chain::header>(data));
+    byte_reader reader1(data);
+    auto res1 = domain::chain::header::from_data(reader1);
+    if (res1) {
+        list.push_back(*res1);
+    }
 
     while ((rc = kth_db_cursor_get(cursor, &key, &value, KTH_DB_NEXT)) == KTH_DB_SUCCESS) {
         auto height = *static_cast<uint32_t*>(kth_db_get_data(key));
         if (height > to) break;
         auto data = db_value_to_data_chunk(value);
-        list.push_back(domain::create_old<domain::chain::header>(data));
+        byte_reader reader2(data);
+        auto res2 = domain::chain::header::from_data(reader2);
+        if (res2) {
+            list.push_back(*res2);
+        }
     }
 
     kth_db_cursor_close(cursor);
@@ -519,11 +533,21 @@ result_code internal_database_basis<Clock>::insert_reorg_into_pool(utxo_pool_t& 
     }
 
     auto entry_data = db_value_to_data_chunk(value);
-    auto entry = domain::create_old<utxo_entry>(entry_data);
+    byte_reader entry_reader(entry_data);
+    auto entry_res = utxo_entry::from_data(entry_reader);
+    if ( ! entry_res) {
+        LOG_ERROR(LOG_DATABASE, "Error deserializing utxo_entry from reorg pool");
+        return result_code::other;
+    }
 
     auto point_data = db_value_to_data_chunk(key_point);
-    auto point = domain::create_old<domain::chain::output_point>(point_data, KTH_INTERNAL_DB_WIRE);
-    pool.insert({point, std::move(entry)});     //TODO(fernando): use emplace?
+    byte_reader point_reader(point_data);
+    auto point_res = domain::chain::output_point::from_data(point_reader, KTH_INTERNAL_DB_WIRE);
+    if ( ! point_res) {
+        LOG_ERROR(LOG_DATABASE, "Error deserializing output_point from reorg pool");
+        return result_code::other;
+    }
+    pool.insert({*point_res, std::move(*entry_res)});     //TODO(fernando): use emplace?
 
     return result_code::success;
 }

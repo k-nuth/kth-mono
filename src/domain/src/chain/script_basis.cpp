@@ -17,7 +17,6 @@
 
 #include <kth/domain/chain/transaction.hpp>
 
-#include <kth/domain/common.hpp>
 #include <kth/domain/constants.hpp>
 #include <kth/domain/machine/interpreter.hpp>
 #include <kth/domain/machine/opcode.hpp>

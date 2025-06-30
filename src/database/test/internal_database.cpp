@@ -8,6 +8,7 @@
 #include <test_helpers.hpp>
 
 #include <kth/database.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 
 using namespace boost::system;
 using namespace std::filesystem;
@@ -42,7 +43,12 @@ struct internal_database_directory_setup_fixture {
 domain::chain::block get_block(std::string const& enc) {
     data_chunk data;
     decode_base16(data, enc);
-    return domain::create_old<domain::chain::block>(data);
+    byte_reader reader(data);
+    auto res = domain::chain::block::from_data(reader);
+    if ( ! res) {
+        return domain::chain::block{};
+    }
+    return *res;
 }
 
 domain::chain::block get_genesis() {
@@ -227,7 +233,10 @@ void check_reorg_output(KTH_DB_env* env_, KTH_DB_dbi& dbi_reorg_pool_, std::stri
     REQUIRE(kth_db_txn_commit(db_txn) == KTH_DB_SUCCESS);
 
     data_chunk data {static_cast<uint8_t*>(kth_db_get_data(value)), static_cast<uint8_t*>(kth_db_get_data(value)) + kth_db_get_size(value)};
-    auto output = domain::create_old<domain::chain::output>(data, false);
+    byte_reader reader(data);
+    auto output_res = domain::chain::output::from_data(reader, false);
+    REQUIRE(output_res);
+    auto output = *output_res;
 
     REQUIRE(encode_base16(output.to_data(true)) == output_enc);
 }
@@ -295,7 +304,10 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, uint32_t heig
     REQUIRE(kth_db_txn_commit(db_txn) == KTH_DB_SUCCESS);
 
     data_chunk data {static_cast<uint8_t*>(kth_db_get_data(value)), static_cast<uint8_t*>(kth_db_get_data(value)) + kth_db_get_size(value)};
-    auto block = domain::create_old<domain::chain::block>(data, false);
+    byte_reader reader(data);
+    auto block_res = domain::chain::block::from_data(reader, false);
+    REQUIRE(block_res);
+    auto block = *block_res;
 
     REQUIRE(block.is_valid());
 }
@@ -325,7 +337,10 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, KTH_DB_dbi& d
     REQUIRE(kth_db_get(db_txn, dbi_transaction_db_, &key_tx, &value_tx) == KTH_DB_SUCCESS);
 
     data_chunk data_tx {static_cast<uint8_t*>(kth_db_get_data(value_tx)), static_cast<uint8_t*>(kth_db_get_data(value_tx)) + kth_db_get_size(value_tx)};
-    auto entry = domain::create_old<transaction_entry>(data_tx);
+    byte_reader reader(data_tx);
+    auto entry_res = transaction_entry::from_data(reader);
+    REQUIRE(entry_res);
+    auto entry = *entry_res;
     tx_list.push_back(std::move(entry.transaction()));
 
     while ((rc = kth_db_cursor_get(cursor, &key, &value, MDB_NEXT_DUP)) == 0) {
@@ -336,7 +351,10 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, KTH_DB_dbi& d
         REQUIRE(kth_db_get(db_txn, dbi_transaction_db_, &key_tx, &value_tx) == KTH_DB_SUCCESS);
 
         data_chunk data_tx {static_cast<uint8_t*>(kth_db_get_data(value_tx)), static_cast<uint8_t*>(kth_db_get_data(value_tx)) + kth_db_get_size(value_tx)};
-        auto entry = domain::create_old<transaction_entry>(data_tx);
+        byte_reader reader(data_tx);
+    auto entry_res = transaction_entry::from_data(reader);
+    REQUIRE(entry_res);
+    auto entry = *entry_res;
         tx_list.push_back(std::move(entry.transaction()));
     }
 
@@ -346,7 +364,10 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, KTH_DB_dbi& d
     REQUIRE(kth_db_get(db_txn, dbi_block_header_, &key, &value) == KTH_DB_SUCCESS);
 
     data_chunk data_header {static_cast<uint8_t*>(kth_db_get_data(value)), static_cast<uint8_t*>(kth_db_get_data(value)) + kth_db_get_size(value)};
-    auto header = domain::create_old<domain::chain::header>(data_header);
+    byte_reader reader(data_header);
+    auto header_res = domain::chain::header::from_data(reader);
+    REQUIRE(header_res);
+    auto header = *header_res;
     REQUIRE(header.is_valid());
 
     domain::chain::block block{header, std::move(tx_list)};
@@ -409,7 +430,10 @@ void check_reorg_index(KTH_DB_env* env_, KTH_DB_dbi& dbi_reorg_index_, std::stri
     REQUIRE(kth_db_get(db_txn, dbi_reorg_index_, &height_key, &value) == KTH_DB_SUCCESS);
     REQUIRE(kth_db_txn_commit(db_txn) == KTH_DB_SUCCESS);
     data_chunk data2 {static_cast<uint8_t*>(kth_db_get_data(value)), static_cast<uint8_t*>(kth_db_get_data(value)) + kth_db_get_size(value)};
-    auto point_indexed = domain::create_old<domain::chain::point>(data2, false);
+    byte_reader reader(data2);
+    auto point_indexed_res = domain::chain::point::from_data(reader, false);
+    REQUIRE(point_indexed_res);
+    auto point_indexed = *point_indexed_res;
 
     hash_digest txid;
     REQUIRE(decode_hash(txid, txid_enc));
@@ -440,7 +464,10 @@ void check_reorg_block(KTH_DB_env* env_, KTH_DB_dbi& dbi_reorg_block_, uint32_t 
     REQUIRE(kth_db_txn_commit(db_txn) == KTH_DB_SUCCESS);
 
     data_chunk data {static_cast<uint8_t*>(kth_db_get_data(value)), static_cast<uint8_t*>(kth_db_get_data(value)) + kth_db_get_size(value)};
-    auto block = domain::create_old<domain::chain::block>(data, false);
+    byte_reader reader(data);
+    auto block_res = domain::chain::block::from_data(reader, false);
+    REQUIRE(block_res);
+    auto block = *block_res;
 
     REQUIRE(encode_base16(block.to_data(false)) == block_enc);
 }
