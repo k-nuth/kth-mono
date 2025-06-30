@@ -32,7 +32,6 @@ class KnuthNodeExeConan(KnuthConanFileV2):
         "cflags": ["ANY"],
         "cmake_export_compile_commands": [True, False],
         "log": ["boost", "spdlog", "binlog"],
-        "use_libmdbx": [True, False],
         "statistics": [True, False],
     }
 
@@ -46,7 +45,6 @@ class KnuthNodeExeConan(KnuthConanFileV2):
         "db_readonly": False,
         "cmake_export_compile_commands": False,
         "log": "spdlog",
-        "use_libmdbx": False,
         "statistics": False,
     }
 
@@ -88,9 +86,6 @@ class KnuthNodeExeConan(KnuthConanFileV2):
         self.options["*"].log = self.options.log
         self.output.info("Compiling with log: %s" % (self.options.log,))
 
-        self.options["*"].use_libmdbx = self.options.use_libmdbx
-        self.output.info("Compiling with use_libmdbx: %s" % (self.options.use_libmdbx,))
-
         self.options["*"].statistics = self.options.statistics
         self.output.info("Compiling with statistics: %s" % (self.options.statistics,))
 
@@ -124,7 +119,6 @@ class KnuthNodeExeConan(KnuthConanFileV2):
         tc.variables["WITH_MEMPOOL"] = option_on_off(self.options.mempool)
         tc.variables["DB_READONLY_MODE"] = option_on_off(self.options.db_readonly)
         tc.variables["LOG_LIBRARY"] = self.options.log
-        tc.variables["USE_LIBMDBX"] = option_on_off(self.options.use_libmdbx)
         tc.variables["STATISTICS"] = option_on_off(self.options.statistics)
         tc.variables["CONAN_DISABLE_CHECK_COMPILER"] = option_on_off(True)
         tc.generate()
