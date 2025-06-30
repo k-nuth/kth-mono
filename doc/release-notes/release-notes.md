@@ -1,3 +1,17 @@
+# version 0.68.1
+
+You can install Knuth node version v0.68.1 [using these instructions](https://kth.cash/#download).
+
+## What's Changed
+* chore: remove redundant update-readme-versions workflow by @fpelliccioni in https://github.com/k-nuth/kth-mono/pull/31
+* cleanup: remove deprecated use_libmdbx options from all modules by @fpelliccioni in https://github.com/k-nuth/kth-mono/pull/33
+* fix: improve Emscripten support and spdlog configuration by @fpelliccioni in https://github.com/k-nuth/kth-mono/pull/32
+* release: 0.68.1 by @fpelliccioni in https://github.com/k-nuth/kth-mono/pull/34
+
+
+**Full Changelog**: https://github.com/k-nuth/kth-mono/compare/v0.68.0...v0.68.1
+
+
 # version 0.68.0
 
 You can install Knuth node version v0.68.0 [using these instructions](https://kth.cash/#download).
