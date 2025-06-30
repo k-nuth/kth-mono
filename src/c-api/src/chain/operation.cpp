@@ -7,8 +7,6 @@
 #include <kth/capi/conversions.hpp>
 #include <kth/capi/helpers.hpp>
 
-#include <kth/domain/common.hpp>
-
 KTH_CONV_DEFINE(chain, kth_operation_t, kth::domain::machine::operation, operation)
 
 // ---------------------------------------------------------------------------

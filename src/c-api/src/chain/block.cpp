@@ -6,6 +6,7 @@
 
 #include <kth/capi/conversions.hpp>
 #include <kth/capi/helpers.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 
 #include <kth/domain/chain/transaction.hpp>
 
@@ -26,8 +27,12 @@ kth_block_t kth_chain_block_construct(kth_header_t header, kth_transaction_list_
 
 kth_block_t kth_chain_block_factory_from_data(uint8_t* data, kth_size_t n) {
     kth::data_chunk data_cpp(data, std::next(data, n));
-    auto block = kth::domain::create_old<kth::domain::chain::block>(data_cpp);
-    return kth::move_or_copy_and_leak(std::move(block));
+    kth::byte_reader reader(data_cpp);
+    auto res = kth::domain::chain::block::from_data(reader);
+    if ( ! res) {
+        return kth::move_or_copy_and_leak(kth::domain::chain::block{});
+    }
+    return kth::move_or_copy_and_leak(std::move(*res));
 }
 
 void kth_chain_block_destruct(kth_block_t block) {

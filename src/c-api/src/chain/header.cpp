@@ -6,6 +6,7 @@
 
 #include <kth/capi/conversions.hpp>
 #include <kth/capi/helpers.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 
 KTH_CONV_DEFINE(chain, kth_header_t, kth::domain::chain::header, header)
 
@@ -13,8 +14,12 @@ extern "C" {
 
 kth_header_t kth_chain_header_factory_from_data(uint8_t* data, kth_size_t n) {
     kth::data_chunk data_cpp(data, std::next(data, n));
-    auto header = kth::domain::create_old<kth::domain::chain::header>(data_cpp);
-    return kth::move_or_copy_and_leak(std::move(header));
+    kth::byte_reader reader(data_cpp);
+    auto res = kth::domain::chain::header::from_data(reader);
+    if ( ! res) {
+        return kth::move_or_copy_and_leak(kth::domain::chain::header{});
+    }
+    return kth::move_or_copy_and_leak(std::move(*res));
 }
 
 kth_size_t kth_chain_header_satoshi_fixed_size() {

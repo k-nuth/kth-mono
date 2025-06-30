@@ -16,7 +16,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include <kth/domain/chain/script.hpp>
-#include <kth/domain/common.hpp>
 #include <kth/domain/machine/operation.hpp>
 #include <kth/domain/machine/program.hpp>
 // #include <kth/infrastructure/message/message_tools.hpp>

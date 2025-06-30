@@ -404,7 +404,6 @@ set(kth_headers
     include/kth/domain/wallet/encrypted_keys.hpp
     include/kth/domain/wallet/wallet_manager.hpp
 
-    include/kth/domain/common.hpp
     include/kth/domain/machine/opcode.hpp
     include/kth/domain/machine/operation.hpp
     include/kth/domain/machine/interpreter.hpp

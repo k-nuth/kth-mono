@@ -12,7 +12,6 @@
 #include <kth/domain/chain/abla.hpp>
 #include <kth/domain/chain/block.hpp>
 #include <kth/domain/chain/chain_state.hpp>
-#include <kth/domain/common.hpp>
 #include <kth/domain/chain/compact.hpp>
 #include <kth/domain/chain/header.hpp>
 #include <kth/domain/chain/history.hpp>

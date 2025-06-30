@@ -14,6 +14,7 @@
 #include <memory>
 #include <utility>
 #include <kth/domain.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 #include <kth/network/define.hpp>
 #include <kth/network/settings.hpp>
 
@@ -118,9 +119,15 @@ void proxy::handle_read_heading(boost_code const& ec, size_t) {
         return;
     }
 
-    // Using domain::create_old instead of domain::create because the 'old' variant
-    // supports an additional parameter for offset initialization, which is required here.
-    auto const head = domain::create_old<heading>(heading_buffer_, 0);
+    // Using byte_reader instead of deprecated create_old function
+    byte_reader reader(heading_buffer_);
+    auto head_res = heading::from_data(reader, 0);
+    if ( ! head_res) {
+        LOG_WARNING(LOG_NETWORK, "Failed to parse heading from [", authority(), "]");
+        stop(error::bad_stream);
+        return;
+    }
+    auto const head = *head_res;
 
     if ( ! head.is_valid()) {
         LOG_WARNING(LOG_NETWORK, "Invalid heading from [", authority(), "]");

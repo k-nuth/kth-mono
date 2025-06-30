@@ -15,6 +15,7 @@
 
 #include <kth/domain.hpp>
 #include <kth/domain/chain/input_point.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 
 #include <kth/database/define.hpp>
 

@@ -161,10 +161,11 @@ domain::chain::history_compact::list internal_database_basis<Clock>::get_history
     if ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_SET)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto entry = domain::create_old<history_entry>(data);
+        byte_reader reader1(data);
+        auto entry_res = history_entry::from_data(reader1);
 
-        if (from_height == 0 || entry.height() >= from_height) {
-            result.push_back(history_entry_to_history_compact(entry));
+        if (entry_res && (from_height == 0 || entry_res->height() >= from_height)) {
+            result.push_back(history_entry_to_history_compact(*entry_res));
         }
 
         while ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_NEXT_DUP)) == 0) {
@@ -174,10 +175,11 @@ domain::chain::history_compact::list internal_database_basis<Clock>::get_history
             }
 
             auto data = db_value_to_data_chunk(value);
-            auto entry = domain::create_old<history_entry>(data);
+            byte_reader reader2(data);
+            auto entry_res2 = history_entry::from_data(reader2);
 
-            if (from_height == 0 || entry.height() >= from_height) {
-                result.push_back(history_entry_to_history_compact(entry));
+            if (entry_res2 && (from_height == 0 || entry_res2->height() >= from_height)) {
+                result.push_back(history_entry_to_history_compact(*entry_res2));
             }
 
         }
@@ -220,11 +222,12 @@ std::vector<hash_digest> internal_database_basis<Clock>::get_history_txns(short_
     if ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_SET)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto entry = domain::create_old<history_entry>(data);
+        byte_reader reader3(data);
+        auto entry_res3 = history_entry::from_data(reader3);
 
-        if (from_height == 0 || entry.height() >= from_height) {
+        if (entry_res3 && (from_height == 0 || entry_res3->height() >= from_height)) {
             // Avoid inserting the same tx
-            auto const & pair = temp.insert(entry.point().hash());
+            auto const & pair = temp.insert(entry_res3->point().hash());
             if (pair.second){
                 // Add valid txns to the result vector
                 result.push_back(*pair.first);
@@ -238,11 +241,12 @@ std::vector<hash_digest> internal_database_basis<Clock>::get_history_txns(short_
             }
 
             auto data = db_value_to_data_chunk(value);
-            auto entry = domain::create_old<history_entry>(data);
+            byte_reader reader4(data);
+            auto entry_res4 = history_entry::from_data(reader4);
 
-            if (from_height == 0 || entry.height() >= from_height) {
+            if (entry_res4 && (from_height == 0 || entry_res4->height() >= from_height)) {
                 // Avoid inserting the same tx
-                auto const & pair = temp.insert(entry.point().hash());
+                auto const & pair = temp.insert(entry_res4->point().hash());
                 if (pair.second){
                     // Add valid txns to the result vector
                     result.push_back(*pair.first);
@@ -333,9 +337,10 @@ result_code internal_database_basis<Clock>::remove_history_db(short_hash const& 
     if ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_SET)) == 0) {
 
         auto data = db_value_to_data_chunk(value);
-        auto entry = domain::create_old<history_entry>(data);
+        byte_reader reader5(data);
+        auto entry_res5 = history_entry::from_data(reader5);
 
-        if (entry.height() == height) {
+        if (entry_res5 && entry_res5->height() == height) {
 
             if (kth_db_cursor_del(cursor, 0) != KTH_DB_SUCCESS) {
                 kth_db_cursor_close(cursor);
@@ -346,9 +351,10 @@ result_code internal_database_basis<Clock>::remove_history_db(short_hash const& 
         while ((rc = kth_db_cursor_get(cursor, &key_hash, &value, MDB_NEXT_DUP)) == 0) {
 
             auto data = db_value_to_data_chunk(value);
-            auto entry = domain::create_old<history_entry>(data);
+            byte_reader reader6(data);
+            auto entry_res6 = history_entry::from_data(reader6);
 
-            if (entry.height() == height) {
+            if (entry_res6 && entry_res6->height() == height) {
                 if (kth_db_cursor_del(cursor, 0) != KTH_DB_SUCCESS) {
                     kth_db_cursor_close(cursor);
                     return result_code::other;

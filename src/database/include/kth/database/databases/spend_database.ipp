@@ -39,8 +39,12 @@ domain::chain::input_point internal_database_basis<Clock>::get_spend(domain::cha
         return domain::chain::input_point{};
     }
 
-    auto res = domain::create_old<domain::chain::input_point>(data);
-    return res;
+    byte_reader reader(data);
+    auto res_input = domain::chain::input_point::from_data(reader);
+    if ( ! res_input) {
+        return domain::chain::input_point{};
+    }
+    return *res_input;
 }
 
 #if ! defined(KTH_DB_READONLY)
