@@ -140,7 +140,11 @@ class KthRecipe(KnuthConanFileV2):
         KnuthConanFileV2.configure(self)
 
         self.options["fmt/*"].header_only = True
-        self.options["spdlog/*"].header_only = True
+        if self.settings.os == "Emscripten":
+            self.options["boost/*"].header_only = True
+
+        if self.options.log == "spdlog":
+            self.options["spdlog/*"].header_only = True
 
         self.options["*"].db_readonly = self.options.db_readonly
         self.output.info("Compiling with read-only DB: %s" % (self.options.db_readonly,))
@@ -150,7 +154,6 @@ class KthRecipe(KnuthConanFileV2):
 
         self.options["*"].log = self.options.log
         self.output.info("Compiling with log: %s" % (self.options.log,))
-
 
     def package_id(self):
         KnuthConanFileV2.package_id(self)
