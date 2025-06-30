@@ -35,7 +35,6 @@ class KnuthDatabaseConan(KnuthConanFileV2):
                "cflags": ["ANY"],
                "cmake_export_compile_commands": [True, False],
                "log": ["boost", "spdlog", "binlog"],
-               "use_libmdbx": [True, False],
     }
 
     default_options = {
@@ -52,7 +51,6 @@ class KnuthDatabaseConan(KnuthConanFileV2):
         "cached_rpc_data": False,
         "cmake_export_compile_commands": False,
         "log": "spdlog",
-        "use_libmdbx": False,
     }
 
     exports_sources = "src/*", "CMakeLists.txt", "ci_utils/cmake/*", "cmake/*", "knuthbuildinfo.cmake", "include/*", "test/*", "tools/*"
@@ -63,13 +61,8 @@ class KnuthDatabaseConan(KnuthConanFileV2):
 
     def requirements(self):
         self.requires("domain/0.45.0", transitive_headers=True, transitive_libs=True)
-
-        if self.options.use_libmdbx:
-            self.requires("libmdbx/0.7.0@kth/stable", transitive_headers=True, transitive_libs=True)
-            self.output.info("Using libmdbx for DB management")
-        else:
-            self.requires("lmdb/0.9.32", transitive_headers=True, transitive_libs=True)
-            self.output.info("Using lmdb for DB management")
+        self.requires("lmdb/0.9.32", transitive_headers=True, transitive_libs=True)
+        self.output.info("Using lmdb for DB management")
 
     def validate(self):
         KnuthConanFileV2.validate(self)
@@ -108,7 +101,6 @@ class KnuthDatabaseConan(KnuthConanFileV2):
         tc.variables["WITH_MEASUREMENTS"] = option_on_off(self.options.measurements)
         tc.variables["DB_READONLY_MODE"] = option_on_off(self.options.db_readonly)
         tc.variables["LOG_LIBRARY"] = self.options.log
-        tc.variables["USE_LIBMDBX"] = option_on_off(self.options.use_libmdbx)
         tc.variables["CONAN_DISABLE_CHECK_COMPILER"] = option_on_off(True)
 
         if self.options.cmake_export_compile_commands:
