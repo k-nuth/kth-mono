@@ -24,6 +24,9 @@ option(ENABLE_MODULE_RECOVERY "Enable ECDSA pubkey recovery module." ON)
 option(ENABLE_MODULE_MULTISET "Enable multiset operations (experimental)." ON)
 
 
+message(STATUS "******************* ENABLE_ECMULT_STATIC_PRECOMPUTATION: ${ENABLE_ECMULT_STATIC_PRECOMPUTATION}")
+
+
 # Make the emult window size customizable.
 set(SECP256K1_ECMULT_WINDOW_SIZE 15 CACHE STRING "Window size for ecmult precomputation for verification, specified as integer in range [2..24].")
 if(${SECP256K1_ECMULT_WINDOW_SIZE} LESS 2 OR ${SECP256K1_ECMULT_WINDOW_SIZE} GREATER 24)
@@ -76,7 +79,7 @@ if (ENABLE_ECMULT_STATIC_PRECOMPUTATION)
 	# # include(NativeExecutable)
 	add_native_executable(gen_context src/gen_context.c)
 
-  target_include_directories(gen_context PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  native_target_include_directories(gen_context PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
   # target_include_directories(gen_context PUBLIC
   # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
