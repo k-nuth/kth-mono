@@ -8,12 +8,18 @@ add_subdirectory(secp256k1)
 add_subdirectory(infrastructure)
 add_subdirectory(domain)
 add_subdirectory(consensus)
-add_subdirectory(network)
+
+# Network module is not compatible with Emscripten
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    add_subdirectory(network)
+endif()
+
 add_subdirectory(database)
 add_subdirectory(blockchain)
 add_subdirectory(node)
 
-if (BUILD_NODE_EXE)
+# Node executable is not compatible with Emscripten
+if (BUILD_NODE_EXE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     add_subdirectory(node-exe)
 endif()
 

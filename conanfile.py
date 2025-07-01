@@ -135,11 +135,17 @@ class KthRecipe(KnuthConanFileV2):
 
     def config_options(self):
         KnuthConanFileV2.config_options(self)
+        # Disable ecmult static precomputation for Emscripten to avoid native build issues
+        if self.settings.os == "Emscripten":
+            self.output.info("Setting enable_ecmult_static_precomputation to False for Emscripten")
+            self.options.enable_ecmult_static_precomputation = False
 
     def configure(self):
         KnuthConanFileV2.configure(self)
 
         self.options["fmt/*"].header_only = True
+        # log os
+        self.output.info("Compiling for OS: %s" % (self.settings.os,))
         if self.settings.os == "Emscripten":
             self.options["boost/*"].header_only = True
 
