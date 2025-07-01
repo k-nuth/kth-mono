@@ -6,6 +6,7 @@
 
 #include <kth/capi/conversions.hpp>
 #include <kth/capi/helpers.hpp>
+#include <kth/infrastructure/utility/byte_reader.hpp>
 
 KTH_CONV_DEFINE(chain, kth_operation_t, kth::domain::machine::operation, operation)
 
@@ -44,12 +45,17 @@ uint8_t const* kth_chain_operation_to_data(kth_operation_t operation, kth_size_t
     return kth::create_c_array(operation_data, *out_size);
 }
 
-// kth_bool_t kth_chain_operation_from_data_mutable(kth_operation_t operation, uint8_t const* data, kth_size_t n) {
-//     kth::data_chunk data_cpp(data, std::next(data, n));
-//     auto& op_cpp = kth_chain_operation_cpp(operation);
-//     auto const res = kth::domain::entity_from_data(op_cpp, data_cpp);
-//     return kth::bool_to_int(res);
-// }
+kth_bool_t kth_chain_operation_from_data_mutable(kth_operation_t operation, uint8_t const* data, kth_size_t n) {
+    kth::data_chunk data_cpp(data, std::next(data, n));
+    kth::byte_reader reader(data_cpp);
+    
+    auto res = kth::domain::machine::operation::from_data(reader);
+    if (res) {
+        auto& op_cpp = kth_chain_operation_cpp(operation);
+        op_cpp = std::move(*res);
+    }
+    return kth::bool_to_int(bool(res));
+}
 
 kth_bool_t kth_chain_operation_from_string_mutable(kth_operation_t operation, char const* value) {
     auto& op_cpp = kth_chain_operation_cpp(operation);
