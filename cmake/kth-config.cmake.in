@@ -1,0 +1,91 @@
+# Copyright (c) 2016-2025 Knuth Project developers.
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Find all dependencies that the kth components need
+find_dependency(Boost REQUIRED)
+find_dependency(gmp REQUIRED)
+
+# Include all component config files
+include("${CMAKE_CURRENT_LIST_DIR}/secp256k1-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/infrastructure-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/domain-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/consensus-config.cmake")
+
+# Include network only if it was built (not compatible with Emscripten)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/network-config.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/network-config.cmake")
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/database-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/blockchain-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/node-config.cmake")
+
+# Include optional components
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/node-exe-config.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/node-exe-config.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/c-api-config.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/c-api-config.cmake")
+endif()
+
+# Create aliases with kth:: namespace for all components
+if(TARGET secp256k1::secp256k1 AND NOT TARGET kth::secp256k1)
+    add_library(kth::secp256k1 ALIAS secp256k1::secp256k1)
+endif()
+
+if(TARGET infrastructure::infrastructure AND NOT TARGET kth::infrastructure)
+    add_library(kth::infrastructure ALIAS infrastructure::infrastructure)
+endif()
+
+if(TARGET domain::domain AND NOT TARGET kth::domain)
+    add_library(kth::domain ALIAS domain::domain)
+endif()
+
+if(TARGET consensus::consensus AND NOT TARGET kth::consensus)
+    add_library(kth::consensus ALIAS consensus::consensus)
+endif()
+
+if(TARGET network::network AND NOT TARGET kth::network)
+    add_library(kth::network ALIAS network::network)
+endif()
+
+if(TARGET database::database AND NOT TARGET kth::database)
+    add_library(kth::database ALIAS database::database)
+endif()
+
+if(TARGET blockchain::blockchain AND NOT TARGET kth::blockchain)
+    add_library(kth::blockchain ALIAS blockchain::blockchain)
+endif()
+
+if(TARGET node::node AND NOT TARGET kth::node)
+    add_library(kth::node ALIAS node::node)
+endif()
+
+if(TARGET node-exe::node-exe AND NOT TARGET kth::node-exe)
+    add_library(kth::node-exe ALIAS node-exe::node-exe)
+endif()
+
+if(TARGET c-api::c-api AND NOT TARGET kth::c-api)
+    add_library(kth::c-api ALIAS c-api::c-api)
+endif()
+
+# Create a meta target that includes all the core components
+if(NOT TARGET kth::kth)
+    add_library(kth::kth INTERFACE IMPORTED)
+    set_target_properties(kth::kth PROPERTIES
+        INTERFACE_LINK_LIBRARIES "kth::infrastructure;kth::domain;kth::consensus;kth::database;kth::blockchain;kth::node;kth::secp256k1"
+    )
+    
+    # Add network if available
+    if(TARGET kth::network)
+        set_property(TARGET kth::kth APPEND PROPERTY INTERFACE_LINK_LIBRARIES "kth::network")
+    endif()
+endif()
+
+check_required_components(kth)

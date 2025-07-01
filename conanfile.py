@@ -231,4 +231,122 @@ class KthRecipe(KnuthConanFileV2):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = collect_libs(self)
+        # Set the main CMake file name
+        self.cpp_info.set_property("cmake_file_name", "kth")
+        
+        # Define individual components as separate targets
+        # Each component will be available as kth::component_name
+        
+        # Secp256k1 cryptographic library
+        self.cpp_info.components["secp256k1"].libs = ["secp256k1"]
+        self.cpp_info.components["secp256k1"].names["cmake_find_package"] = "secp256k1"
+        self.cpp_info.components["secp256k1"].names["cmake_find_package_multi"] = "secp256k1"
+        # secp256k1 requires GMP for big number operations
+        self.cpp_info.components["secp256k1"].requires = ["gmp::gmp"]
+
+        # Core infrastructure component
+        self.cpp_info.components["infrastructure"].libs = ["infrastructure"]
+        self.cpp_info.components["infrastructure"].names["cmake_find_package"] = "infrastructure"
+        self.cpp_info.components["infrastructure"].names["cmake_find_package_multi"] = "infrastructure"
+        # Infrastructure core dependencies: secp256k1, boost, fmt, expected-lite, ctre, spdlog
+        self.cpp_info.components["infrastructure"].requires = [
+            "secp256k1", 
+            "boost::boost", 
+            "fmt::fmt", 
+            "expected-lite::expected-lite", 
+            "ctre::ctre", 
+            "spdlog::spdlog"
+        ]
+        
+        
+        # Domain models and business logic
+        self.cpp_info.components["domain"].libs = ["domain"]
+        self.cpp_info.components["domain"].names["cmake_find_package"] = "domain"
+        self.cpp_info.components["domain"].names["cmake_find_package_multi"] = "domain"
+        # Domain depends on infrastructure and tiny-aes-c for wallet encryption
+        self.cpp_info.components["domain"].requires = [
+            "infrastructure", 
+            "tiny-aes-c::tiny-aes-c"
+        ]
+        
+        # Consensus rules and validation
+        self.cpp_info.components["consensus"].libs = ["consensus"]
+        self.cpp_info.components["consensus"].names["cmake_find_package"] = "consensus"
+        self.cpp_info.components["consensus"].names["cmake_find_package_multi"] = "consensus"
+        # Consensus has its own direct dependencies: boost, openssl, secp256k1 (internal component)
+        self.cpp_info.components["consensus"].requires = [
+            "secp256k1",
+            "boost::boost", 
+            "openssl::openssl"
+        ]
+        
+        # Database layer
+        self.cpp_info.components["database"].libs = ["database"]
+        self.cpp_info.components["database"].names["cmake_find_package"] = "database"
+        self.cpp_info.components["database"].names["cmake_find_package_multi"] = "database"
+        # Database depends on domain and lmdb
+        self.cpp_info.components["database"].requires = ["domain", "lmdb::lmdb"]
+        
+        # Blockchain management
+        self.cpp_info.components["blockchain"].libs = ["blockchain"]
+        self.cpp_info.components["blockchain"].names["cmake_find_package"] = "blockchain"
+        self.cpp_info.components["blockchain"].names["cmake_find_package_multi"] = "blockchain"
+        # Blockchain depends on database and optionally consensus
+        self.cpp_info.components["blockchain"].requires = [
+            "database", 
+            "consensus"
+        ]
+        
+        # Network layer (not available in Emscripten builds)
+        if self.settings.os != "Emscripten":
+            self.cpp_info.components["network"].libs = ["network"]
+            self.cpp_info.components["network"].names["cmake_find_package"] = "network"
+            self.cpp_info.components["network"].names["cmake_find_package_multi"] = "network"
+            # Network depends on domain
+            self.cpp_info.components["network"].requires = ["domain"]
+        
+        # Node implementation
+        self.cpp_info.components["node"].libs = ["node"]
+        self.cpp_info.components["node"].names["cmake_find_package"] = "node"
+        self.cpp_info.components["node"].names["cmake_find_package_multi"] = "node"
+        # Node depends on blockchain and optionally network (if not Emscripten)
+        node_requires = ["blockchain"]
+        if self.settings.os != "Emscripten":
+            node_requires.append("network")
+        self.cpp_info.components["node"].requires = node_requires
+        
+        # Optional components
+        # Node executable (if built)
+        try:
+            node_exe_libs = [lib for lib in collect_libs(self) if "node-exe" in lib or "kth-node-exe" in lib]
+            if node_exe_libs:
+                self.cpp_info.components["node-exe"].libs = node_exe_libs
+                self.cpp_info.components["node-exe"].names["cmake_find_package"] = "node-exe"
+                self.cpp_info.components["node-exe"].names["cmake_find_package_multi"] = "node-exe"
+                self.cpp_info.components["node-exe"].requires = ["node"]
+        except:
+            # If collect_libs fails or node-exe is not built, skip it
+            pass
+        
+        # C API (if enabled)
+        # Note: BUILD_C_API option might not be accessible here, so we'll try to detect if the lib exists
+        try:
+            c_api_libs = [lib for lib in collect_libs(self) if "c-api" in lib or "kth-c-api" in lib]
+            if c_api_libs:
+                self.cpp_info.components["c-api"].libs = c_api_libs
+                self.cpp_info.components["c-api"].names["cmake_find_package"] = "c-api"
+                self.cpp_info.components["c-api"].names["cmake_find_package_multi"] = "c-api"
+                self.cpp_info.components["c-api"].requires = ["node"]
+        except:
+            # If collect_libs fails or c-api is not built, skip it
+            pass
+        
+        # Main target that includes all core components (equivalent to the old behavior)
+        # This provides a convenient way to link against all of kth at once
+        main_requires = ["infrastructure", "domain", "consensus", "database", "blockchain", "node", "secp256k1"]
+        if self.settings.os != "Emscripten":
+            main_requires.append("network")
+        
+        self.cpp_info.components["kth"].requires = main_requires
+        self.cpp_info.components["kth"].names["cmake_find_package"] = "kth"
+        self.cpp_info.components["kth"].names["cmake_find_package_multi"] = "kth"
