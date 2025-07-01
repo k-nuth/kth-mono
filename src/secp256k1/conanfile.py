@@ -14,7 +14,7 @@ required_conan_version = ">=2.0"
 
 class Secp256k1Conan(KnuthConanFileV2):
     name = "secp256k1"
-    license = "https://opensource.org/licenses/MIT"
+    license = "http://www.boost.org/users/license.html"
     url = "https://github.com/k-nuth/secp256k1"
     description = "Optimized C library for EC operations on curve secp256k1"
     settings = "os", "compiler", "build_type", "arch"
@@ -66,7 +66,7 @@ class Secp256k1Conan(KnuthConanFileV2):
         "ecmult_window_size": 15,
         "ecmult_gen_precision": 4,
 
-        "enable_ecmult_static_precomputation": True,
+        "enable_ecmult_static_precomputation": False,
         "enable_module_ecdh": False,
         "enable_module_schnorr": True,
         "enable_module_recovery": True,
