@@ -1,7 +1,11 @@
 #!/bin/bash
+set -x
 
-# VERSION=$(cat conanfile.py | grep "version" | cut -d '"' -f 2)
-VERSION="0.68.0"
+if [ -z "$1" ]; then
+    echo "Usage: $0 <version>"
+    exit 1
+fi
+VERSION="$1"
 
 echo "Building version: ${VERSION}"
 
