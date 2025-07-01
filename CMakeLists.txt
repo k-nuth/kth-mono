@@ -72,3 +72,22 @@ add_subdirectory(src)
 if (WITH_TESTS)
   enable_testing()
 endif()
+
+# Install the main kth CMake configuration file
+# ------------------------------------------------------------------------------
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+# Configure the main kth config file
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/kth-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/kth-config.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/kth"
+    PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
+)
+
+# Install the config file
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/kth-config.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/kth"
+)
