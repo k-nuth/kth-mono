@@ -27,6 +27,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_NODE_EXE "Build the node executable." ON)
 option(BUILD_C_API "Build the C-API." ON)
+option(GLOBAL_BUILD "Global build flag." ON)
 option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE property" ON)
 option(WITH_CONSOLE "Compile console application." OFF)
 option(WITH_LOCAL_MINING "Compile with local mining." ON)
