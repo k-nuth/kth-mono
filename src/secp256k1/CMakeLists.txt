@@ -23,9 +23,7 @@ option(ENABLE_MODULE_SCHNORR "Enable Schnorr signature module (experimental)." O
 option(ENABLE_MODULE_RECOVERY "Enable ECDSA pubkey recovery module." ON)
 option(ENABLE_MODULE_MULTISET "Enable multiset operations (experimental)." ON)
 
-
-message(STATUS "******************* ENABLE_ECMULT_STATIC_PRECOMPUTATION: ${ENABLE_ECMULT_STATIC_PRECOMPUTATION}")
-
+message(STATUS "ENABLE_ECMULT_STATIC_PRECOMPUTATION: ${ENABLE_ECMULT_STATIC_PRECOMPUTATION}")
 
 # Make the emult window size customizable.
 set(SECP256K1_ECMULT_WINDOW_SIZE 15 CACHE STRING "Window size for ecmult precomputation for verification, specified as integer in range [2..24].")
