@@ -42,6 +42,28 @@ Built on top of the C API, these bindings allow you to use Knuth from your prefe
 ### 🐍 Python
 - **[Python API](https://github.com/k-nuth/py-api)** - Pythonic interface to Knuth functionality
 
+## 🧪 Testing
+
+Knuth includes comprehensive test suites that run automatically during builds and in CI/CD. Tests are enabled by default in all build configurations.
+
+### Running Tests
+
+```bash
+# Build and test (Release)
+./scripts/build.sh 1.0.0
+
+# Build and test (Debug)  
+./scripts/build-debug.sh 1.0.0
+
+# Run only tests (after building)
+./scripts/run-tests.sh
+
+# Test-focused build
+./scripts/test.sh 1.0.0
+```
+
+For detailed testing information, see [BUILD_WITH_TESTS.md](doc/BUILD_WITH_TESTS.md).
+
 ## Getting Started
 
 ### Prerequisites
