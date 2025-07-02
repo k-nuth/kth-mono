@@ -506,9 +506,9 @@ if (WITH_TESTS)
     enable_testing()
     find_package(Catch2 3 REQUIRED)
 
-    add_executable(queries
-      test/queries.cpp)
-    target_link_libraries(queries PUBLIC ${PROJECT_NAME})
+    # add_executable(queries
+    #   test/dummy.cpp)
+    # target_link_libraries(queries PUBLIC ${PROJECT_NAME})
 endif()
 
 

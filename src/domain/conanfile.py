@@ -41,7 +41,7 @@ class KnuthDomainConan(KnuthConanFileV2):
         "fPIC": True,
         "with_icu": False,
         "with_qrencode": False,
-        "tests": False,
+        "tests": True,
         "examples": False,
         "currency": "BCH",
 

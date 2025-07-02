@@ -37,7 +37,7 @@ class KnuthNetworkConan(KnuthConanFileV2):
     default_options = {
         "shared": False,
         "fPIC": True,
-        "tests": False,
+        "tests": True,
         "currency": "BCH",
 
         "march_strategy": "download_if_possible",

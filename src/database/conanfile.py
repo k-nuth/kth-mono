@@ -40,7 +40,7 @@ class KnuthDatabaseConan(KnuthConanFileV2):
     default_options = {
         "shared": False,
         "fPIC": True,
-        "tests": False,
+        "tests": True,
         "tools": False,
         "currency": "BCH",
         "march_strategy": "download_if_possible",
