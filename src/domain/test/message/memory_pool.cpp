@@ -13,7 +13,7 @@ TEST_CASE("memory pool - from data insufficient version failure", "[memory pool]
     const message::memory_pool expected;
     data_chunk const data = expected.to_data(message::version::level::maximum);
     message::memory_pool instance{};
-    REQUIRE( ! entity_from_data(instance, message::memory_pool::version_minimum - 1, data));
+    REQUIRE( ! entity_from_data(instance, data, message::memory_pool::version_minimum - 1));
     REQUIRE( ! instance.is_valid());
 }
 

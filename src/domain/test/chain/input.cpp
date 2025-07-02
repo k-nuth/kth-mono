@@ -24,8 +24,11 @@ TEST_CASE("input  constructor 1  always  returns default initialized", "[input]"
 
 TEST_CASE("input  constructor 2  valid input  returns input initialized", "[input]") {
     output_point const previous_output{null_hash, 5434u};
-    script script;
-    REQUIRE(entity_from_data(script, to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1")), false));
+    auto script_data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    byte_reader reader(script_data);
+    auto script_result = script::from_data(reader, false);
+    REQUIRE(script_result);
+    auto script = *script_result;
 
     uint32_t sequence = 4568656u;
 
@@ -38,8 +41,11 @@ TEST_CASE("input  constructor 2  valid input  returns input initialized", "[inpu
 
 TEST_CASE("input  constructor 3  valid input  returns input initialized", "[input]") {
     output_point const previous_output{null_hash, 5434u};
-    script script;
-    REQUIRE(entity_from_data(script, to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1")), false));
+    auto script_data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
+    byte_reader reader(script_data);
+    auto script_result = script::from_data(reader, false);
+    REQUIRE(script_result);
+    auto script = *script_result;
 
     uint32_t sequence = 4568656u;
 
@@ -54,8 +60,10 @@ TEST_CASE("input  constructor 3  valid input  returns input initialized", "[inpu
 }
 
 TEST_CASE("input  constructor 4  valid input  returns input initialized", "[input]") {
-    input expected;
-    REQUIRE(entity_from_data(expected, valid_raw_input));
+    byte_reader reader(valid_raw_input);
+    auto expected_result = input::from_data(reader, true);
+    REQUIRE(expected_result);
+    auto expected = *expected_result;
 
     input instance(expected);
     REQUIRE(instance.is_valid());
@@ -63,8 +71,10 @@ TEST_CASE("input  constructor 4  valid input  returns input initialized", "[inpu
 }
 
 TEST_CASE("input  constructor 5  valid input  returns input initialized", "[input]") {
-    input expected;
-    REQUIRE(entity_from_data(expected, valid_raw_input));
+    byte_reader reader(valid_raw_input);
+    auto expected_result = input::from_data(reader, true);
+    REQUIRE(expected_result);
+    auto expected = *expected_result;
 
     input instance(std::move(expected));
     REQUIRE(instance.is_valid());
@@ -73,25 +83,24 @@ TEST_CASE("input  constructor 5  valid input  returns input initialized", "[inpu
 TEST_CASE("input  from data  insufficient data  failure", "[input]") {
     data_chunk data(2);
 
-    input instance;
-
-    REQUIRE( ! entity_from_data(instance, data));
-    REQUIRE( ! instance.is_valid());
+    byte_reader reader(data);
+    auto result = input::from_data(reader, true);
+    REQUIRE(!result);
 }
 
 TEST_CASE("input  from data  valid data  success", "[input]") {
     auto const junk = base16_literal("000000000000005739943a9c29a1955dfae2b3f37de547005bfb9535192e5fb0000000000000005739943a9c29a1955dfae2b3f37de547005bfb9535192e5fb0");
 
-    // data_chunk_stream_host host(junk);
-    byte_source<std::array<uint8_t, 64>> source(junk);
-    boost::iostreams::stream<byte_source<std::array<uint8_t, 64>>> stream(source);
-
-    input instance;
-    REQUIRE(entity_from_data(instance, stream));
+    byte_reader reader(junk);
+    auto result = input::from_data(reader, true);
+    REQUIRE(result);
 }
 
 TEST_CASE("input  factory from data 1  valid input  success", "[input]") {
-    auto const instance = create<input>(valid_raw_input);
+    byte_reader reader(valid_raw_input);
+    auto result = input::from_data(reader, true);
+    REQUIRE(result);
+    auto const instance = *result;
     REQUIRE(instance.is_valid());
     REQUIRE(instance.serialized_size() == valid_raw_input.size());
 
@@ -102,8 +111,10 @@ TEST_CASE("input  factory from data 1  valid input  success", "[input]") {
 }
 
 TEST_CASE("input  factory from data 2  valid input  success", "[input]") {
-    data_source stream(valid_raw_input);
-    auto instance = create<input>(stream);
+    byte_reader reader(valid_raw_input);
+    auto result = input::from_data(reader, true);
+    REQUIRE(result);
+    auto const& instance = *result;
     REQUIRE(instance.is_valid());
     REQUIRE(instance.serialized_size() == valid_raw_input.size());
 
@@ -114,9 +125,10 @@ TEST_CASE("input  factory from data 2  valid input  success", "[input]") {
 }
 
 TEST_CASE("input  factory from data 3  valid input  success", "[input]") {
-    data_source stream(valid_raw_input);
-    istream_reader source(stream);
-    auto instance = create<input>(source);
+    byte_reader reader(valid_raw_input);
+    auto result = input::from_data(reader, true);
+    REQUIRE(result);
+    auto const& instance = *result;
     REQUIRE(instance.is_valid());
     REQUIRE(instance.serialized_size() == valid_raw_input.size());
 
@@ -214,8 +226,10 @@ TEST_CASE("input  is locked  disabled time type sequence age below minimum  fals
 
 TEST_CASE("input  signature operations  bip16 inactive  returns script sigops", "[input]") {
     auto const raw_script = to_chunk(base16_literal("02acad"));
-    script script;
-    REQUIRE(entity_from_data(script, raw_script, true));
+    byte_reader reader(raw_script);
+    auto result = script::from_data(reader, true);
+    REQUIRE(result);
+    auto const& script = *result;
     input instance;
     instance.set_script(script);
     REQUIRE(script.sigops(false) == instance.signature_operations(false, false));
@@ -223,8 +237,10 @@ TEST_CASE("input  signature operations  bip16 inactive  returns script sigops", 
 
 TEST_CASE("input  signature operations  bip16 active cache empty  returns script sigops", "[input]") {
     auto const raw_script = to_chunk(base16_literal("02acad"));
-    script script;
-    REQUIRE(entity_from_data(script, raw_script, true));
+    byte_reader reader(raw_script);
+    auto result = script::from_data(reader, true);
+    REQUIRE(result);
+    auto const& script = *result;
     input instance;
     instance.set_script(script);
     REQUIRE(script.sigops(false) == instance.signature_operations(true, false));
@@ -259,9 +275,11 @@ TEST_CASE("input  previous output setter 2  roundtrip  success", "[input]") {
 }
 
 TEST_CASE("input  script setter 1  roundtrip  success", "[input]") {
-    script value;
     auto const data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
-    REQUIRE(entity_from_data(value, data, false));
+    byte_reader reader(data);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    auto const& value = *result;
 
     input instance;
     REQUIRE(value != instance.script());
@@ -272,9 +290,11 @@ TEST_CASE("input  script setter 1  roundtrip  success", "[input]") {
 }
 
 TEST_CASE("input  script setter 2  roundtrip  success", "[input]") {
-    script value;
     auto const data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
-    REQUIRE(entity_from_data(value, data, false));
+    byte_reader reader(data);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    auto const& value = *result;
 
     auto dup_value = value;
     input instance;
@@ -294,10 +314,15 @@ TEST_CASE("input  sequence  roundtrip  success", "[input]") {
 }
 
 TEST_CASE("input  operator assign equals 1  always  matches equivalent", "[input]") {
-    input expected;
-    REQUIRE(entity_from_data(expected, valid_raw_input));
-    input instance;
-    instance = create<input>(valid_raw_input);
+    byte_reader reader1(valid_raw_input);
+    auto result1 = input::from_data(reader1, true);
+    REQUIRE(result1);
+    auto const& expected = *result1;
+    
+    byte_reader reader2(valid_raw_input);
+    auto result2 = input::from_data(reader2, true);
+    REQUIRE(result2);
+    input instance = *result2;
     REQUIRE(instance == expected);
 }
 

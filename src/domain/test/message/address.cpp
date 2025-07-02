@@ -133,7 +133,7 @@ TEST_CASE("address  from data  insufficient bytes  failure", "[address]") {
     data_chunk const raw{0xab};
     address instance;
 
-    REQUIRE( ! entity_from_data(instance, version::level::minimum, raw));
+    REQUIRE( ! entity_from_data(instance, raw, version::level::minimum));
 }
 
 TEST_CASE("address  factory from data 1  roundtrip  success", "[address]") {

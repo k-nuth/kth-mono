@@ -103,7 +103,7 @@ TEST_CASE("inventory vector constructor 5 always equals params", "[inventory vec
 TEST_CASE("inventory vector from data  insufficient bytes  failure", "[inventory vector]") {
     static data_chunk const raw{1};
     inventory_vector instance;
-    REQUIRE( ! entity_from_data(instance, version::level::minimum, raw));
+    REQUIRE( ! entity_from_data(instance, raw, version::level::minimum));
 }
 
 TEST_CASE("inventory vector factory from data 1  valid input  success", "[inventory vector]") {

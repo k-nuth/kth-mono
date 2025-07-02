@@ -74,9 +74,15 @@ verify_result test_verify(std::string const& transaction, std::string const& pre
     std::vector<std::vector<uint8_t>> coins;
     REQUIRE(decode_base16(tx_data, transaction));
     REQUIRE(decode_base16(prevout_script_data, prevout_script));
+    
+    // Create empty unlocking script for this test
+    data_chunk unlocking_script_data;
+    const unsigned char* unlocking_ptr = unlocking_script_data.empty() ? nullptr : &unlocking_script_data[0];
+    
     return verify_script(&tx_data[0], tx_data.size() + tx_size_hack,
-        &prevout_script_data[0], prevout_script_data.size(), tx_input_index,
-        flags, sig_checks, amount, coins);
+        &prevout_script_data[0], prevout_script_data.size(), 
+        unlocking_ptr, unlocking_script_data.size(),
+        tx_input_index, flags, sig_checks, amount, coins);
 }
 #else
 
@@ -107,8 +113,11 @@ TEST_CASE("consensus script verify null tx throws invalid argument", "[consensus
     data_chunk prevout_script_data;
     size_t sig_checks;
     std::vector<std::vector<uint8_t>> coins;
+    data_chunk unlocking_script_data;
+    const unsigned char* unlocking_ptr = unlocking_script_data.empty() ? nullptr : &unlocking_script_data[0];
     REQUIRE(decode_base16(prevout_script_data, CONSENSUS_SCRIPT_VERIFY_PREVOUT_SCRIPT));
-    REQUIRE_THROWS_AS(verify_script(NULL, 1, &prevout_script_data[0], prevout_script_data.size(), 0, 0, sig_checks, 0, coins), std::invalid_argument);
+    REQUIRE_THROWS_AS(verify_script(NULL, 1, &prevout_script_data[0], prevout_script_data.size(), 
+        unlocking_ptr, unlocking_script_data.size(), 0, 0, sig_checks, 0, coins), std::invalid_argument);
 }
 
 //TODO: BTC test
@@ -116,16 +125,22 @@ TEST_CASE("consensus script verify value overflow throws invalid argument", "[co
     data_chunk prevout_script_data;
     size_t sig_checks;
     std::vector<std::vector<uint8_t>> coins;
+    data_chunk unlocking_script_data;
+    const unsigned char* unlocking_ptr = unlocking_script_data.empty() ? nullptr : &unlocking_script_data[0];
     REQUIRE(decode_base16(prevout_script_data, CONSENSUS_SCRIPT_VERIFY_PREVOUT_SCRIPT));
-    REQUIRE_THROWS_AS(verify_script(NULL, 1, &prevout_script_data[0], prevout_script_data.size(), 0xffffffffffffffff, 0, sig_checks, 0, coins), std::invalid_argument);
+    REQUIRE_THROWS_AS(verify_script(NULL, 1, &prevout_script_data[0], prevout_script_data.size(), 
+        unlocking_ptr, unlocking_script_data.size(), 0xffffffffffffffff, 0, sig_checks, 0, coins), std::invalid_argument);
 }
 
 TEST_CASE("consensus script verify null prevout script throws invalid argument", "[consensus script verify]") {
     data_chunk tx_data;
     size_t sig_checks;
     std::vector<std::vector<uint8_t>> coins;
+    data_chunk unlocking_script_data;
+    const unsigned char* unlocking_ptr = unlocking_script_data.empty() ? nullptr : &unlocking_script_data[0];
     REQUIRE(decode_base16(tx_data, CONSENSUS_SCRIPT_VERIFY_TX));
-    REQUIRE_THROWS_AS(verify_script(&tx_data[0], tx_data.size(), NULL, 1, 0, 0, sig_checks, 0, coins), std::invalid_argument);
+    REQUIRE_THROWS_AS(verify_script(&tx_data[0], tx_data.size(), NULL, 1, 
+        unlocking_ptr, unlocking_script_data.size(), 0, 0, sig_checks, 0, coins), std::invalid_argument);
 }
 
 TEST_CASE("consensus script verify invalid tx tx invalid", "[consensus script verify]") {

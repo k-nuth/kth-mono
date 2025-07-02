@@ -2,30 +2,20 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// https://github.com/catchorg/Catch2/blob/master/docs/tostring.md
-
 #ifndef KTH_DOMAIN_TEST_HELPERS_HPP
 #define KTH_DOMAIN_TEST_HELPERS_HPP
 
 #include <ostream>
 
-#include <kth/infrastructure/hash_define.hpp>
-#include <kth/infrastructure/formats/base_16.hpp>
+// Include infrastructure helpers (domain depends on infrastructure)
+#include "../../infrastructure/test/test_helpers.hpp"
 
-namespace kth {
-
-inline
-std::ostream& operator<<(std::ostream& os, hash_digest const& x) {
-    os << encode_hash(x);
-    return os;
-}
-
-} // namespace kth
-
-// #include <kth/domain.hpp>
+// Include domain types for full support
+#include <kth/domain.hpp>
 #include <kth/domain/message/version.hpp>
 #include <kth/infrastructure/message/network_address.hpp>
 
+// Pretty printing operators for domain-specific types
 namespace kth::infrastructure::message {
 
 inline
@@ -34,12 +24,7 @@ std::ostream& operator<<(std::ostream& os, network_address const& x) {
     return os;
 }
 
-} // namespace kth::infrastructure::message {
-
-
-#include <kth/domain/chain/input.hpp>
-#include <kth/domain/chain/output.hpp>
-#include <kth/domain/chain/transaction.hpp>
+} // namespace kth::infrastructure::message
 
 namespace kth::domain::chain {
 
@@ -63,16 +48,7 @@ std::ostream& operator<<(std::ostream& os, transaction const& x) {
 
 } // namespace kth::domain::chain
 
-
-#include <kth/domain/message/prefilled_transaction.hpp>
-
 namespace kth::domain::message {
-
-// inline
-// std::ostream& operator<<(std::ostream& os, inventory_vector const& x) {
-//     os << encode_base16(x.to_data(version::level::minimum));
-//     return os;
-// }
 
 inline
 std::ostream& operator<<(std::ostream& os, prefilled_transaction const& x) {
@@ -82,14 +58,12 @@ std::ostream& operator<<(std::ostream& os, prefilled_transaction const& x) {
 
 } // namespace kth::domain::message
 
+// Import and re-export infrastructure helpers for domain types
+namespace kth::domain {
 
-#include <catch2/catch_test_macros.hpp>
+using kth::entity_from_data;
+using kth::create;
 
-#define CHECK_MESSAGE(cond, msg) do { INFO(msg); CHECK(cond); } while((void)0, 0)
-#define REQUIRE_MESSAGE(cond, msg) do { INFO(msg); REQUIRE(cond); } while((void)0, 0)
-
-
-// #include <kth/infrastructure.hpp>
-#include <kth/domain.hpp>
+} // namespace kth::domain
 
 #endif // KTH_DOMAIN_TEST_HELPERS_HPP

@@ -566,8 +566,9 @@ TEST_CASE("script checksig  single  uses one hash", "[script]") {
     ec_signature signature;
     static auto const index = 1u;
     static auto const strict = true;
+    static auto const active_forks = 0u; // No active forks for test
     REQUIRE(parse_signature(signature, distinguished, strict));
-    REQUIRE(script::check_signature(signature, sighash_algorithm::single, pubkey, script_code, parent_tx, index));
+    REQUIRE(script::check_signature(signature, sighash_algorithm::single, pubkey, script_code, parent_tx, index, active_forks).first);
 }
 
 TEST_CASE("script checksig  normal  success", "[script]") {
@@ -591,8 +592,9 @@ TEST_CASE("script checksig  normal  success", "[script]") {
 
     ec_signature signature;
     static auto const index = 0u;
+    static auto const active_forks = 0u; // No active forks for test
     REQUIRE(parse_signature(signature, distinguished, true));
-    REQUIRE(script::check_signature(signature, sighash_algorithm::single, pubkey, script_code, parent_tx, index));
+    REQUIRE(script::check_signature(signature, sighash_algorithm::single, pubkey, script_code, parent_tx, index, active_forks).first);
 }
 
 TEST_CASE("script create endorsement  single input single output  expected", "[script]") {
@@ -606,11 +608,13 @@ TEST_CASE("script create endorsement  single input single output  expected", "[s
 
     ec_secret const secret = hash_literal("ce8f4b713ffdd2658900845251890f30371856be201cd1f5b3d970f793634333");
 
-    endorsement out;
     auto const index = 0u;
     auto const sighash_type = sighash_algorithm::all;
-    REQUIRE(script::create_endorsement(out, secret, prevout_script, new_tx, index, sighash_type));
-
+    auto const active_forks = 0u; // No active forks for test
+    auto out_result = script::create_endorsement(secret, prevout_script, new_tx, index, sighash_type, active_forks);
+    REQUIRE(out_result.has_value());
+    
+    auto const& out = out_result.value();
     auto const result = encode_base16(out);
     // auto const expected = "3045022100e428d3cc67a724cb6cfe8634aa299e58f189d9c46c02641e936c40cc16c7e8ed0220083949910fe999c21734a1f33e42fca15fb463ea2e08f0a1bccd952aacaadbb801";
     auto const expected = "304402200245ea46be39d72fed03c899aabc446b3c9baf93f57c2b382757856c3209854b0220795946074804a08c0053116eafe851c1a37b24414199afecf286f1eb4d82167801";
@@ -629,11 +633,13 @@ TEST_CASE("script create endorsement  single input no output  expected", "[scrip
 
     ec_secret const secret = hash_literal("ce8f4b713ffdd2658900845251890f30371856be201cd1f5b3d970f793634333");
 
-    endorsement out;
     auto const index = 0u;
     auto const sighash_type = sighash_algorithm::all;
-    REQUIRE(script::create_endorsement(out, secret, prevout_script, new_tx, index, sighash_type));
-
+    auto const active_forks = 0u; // No active forks for test
+    auto out_result = script::create_endorsement(secret, prevout_script, new_tx, index, sighash_type, active_forks);
+    REQUIRE(out_result.has_value());
+    
+    auto const& out = out_result.value();
     auto const result = encode_base16(out);
     // auto const expected = "3045022100ba57820be5f0b93a0d5b880fbf2a86f819d959ecc24dc31b6b2d4f6ed286f253022071ccd021d540868ee10ca7634f4d270dfac7aea0d5912cf2b104111ac9bc756b01";
     auto const expected = "304402202d32085880e02b7f58a23db8a01eebfe105b6efda19e426960148d152ae67c76022028868ba8d97a4983252b247ae7f3203106c691a6ff83cc0f9b11289115ce4f3801";
@@ -652,8 +658,8 @@ TEST_CASE("script generate signature hash  all  expected", "[script]") {
     endorsement out;
     auto const index = 0u;
     auto const sighash_type = sighash_algorithm::all;
-    auto const sighash = script::generate_signature_hash(new_tx, index, prevout_script, sighash_type);
-    auto const result = encode_base16(sighash);
+    auto const sighash = script::generate_signature_hash(new_tx, index, prevout_script, sighash_type, 0u);
+    auto const result = encode_base16(sighash.first);
     auto const expected = "f89572635651b2e4f89778350616989183c98d1a721c911324bf9f17a0cf5bf0";
     REQUIRE(result == expected);
 }

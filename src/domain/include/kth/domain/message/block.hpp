@@ -67,7 +67,7 @@ public:
 
     template <typename W>
     void to_data(uint32_t /*version*/, W& sink) const {
-        chain::block::to_data(sink, true);
+        chain::block::to_data(sink);
     }
 
     //void to_data(uint32_t version, writer& sink) const;

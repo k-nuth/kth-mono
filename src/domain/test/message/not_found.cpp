@@ -100,7 +100,7 @@ TEST_CASE("not found  constructor 7  always  equals params", "[not found]") {
 TEST_CASE("not found  from data  insufficient bytes  failure", "[not found]") {
     static data_chunk const raw{0xab, 0xcd};
     not_found instance;
-    REQUIRE( ! entity_from_data(instance, version::level::minimum, raw));
+    REQUIRE( ! entity_from_data(instance, raw, version::level::minimum));
 }
 
 TEST_CASE("not found  from data  insufficient version  failure", "[not found]") {
@@ -114,7 +114,7 @@ TEST_CASE("not found  from data  insufficient version  failure", "[not found]") 
     auto const version = version::level::maximum;
     data_chunk const raw = expected.to_data(version);
     not_found instance;
-    REQUIRE( ! entity_from_data(instance, not_found::version_minimum - 1, raw));
+    REQUIRE( ! entity_from_data(instance, raw, not_found::version_minimum - 1));
     REQUIRE( ! instance.is_valid());
 }
 
