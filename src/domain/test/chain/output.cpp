@@ -18,9 +18,11 @@ TEST_CASE("output constructor 1 always returns default initialized", "[output]")
 
 TEST_CASE("output constructor 2  valid input  returns input initialized", "[output]") {
     uint64_t value = 643u;
-    chain::script script;
     auto const data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
-    REQUIRE(entity_from_data(script, data, false));
+    byte_reader reader(data);
+    auto const script_result = chain::script::from_data(reader, false);
+    REQUIRE(script_result);
+    auto const& script = *script_result;
 
     chain::output instance(value, script, chain::token_data_opt{});
     REQUIRE(instance.is_valid());
@@ -31,9 +33,11 @@ TEST_CASE("output constructor 2  valid input  returns input initialized", "[outp
 
 TEST_CASE("output constructor 3  valid input  returns input initialized", "[output]") {
     uint64_t value = 643u;
-    chain::script script;
     auto const data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
-    REQUIRE(entity_from_data(script, data, false));
+    byte_reader reader(data);
+    auto const script_result = chain::script::from_data(reader, false);
+    REQUIRE(script_result);
+    auto const& script = *script_result;
 
     // This must be non-const.
     auto dup_script = script;
@@ -47,8 +51,10 @@ TEST_CASE("output constructor 3  valid input  returns input initialized", "[outp
 }
 
 TEST_CASE("output constructor 4  valid input  returns input initialized", "[output]") {
-    chain::output expected;
-    REQUIRE(entity_from_data(expected, valid_raw_output));
+    byte_reader reader(valid_raw_output);
+    auto const expected_result = chain::output::from_data(reader);
+    REQUIRE(expected_result);
+    auto const& expected = *expected_result;
 
     chain::output instance(expected);
     REQUIRE(instance.is_valid());
@@ -59,8 +65,10 @@ TEST_CASE("output constructor 4  valid input  returns input initialized", "[outp
 
 TEST_CASE("output constructor 5  valid input  returns input initialized", "[output]") {
     // This must be non-const.
-    chain::output expected;
-    REQUIRE(entity_from_data(expected, valid_raw_output));
+    byte_reader reader(valid_raw_output);
+    auto expected_result = chain::output::from_data(reader);
+    REQUIRE(expected_result);
+    auto expected = std::move(*expected_result);
 
     chain::output instance(std::move(expected));
     REQUIRE(instance.is_valid());
@@ -69,15 +77,16 @@ TEST_CASE("output constructor 5  valid input  returns input initialized", "[outp
 
 TEST_CASE("output from data  insufficient bytes  failure", "[output]") {
     data_chunk data(2);
-
-    chain::output instance;
-
-    REQUIRE( ! entity_from_data(instance, data));
-    REQUIRE( ! instance.is_valid());
+    byte_reader reader(data);
+    auto const result = chain::output::from_data(reader);
+    REQUIRE( ! result);
 }
 
 TEST_CASE("output factory from data 1  valid input success", "[output]") {
-    auto instance = create<chain::output>(valid_raw_output);
+    byte_reader reader(valid_raw_output);
+    auto const result = chain::output::from_data(reader);
+    REQUIRE(result);
+    auto const& instance = *result;
     REQUIRE(instance.is_valid());
     REQUIRE(instance.serialized_size() == valid_raw_output.size());
     REQUIRE( ! instance.token_data().has_value());
@@ -89,8 +98,10 @@ TEST_CASE("output factory from data 1  valid input success", "[output]") {
 }
 
 TEST_CASE("output factory from data 2  valid input success", "[output]") {
-    data_source stream(valid_raw_output);
-    auto instance = create<chain::output>(stream);
+    byte_reader reader(valid_raw_output);
+    auto const result = chain::output::from_data(reader);
+    REQUIRE(result);
+    auto const& instance = *result;
     REQUIRE(instance.is_valid());
     REQUIRE(instance.serialized_size() == valid_raw_output.size());
     REQUIRE( ! instance.token_data().has_value());
@@ -102,9 +113,10 @@ TEST_CASE("output factory from data 2  valid input success", "[output]") {
 }
 
 TEST_CASE("output factory from data 3  valid input success", "[output]") {
-    data_source stream(valid_raw_output);
-    istream_reader source(stream);
-    auto instance = create<chain::output>(source);
+    byte_reader reader(valid_raw_output);
+    auto const result = chain::output::from_data(reader);
+    REQUIRE(result);
+    auto const& instance = *result;
     REQUIRE(instance.is_valid());
     REQUIRE(instance.serialized_size() == valid_raw_output.size());
     REQUIRE( ! instance.token_data().has_value());
@@ -132,9 +144,11 @@ TEST_CASE("output value  roundtrip  success", "[output]") {
 }
 
 TEST_CASE("output script setter 1  roundtrip  success", "[output]") {
-    chain::script value;
     auto const data = to_chunk(base16_literal("ece424a6bb6ddf4db592c0faed60685047a361b1"));
-    REQUIRE(entity_from_data(value, data, false));
+    byte_reader reader(data);
+    auto const value_result = chain::script::from_data(reader, false);
+    REQUIRE(value_result);
+    auto const& value = *value_result;
 
     chain::output instance;
     REQUIRE(value != instance.script());

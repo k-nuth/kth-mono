@@ -180,10 +180,10 @@ TEST_CASE("opcode  opcode to string  nop3 or checksequenceverify bip112 fork  ch
 }
 
 // All codes above 'nop10' serialize as hex.
-TEST_CASE("opcode  opcode to string  reserved 186 any forks  0xba", "[None]")
+TEST_CASE("opcode  opcode to string  checkdatasig 186 any forks  0xba", "[None]")
 {
-    REQUIRE(opcode_to_string(opcode::reserved_186, rule_fork::no_rules) == "0xba");
-    REQUIRE(opcode_to_string(opcode::reserved_186, rule_fork::all_rules) == "0xba");
+    REQUIRE(opcode_to_string(opcode::checkdatasig, rule_fork::no_rules) == "0xba");
+    REQUIRE(opcode_to_string(opcode::checkdatasig, rule_fork::all_rules) == "0xba");
 }
 
 // All codes above 'nop10' serialize as hex.

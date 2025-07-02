@@ -196,18 +196,19 @@ TEST_CASE("block  is valid merkle root  valid  returns true", "[chain block]") {
         "f5349388ac00743ba40b0000001976a914eb675c349c474bec8dea2d79d12cff6f330"
         "ab48788ac00000000"));
 
-    chain::block instance;
-    REQUIRE(entity_from_data(instance, raw_block));
-    REQUIRE(instance.is_valid_merkle_root());
+    byte_reader reader(raw_block);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE(result);
+    REQUIRE(result->is_valid_merkle_root());
 }
 
 // Start Test Suite: block serialization tests
 
 TEST_CASE("block  from data  insufficient bytes  failure", "[block serialization]") {
     data_chunk data(10);
-    chain::block instance;
-    REQUIRE( ! entity_from_data(instance, data));
-    REQUIRE( ! instance.is_valid());
+    byte_reader reader(data);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE( ! result);
 }
 
 TEST_CASE("block  from data  insufficient transaction bytes  failure", "[block serialization]") {
@@ -218,9 +219,9 @@ TEST_CASE("block  from data  insufficient transaction bytes  failure", "[block s
         "00000000000000000000000000000000000000000000ffffffff07049d8e2f1b"
         "0114ffffffff0100f2052a0100000043410437b36a7221bc977dce712728a954"));
 
-    chain::block instance;
-    REQUIRE( ! entity_from_data(instance, data));
-    REQUIRE( ! instance.is_valid());
+    byte_reader reader(data);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE( ! result);
 }
 
 TEST_CASE("block genesis mainnet valid structure", "[block serialization]") {
@@ -278,7 +279,10 @@ TEST_CASE("block  factory from data 1  genesis mainnet  success", "[block serial
     REQUIRE(raw_block.size() == 285u);
 
     // Reload genesis block.
-    auto const block = create<chain::block>(raw_block);
+    byte_reader reader(raw_block);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE(result);
+    auto const& block = *result;
 
     REQUIRE(block.is_valid());
     REQUIRE(genesis.header() == block.header());
@@ -297,8 +301,10 @@ TEST_CASE("block  factory from data 2  genesis mainnet  success", "[block serial
     REQUIRE(raw_block.size() == 285u);
 
     // Reload genesis block.
-    data_source stream(raw_block);
-    auto const block = create<chain::block>(stream);
+    byte_reader reader(raw_block);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE(result);
+    auto const& block = *result;
 
     REQUIRE(block.is_valid());
     REQUIRE(genesis.header() == block.header());
@@ -317,9 +323,10 @@ TEST_CASE("block  factory from data 3  genesis mainnet  success", "[block serial
     REQUIRE(raw_block.size() == 285u);
 
     // Reload genesis block.
-    data_source stream(raw_block);
-    istream_reader reader(stream);
-    auto const block = create<chain::block>(reader);
+    byte_reader reader(raw_block);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE(result);
+    auto const& block = *result;
 
     REQUIRE(block.is_valid());
     REQUIRE(genesis.header() == block.header());
@@ -364,8 +371,10 @@ TEST_CASE("block  generate merkle root  block with multiple transactions  matche
         "14b9a2c9700ff9519516b21af338d28d53ddf5349388ac00743ba40b00000019"
         "76a914eb675c349c474bec8dea2d79d12cff6f330ab48788ac00000000"));
 
-    chain::block block100k;
-    REQUIRE(entity_from_data(block100k, raw));
+    byte_reader reader(raw);
+    auto const result = chain::block::from_data(reader);
+    REQUIRE(result);
+    auto const& block100k = *result;
     REQUIRE(block100k.is_valid());
 
     auto const serial = block100k.to_data();

@@ -85,11 +85,9 @@ TEST_CASE("chain header  constructor 5  always  equals params", "[chain header]"
 
 TEST_CASE("chain header  from data  insufficient bytes  failure", "[chain header]") {
     data_chunk data(10);
-
-    chain::header header;
-
-    REQUIRE( ! entity_from_data(header, data));
-    REQUIRE( ! header.is_valid());
+    byte_reader reader(data);
+    auto const result = chain::header::from_data(reader);
+    REQUIRE( ! result);
 }
 
 TEST_CASE("chain header  factory from data 1  valid input  success", "[chain header]") {
@@ -103,7 +101,10 @@ TEST_CASE("chain header  factory from data 1  valid input  success", "[chain hea
 
     auto const data = expected.to_data();
 
-    auto const result = create<chain::header>(data);
+    byte_reader reader(data);
+    auto const result_exp = chain::header::from_data(reader);
+    REQUIRE(result_exp);
+    auto const& result = *result_exp;
 
     REQUIRE(result.is_valid());
     REQUIRE(expected == result);
@@ -119,9 +120,10 @@ TEST_CASE("chain header  factory from data 2  valid input  success", "[chain hea
         68644};
 
     auto const data = expected.to_data();
-    data_source istream(data);
-
-    auto const result = create<chain::header>(istream);
+    byte_reader reader(data);
+    auto const result_exp = chain::header::from_data(reader);
+    REQUIRE(result_exp);
+    auto const& result = *result_exp;
 
     REQUIRE(result.is_valid());
     REQUIRE(expected == result);
@@ -137,10 +139,10 @@ TEST_CASE("chain header  factory from data 3  valid input  success", "[chain hea
         68644};
 
     auto const data = expected.to_data();
-    data_source istream(data);
-    istream_reader source(istream);
-
-    auto const result = create<chain::header>(source);
+    byte_reader reader(data);
+    auto const result_exp = chain::header::from_data(reader);
+    REQUIRE(result_exp);
+    auto const& result = *result_exp;
 
     REQUIRE(result.is_valid());
     REQUIRE(expected == result);

@@ -42,14 +42,14 @@ TEST_CASE("fee filter  constructor 4  always  equals params", "[fee filter]") {
 TEST_CASE("fee filter  from data  insufficient bytes failure", "[fee filter]") {
     data_chunk const raw = {0xab, 0x11};
     fee_filter instance;
-    REQUIRE( ! entity_from_data(instance, version::level::maximum, raw));
+    REQUIRE( ! entity_from_data(instance, raw, version::level::maximum));
 }
 
 TEST_CASE("fee filter  from data  insufficient version failure", "[fee filter]") {
     const fee_filter expected{1};
     auto const data = expected.to_data(fee_filter::version_maximum);
     fee_filter instance;
-    REQUIRE( ! entity_from_data(instance, filter_add::version_minimum - 1, data));
+    REQUIRE( ! entity_from_data(instance, data, filter_add::version_minimum - 1));
 }
 
 TEST_CASE("fee filter  factory from data 1  roundtrip  success", "[fee filter]") {

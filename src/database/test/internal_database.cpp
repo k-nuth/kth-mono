@@ -337,8 +337,8 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, KTH_DB_dbi& d
     REQUIRE(kth_db_get(db_txn, dbi_transaction_db_, &key_tx, &value_tx) == KTH_DB_SUCCESS);
 
     data_chunk data_tx {static_cast<uint8_t*>(kth_db_get_data(value_tx)), static_cast<uint8_t*>(kth_db_get_data(value_tx)) + kth_db_get_size(value_tx)};
-    byte_reader reader(data_tx);
-    auto entry_res = transaction_entry::from_data(reader);
+    byte_reader reader_tx(data_tx);
+    auto entry_res = transaction_entry::from_data(reader_tx);
     REQUIRE(entry_res);
     auto entry = *entry_res;
     tx_list.push_back(std::move(entry.transaction()));
@@ -351,8 +351,8 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, KTH_DB_dbi& d
         REQUIRE(kth_db_get(db_txn, dbi_transaction_db_, &key_tx, &value_tx) == KTH_DB_SUCCESS);
 
         data_chunk data_tx {static_cast<uint8_t*>(kth_db_get_data(value_tx)), static_cast<uint8_t*>(kth_db_get_data(value_tx)) + kth_db_get_size(value_tx)};
-        byte_reader reader(data_tx);
-    auto entry_res = transaction_entry::from_data(reader);
+        byte_reader reader_tx_loop(data_tx);
+    auto entry_res = transaction_entry::from_data(reader_tx_loop);
     REQUIRE(entry_res);
     auto entry = *entry_res;
         tx_list.push_back(std::move(entry.transaction()));
@@ -364,8 +364,8 @@ void check_blocks_db(KTH_DB_env* env_, KTH_DB_dbi& dbi_blocks_db_, KTH_DB_dbi& d
     REQUIRE(kth_db_get(db_txn, dbi_block_header_, &key, &value) == KTH_DB_SUCCESS);
 
     data_chunk data_header {static_cast<uint8_t*>(kth_db_get_data(value)), static_cast<uint8_t*>(kth_db_get_data(value)) + kth_db_get_size(value)};
-    byte_reader reader(data_header);
-    auto header_res = domain::chain::header::from_data(reader);
+    byte_reader reader_header(data_header);
+    auto header_res = domain::chain::header::from_data(reader_header);
     REQUIRE(header_res);
     auto header = *header_res;
     REQUIRE(header.is_valid());

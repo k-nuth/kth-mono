@@ -128,7 +128,7 @@ TEST_CASE("message transaction  constructor 7  always  equals equivalent tx", "[
 TEST_CASE("message transaction  from data  insufficient data  failure", "[message transaction]") {
     data_chunk data(2);
     transaction instance;
-    REQUIRE( ! entity_from_data(instance, version::level::minimum, data));
+    REQUIRE( ! entity_from_data(instance, data, version::level::minimum));
     REQUIRE( ! instance.is_valid());
 }
 
@@ -142,7 +142,7 @@ TEST_CASE("message transaction  from data  valid junk  success", "[message trans
     boost::iostreams::stream<byte_source<std::array<uint8_t, 64>>> stream(source);
 
     transaction tx;
-    REQUIRE(entity_from_data(tx, version::level::minimum, stream));
+    REQUIRE(entity_from_data(tx, stream, version::level::minimum));
 }
 
 TEST_CASE("message transaction  factory from data 1  case 1 valid data  success", "[message transaction]") {
@@ -387,7 +387,7 @@ TEST_CASE("message transaction  operator assign equals 2  always  matches equiva
         "e61e66fe5d88ac00000000"));
 
     transaction expected;
-    REQUIRE(entity_from_data(expected, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(expected, raw_tx, transaction::version_minimum));
     transaction instance;
     instance = create<transaction>(transaction::version_minimum, raw_tx);
     REQUIRE(instance == expected);
@@ -415,7 +415,7 @@ TEST_CASE("message transaction  operator boolean equals 1  duplicates  returns t
 
     transaction alpha;
     chain::transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
     REQUIRE(entity_from_data(beta, raw_tx));
     REQUIRE(alpha == beta);
 }
@@ -442,7 +442,7 @@ TEST_CASE("message transaction  operator boolean equals 1  differs  returns fals
 
     transaction alpha;
     chain::transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
     REQUIRE(alpha != beta);
 }
 
@@ -468,7 +468,7 @@ TEST_CASE("message transaction  operator boolean not equals 1  duplicates  retur
 
     transaction alpha;
     chain::transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
     REQUIRE(entity_from_data(beta, raw_tx));
     REQUIRE(alpha == beta);
 }
@@ -495,7 +495,7 @@ TEST_CASE("message transaction  operator boolean not equals 1  differs  returns 
 
     transaction alpha;
     chain::transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
     REQUIRE(alpha != beta);
 }
 
@@ -521,8 +521,8 @@ TEST_CASE("message transaction  operator boolean equals 2  duplicates  returns t
 
     transaction alpha;
     transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
-    REQUIRE(entity_from_data(beta, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
+    REQUIRE(entity_from_data(beta, raw_tx, transaction::version_minimum));
     REQUIRE(alpha == beta);
 }
 
@@ -548,7 +548,7 @@ TEST_CASE("message transaction  operator boolean equals 2  differs  returns fals
 
     transaction alpha;
     transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
     REQUIRE(alpha != beta);
 }
 
@@ -574,8 +574,8 @@ TEST_CASE("message transaction  operator boolean not equals 2  duplicates  retur
 
     transaction alpha;
     transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
-    REQUIRE(entity_from_data(beta, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
+    REQUIRE(entity_from_data(beta, raw_tx, transaction::version_minimum));
     REQUIRE(alpha == beta);
 }
 
@@ -601,7 +601,7 @@ TEST_CASE("message transaction  operator boolean not equals 2  differs  returns 
 
     transaction alpha;
     transaction beta;
-    REQUIRE(entity_from_data(alpha, transaction::version_minimum, raw_tx));
+    REQUIRE(entity_from_data(alpha, raw_tx, transaction::version_minimum));
     REQUIRE(alpha != beta);
 }
 

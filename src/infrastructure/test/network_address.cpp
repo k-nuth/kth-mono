@@ -78,12 +78,13 @@ TEST_CASE("network address  constructor 5  always  equals params", "[network add
 
 TEST_CASE("network address  from data  insufficient bytes  failure", "[network address tests]") {
     data_chunk const raw{1};
-    network_address instance{};
+    byte_reader reader(raw);
 
-    REQUIRE( ! instance.from_data(raw, version_level_minimum, false));
+    auto const result = network_address::from_data(reader, version_level_minimum, false);
+    REQUIRE( ! result);
 }
 
-TEST_CASE("network address  factory from data 1  without timestamp  success", "[network address tests]") {
+TEST_CASE("network address  from data 1  without timestamp  success", "[network address tests]") {
     network_address const expected{
         734678u,
         5357534u,
@@ -91,32 +92,16 @@ TEST_CASE("network address  factory from data 1  without timestamp  success", "[
         123u};
 
     auto const data = expected.to_data(version_level_minimum, false);
-    auto const result = network_address::factory_from_data(data, version_level_minimum, false);
+    byte_reader reader(data);
+    auto const result = network_address::from_data(reader, version_level_minimum, false);
 
-    REQUIRE(result.is_valid());
-    REQUIRE(equal(expected, result, false));
-    REQUIRE(data.size() == result.serialized_size(version_level_minimum, false));
-    REQUIRE(expected.serialized_size(version_level_minimum, false) == result.serialized_size(version_level_minimum, false));
+    REQUIRE(result);
+    REQUIRE(equal(expected, *result, false));
+    REQUIRE(data.size() == result->serialized_size(version_level_minimum, false));
+    REQUIRE(expected.serialized_size(version_level_minimum, false) == result->serialized_size(version_level_minimum, false));
 }
 
-TEST_CASE("network address  factory from data 2  without timestamp  success", "[network address tests]") {
-    network_address const expected{
-        734678u,
-        5357534u,
-        base16_literal("127544abcdefa7b6d3e91486c57000aa"),
-        123u};
-
-    auto const data = expected.to_data(version_level_minimum, false);
-    data_source istream(data);
-    auto const result = network_address::factory_from_data(istream, version_level_minimum, false);
-
-    REQUIRE(result.is_valid());
-    REQUIRE(equal(expected, result, false));
-    REQUIRE(data.size() == result.serialized_size(version_level_minimum, false));
-    REQUIRE(expected.serialized_size(version_level_minimum, false) == result.serialized_size(version_level_minimum, false));
-}
-
-TEST_CASE("network address  factory from data 3  without timestamp  success", "[network address tests]") {
+TEST_CASE("network address  from data 2  without timestamp  success", "[network address tests]") {
     network_address const expected{
         734678u,
         5357534u,
@@ -126,15 +111,33 @@ TEST_CASE("network address  factory from data 3  without timestamp  success", "[
     auto const data = expected.to_data(version_level_minimum, false);
     data_source istream(data);
     istream_reader source(istream);
-    auto const result = network_address::factory_from_data(source, version_level_minimum, false);
+    byte_reader reader(data);
+    auto const result = network_address::from_data(reader, version_level_minimum, false);
 
-    REQUIRE(result.is_valid());
-    REQUIRE(equal(expected, result, false));
-    REQUIRE(data.size() == result.serialized_size(version_level_minimum, false));
-    REQUIRE(expected.serialized_size(version_level_minimum, false) == result.serialized_size(version_level_minimum, false));
+    REQUIRE(result);
+    REQUIRE(equal(expected, *result, false));
+    REQUIRE(data.size() == result->serialized_size(version_level_minimum, false));
+    REQUIRE(expected.serialized_size(version_level_minimum, false) == result->serialized_size(version_level_minimum, false));
 }
 
-TEST_CASE("network address  factory from data 1  with timestamp  success", "[network address tests]") {
+TEST_CASE("network address  from data 3  without timestamp  success", "[network address tests]") {
+    network_address const expected{
+        734678u,
+        5357534u,
+        base16_literal("127544abcdefa7b6d3e91486c57000aa"),
+        123u};
+
+    auto const data = expected.to_data(version_level_minimum, false);
+    byte_reader reader(data);
+    auto const result = network_address::from_data(reader, version_level_minimum, false);
+
+    REQUIRE(result);
+    REQUIRE(equal(expected, *result, false));
+    REQUIRE(data.size() == result->serialized_size(version_level_minimum, false));
+    REQUIRE(expected.serialized_size(version_level_minimum, false) == result->serialized_size(version_level_minimum, false));
+}
+
+TEST_CASE("network address  from data 1  with timestamp  success", "[network address tests]") {
     network_address const expected{
         734678u,
         5357534u,
@@ -142,15 +145,16 @@ TEST_CASE("network address  factory from data 1  with timestamp  success", "[net
         123u};
 
     auto const data = expected.to_data(version_level_minimum, true);
-    auto const result = network_address::factory_from_data(data, version_level_minimum, true);
+    byte_reader reader(data);
+    auto const result = network_address::from_data(reader, version_level_minimum, true);
 
-    REQUIRE(result.is_valid());
-    REQUIRE(equal(expected, result, true));
-    REQUIRE(data.size() == result.serialized_size(version_level_minimum, true));
-    REQUIRE(expected.serialized_size(version_level_minimum, true) == result.serialized_size(version_level_minimum, true));
+    REQUIRE(result);
+    REQUIRE(equal(expected, *result, true));
+    REQUIRE(data.size() == result->serialized_size(version_level_minimum, true));
+    REQUIRE(expected.serialized_size(version_level_minimum, true) == result->serialized_size(version_level_minimum, true));
 }
 
-TEST_CASE("network address  factory from data 2  with timestamp  success", "[network address tests]") {
+TEST_CASE("network address  from data 2  with timestamp  success", "[network address tests]") {
     network_address const expected{
         734678u,
         5357534u,
@@ -158,16 +162,16 @@ TEST_CASE("network address  factory from data 2  with timestamp  success", "[net
         123u};
 
     auto const data = expected.to_data(version_level_minimum, true);
-    data_source istream(data);
-    auto const result = network_address::factory_from_data(istream, version_level_minimum, true);
+    byte_reader reader(data);
+    auto const result = network_address::from_data(reader, version_level_minimum, true);
 
-    REQUIRE(result.is_valid());
-    REQUIRE(equal(expected, result, true));
-    REQUIRE(data.size() == result.serialized_size(version_level_minimum, true));
-    REQUIRE(expected.serialized_size(version_level_minimum, true) == result.serialized_size(version_level_minimum, true));
+    REQUIRE(result);
+    REQUIRE(equal(expected, *result, true));
+    REQUIRE(data.size() == result->serialized_size(version_level_minimum, true));
+    REQUIRE(expected.serialized_size(version_level_minimum, true) == result->serialized_size(version_level_minimum, true));
 }
 
-TEST_CASE("network address  factory from data 3  with timestamp  success", "[network address tests]") {
+TEST_CASE("network address  from data 3  with timestamp  success", "[network address tests]") {
     network_address const expected{
         734678u,
         5357534u,
@@ -175,14 +179,13 @@ TEST_CASE("network address  factory from data 3  with timestamp  success", "[net
         123u};
 
     auto const data = expected.to_data(version_level_minimum, true);
-    data_source istream(data);
-    istream_reader source(istream);
-    auto const result = network_address::factory_from_data(source, version_level_minimum, true);
+    byte_reader reader(data);
+    auto const result = network_address::from_data(reader, version_level_minimum, true);
 
-    REQUIRE(result.is_valid());
-    REQUIRE(equal(expected, result, true));
-    REQUIRE(data.size() == result.serialized_size(version_level_minimum, true));
-    REQUIRE(expected.serialized_size(version_level_minimum, true) == result.serialized_size(version_level_minimum, true));
+    REQUIRE(result);
+    REQUIRE(equal(expected, *result, true));
+    REQUIRE(data.size() == result->serialized_size(version_level_minimum, true));
+    REQUIRE(expected.serialized_size(version_level_minimum, true) == result->serialized_size(version_level_minimum, true));
 }
 
 TEST_CASE("network address  timestamp accessor  always  returns initialized value", "[network address tests]") {
