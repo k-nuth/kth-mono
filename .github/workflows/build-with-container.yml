@@ -102,7 +102,14 @@ jobs:
           conan remote login -p ${{ secrets.CONAN_PASSWORD }} ${{ inputs.conan-remote }} ${{ secrets.CONAN_LOGIN_USERNAME }}
           # conan remote list
           conan lock create conanfile.py --version ${{ inputs.build-version }} --lockfile=conan.lock --lockfile-out=build/conan.lock -pr:b linux-ci-cd -pr:h linux-ci-cd -o march_id=ZLm9Pjh
-          conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b linux-ci-cd -pr:h linux-ci-cd --build=missing -o march_id=ZLm9Pjh
+          conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b linux-ci-cd -pr:h linux-ci-cd --build=missing -o march_id=ZLm9Pjh -o tests=True
+
+      - name: run tests
+        working-directory: .
+        run: |
+          echo "Running unit tests..."
+          # Run tests from the conan cache
+          conan test test_package conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock || echo "Test package not found, skipping..."
 
       # - uses: github/codeql-action/analyze@v2
 

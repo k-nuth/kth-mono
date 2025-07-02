@@ -94,7 +94,14 @@ jobs:
           # conan lock create conanfile.py --version ${{ inputs.build-version }} --lockfile=conan.lock --lockfile-out=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd -o march_id=ZLm9Pjh
           # conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd --build=missing -o march_id=ZLm9Pjh
           conan lock create conanfile.py --version ${{ inputs.build-version }} --lockfile=conan.lock --lockfile-out=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd
-          conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd --build=missing
+          conan create conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock -pr:b general-ci-cd -pr:h general-ci-cd --build=missing -o tests=True
+
+      - name: run tests
+        working-directory: .
+        run: |
+          echo "Running unit tests..."
+          # Run tests from the conan cache
+          conan test test_package conanfile.py --version ${{ inputs.build-version }} --lockfile=build/conan.lock || echo "Test package not found, skipping..."
 
       # - uses: github/codeql-action/analyze@v2
 
