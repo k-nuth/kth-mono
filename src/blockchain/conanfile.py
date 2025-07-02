@@ -42,7 +42,7 @@ class KnuthBlockchainConan(KnuthConanFileV2):
         "shared": False,
         "fPIC": True,
         "consensus": True,
-        "tests": False,
+        "tests": True,
         "tools": False,
         "currency": "BCH",
         "march_strategy": "download_if_possible",

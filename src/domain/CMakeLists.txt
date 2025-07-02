@@ -613,7 +613,7 @@ if (WITH_TESTS)
         test/wallet/stealth_receiver.cpp
         test/wallet/stealth_sender.cpp
         test/wallet/uri_reader.cpp
-        test/wallet/wallet_manager.cpp
+        # test/wallet/wallet_manager.cpp  # File not found
 
         #TODO(fernando): to include
         # test/wallet/transaction_functions.cpp
@@ -625,8 +625,15 @@ if (WITH_TESTS)
   target_link_libraries(kth_domain_test PRIVATE Catch2::Catch2WithMain)
 
   include(CTest)
-  include(Catch)
-  catch_discover_tests(kth_domain_test)
+  # Try to use Catch2 automatic test discovery
+  find_package(Catch2 QUIET)
+  if(Catch2_FOUND)
+    include(Catch)
+    catch_discover_tests(kth_domain_test)
+  else()
+    # Fallback to manual test registration
+    add_test(NAME kth_domain_test COMMAND kth_domain_test)
+  endif()
 endif()
 
 #TODO(fernando): re-enable this

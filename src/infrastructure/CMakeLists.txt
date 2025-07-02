@@ -560,7 +560,7 @@ if (WITH_TESTS)
     test/utility/data.cpp
     test/utility/endian.cpp
     test/utility/operators.cpp
-    test/utility/pseudo_random.cpp
+    test/utility/pseudo_random_broken_do_not_use.cpp
     test/utility/serializer.cpp
     test/utility/stream.cpp
     test/utility/thread.cpp
@@ -604,8 +604,15 @@ if (WITH_TESTS)
   target_link_libraries(kth_infrastructure_test PRIVATE Catch2::Catch2WithMain)
 
   include(CTest)
-  include(Catch)
-  catch_discover_tests(kth_infrastructure_test)
+  # Try to use Catch2 automatic test discovery
+  find_package(Catch2 QUIET)
+  if(Catch2_FOUND)
+    include(Catch)
+    catch_discover_tests(kth_infrastructure_test)
+  else()
+    # Fallback to manual test registration
+    add_test(NAME kth_infrastructure_test COMMAND kth_infrastructure_test)
+  endif()
 endif()
 
 # Examples

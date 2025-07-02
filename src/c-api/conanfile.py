@@ -41,7 +41,7 @@ class KnuthCAPIConan(KnuthConanFileV2):
     default_options = {
         "shared": False,
         "fPIC": True,
-        "tests": False,
+        "tests": True,
         "console": False,
         "march_strategy": "download_if_possible",
         "no_compilation": False,
@@ -75,10 +75,6 @@ class KnuthCAPIConan(KnuthConanFileV2):
     def requirements(self):
         if not self.options.no_compilation and self.settings.get_safe("compiler") is not None:
             self.requires("node/0.58.0", transitive_headers=True, transitive_libs=True)
-            # if self.settings.os == "Emscripten":
-            #     self.requires("domain/0.45.0", transitive_headers=True, transitive_libs=True)
-            # else:
-            #     self.requires("node/0.58.0", transitive_headers=True, transitive_libs=True)
 
     def build_requirements(self):
         if self.options.tests:

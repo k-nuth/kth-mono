@@ -60,7 +60,7 @@ class KthRecipe(KnuthConanFileV2):
     default_options = {
         "shared": False,
         "fPIC": True,
-        "tests": False,
+        "tests": True,
         "console": False,
         "march_strategy": "download_if_possible",
         "currency": "BCH",

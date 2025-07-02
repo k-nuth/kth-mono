@@ -72,8 +72,8 @@ class Secp256k1Conan(KnuthConanFileV2):
         "enable_module_recovery": True,
         "enable_module_multiset": True,
         "benchmark": False,
-        "tests": False,
-        "openssl_tests": False,
+        "tests": True,
+        "openssl_tests": True,
         "bignum_lib": True,
 
         "march_strategy": "download_if_possible",

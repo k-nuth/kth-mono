@@ -210,13 +210,16 @@ if (WITH_TESTS)
     _group_sources(kth_network_test "${CMAKE_CURRENT_LIST_DIR}/test")
 
     include(CTest)
+  # Try to use Catch2 automatic test discovery
+  find_package(Catch2 QUIET)
+  if(Catch2_FOUND)
     include(Catch)
     catch_discover_tests(kth_network_test)
+  else()
+    # Fallback to manual test registration
+    add_test(NAME kth_network_test COMMAND kth_network_test)
+  endif()
 
-    # _add_tests(kth_network_test
-    #   empty_tests
-    #   # p2p_tests
-    # )
 endif()
 
 

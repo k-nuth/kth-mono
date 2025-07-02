@@ -44,7 +44,7 @@ class KnuthInfrastructureConan(KnuthConanFileV2):
         "with_icu": False,
         "with_png": False,
         "with_qrencode": False,
-        "tests": False,
+        "tests": True,
         "examples": False,
 
         "march_strategy": "download_if_possible",
