@@ -1,21 +1,25 @@
-# secp256k1 <a target="_blank" href="https://github.com/k-nuth/kth-mono/releases">![Github Releases][badge.release]</a> <a target="_blank" href="https://github.com/k-nuth/kth-mono/actions">![Build status][badge.GhA]</a> <a target="_blank" href="https://t.me/knuth_cash">![Telegram][badge.telegram]</a>
+libsecp256k1
+============
 
-> Optimized C library for EC operations on curve secp256k1.
+Optimized C library for cryptographic operations on curve secp256k1.
 
-Optimized C library for ECDSA signatures and secret/public key operations on curve secp256k1.
+This library is used for consensus critical cryptographic operations on the Bitcoin Cash network. It is maintained within the Bitcoin Cash Node repository while following upstream sources which include Bitcoin Core and Bitcoin ABC.
+Developers who want to contribute may do so either through the Bitcoin Cash Node project, or at [reviews.bitcoinabc.org](https://reviews.bitcoinabc.org/), or through Bitcoin Core. Use at your own risk.
 
-This library is intended to be the highest quality publicly available library for cryptography on the secp256k1 curve. However, the primary focus of its development has been for usage in the Bitcoin system and usage unlike Bitcoin's may be less well tested, verified, or suffer from a less well thought out interface. Correct usage requires some care and consideration that the library is fit for your application's purpose.
+This library is intended to be the highest quality publicly available library for cryptography on the secp256k1 curve. However, the primary focus of its development has been for usage in the Bitcoin Cash system and usage unlike Bitcoin's may be less well tested, verified, or suffer from a less well thought out interface. Correct usage requires some care and consideration that the library is fit for your application's purpose.
 
 Features:
 * secp256k1 ECDSA signing/verification and key generation.
+* secp256k1 Schnorr signing/verification ([Bitcoin Cash Schnorr variant](https://www.bitcoincash.org/spec/2019-05-15-schnorr.html)).
 * Additive and multiplicative tweaking of secret/public keys.
 * Serialization/parsing of secret keys, public keys, signatures.
-* Constant time, constant memory access signing and public key generation.
+* Constant time, constant memory access signing and pubkey generation.
 * Derandomized ECDSA (via RFC6979 or with a caller provided function.)
 * Very efficient implementation.
 * Suitable for embedded systems.
 * Optional module for public key recovery.
 * Optional module for ECDH key exchange (experimental).
+* Optional module for multiset hash (experimental).
 
 Experimental features have not received enough scrutiny to satisfy the standard of quality of this library but are made available for testing and review by the community. The APIs of these features should not be considered stable.
 
@@ -56,40 +60,86 @@ Implementation details
   * Optional runtime blinding which attempts to frustrate differential power analysis.
   * The precomputed tables add and eventually subtract points for which no known scalar (secret key) is known, preventing even an attacker with control over the secret key used to control the data internally.
 
-Getting started
----------------
+Build steps
+-----------
 
-Installing the library is as simple as:
+libsecp256k1 can be built using autotools:
 
-1. Install and configure the Knuth build helper:
-```
-$ pip install kthbuild --user --upgrade
-
-$ conan config install https://github.com/k-nuth/ci-utils/raw/master/conan/config2023.zip
-```
-
-2. Install the appropriate library:
-
-```
-$ conan install --requires=secp256k1/0.68.1 --update
+```bash
+./autogen.sh
+mkdir build
+cd build
+../configure
+make
+make check
+sudo make install  # optional
 ```
 
-For more more detailed instructions, please refer to our [documentation](https://kth.cash/docs/).
+Or using CMake:
 
-## About this library
+```bash
+mkdir build
+cd build
+cmake -GNinja ..
+ninja
+ninja check-secp256k1
+sudo ninja install  # optional
+```
 
-This library can be used stand-alone, but it is probably convenient for you to use one of our main projects, [look over here](https://github.com/k-nuth/kth-mono/).
+Exhaustive tests
+-----------
 
-## Issues
+    $ ./exhaustive_tests
 
-Each of our modules has its own Github repository, but in case you want to create an issue, please do so in our [main repository](https://github.com/k-nuth/kth-mono/issues).
+With valgrind, you might need to increase the max stack size:
 
-<!-- Links -->
-[badge.Cirrus]: https://api.cirrus-ci.com/github/k-nuth/kth-mono.svg?branch=master
-[badge.GhA]: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fk-nuth%2Fkth-mono%2Fbadge&style=for-the-badge
-[badge.version]: https://badge.fury.io/gh/k-nuth%2Fkth-mono.svg
-[badge.release]: https://img.shields.io/github/v/release/k-nuth/kth-mono?display_name=tag&style=for-the-badge&color=00599C&logo=c
-[badge.cpp]: https://img.shields.io/badge/C++-23-blue.svg?logo=c%2B%2B&style=for-the-badge
-[badge.telegram]: https://img.shields.io/badge/telegram-badge-blue.svg?logo=telegram&style=for-the-badge
-<!-- [badge.Gitter]: https://img.shields.io/badge/gitter-join%20chat-blue.svg -->
+    $ valgrind --max-stackframe=2500000 ./exhaustive_tests
 
+Test coverage
+-----------
+
+This library aims to have full coverage of the reachable lines and branches.
+
+__To create a test coverage report with autotools:__
+
+Configure with `--enable-coverage` (use of GCC is necessary):
+
+    $ ./configure --enable-coverage
+
+Run the tests:
+
+    $ make check
+
+To create a report, `gcovr` is recommended, as it includes branch coverage reporting:
+
+    $ gcovr --exclude 'src/bench*' --print-summary
+
+To create a HTML report with coloured and annotated source code:
+
+    $ gcovr --exclude 'src/bench*' --html --html-details -o coverage.html
+
+
+__To create a test coverage report with CMake:__
+
+Make sure you installed the dependencies first, and they are in your `PATH`:
+`c++filt`, `gcov`, `genhtml`, `lcov` and `python3`.
+
+Then run the build, tests and generate the coverage report with:
+
+```bash
+mkdir coverage
+cd coverage
+cmake -GNinja .. \
+  -DCMAKE_C_COMPILER=gcc \
+  -DSECP256K1_ENABLE_COVERAGE=ON \
+  -DSECP256K1_ENABLE_BRANCH_COVERAGE=ON # optional
+ninja coverage-check-secp256k1
+```
+
+The coverage report will be available by opening the file
+`check-secp256k1.coverage/index.html` with a web browser.
+
+Reporting a vulnerability
+------------
+
+See [SECURITY.md](SECURITY.md)

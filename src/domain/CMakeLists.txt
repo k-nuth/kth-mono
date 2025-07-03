@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
 option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE property" ON)
-option(WITH_TESTS "Compile with unit tests." ON)
+option(ENABLE_TEST "Compile with unit tests." ON)
 option(WITH_EXAMPLES "Compile with examples." OFF)
 option(WITH_ICU "Compile with International Components for Unicode." OFF)
 option(WITH_PNG "Compile with Libpng support." OFF)
@@ -542,7 +542,7 @@ endif()
 
 # Tests
 # ------------------------------------------------------------------------------
-if (WITH_TESTS)
+if (ENABLE_TEST)
   enable_testing()
   find_package(Catch2 3 REQUIRED)
   add_executable(kth_domain_test

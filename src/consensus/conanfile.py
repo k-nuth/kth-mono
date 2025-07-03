@@ -98,7 +98,7 @@ class KnuthConsensusConan(KnuthConanFileV2):
     def generate(self):
         tc = self.cmake_toolchain_basis()
         # tc.variables["CMAKE_VERBOSE_MAKEFILE"] = True
-        # tc.variables["WITH_TESTS"] = option_on_off(self.options.with_tests)
+        # tc.variables["ENABLE_TEST"] = option_on_off(self.options.with_tests)
         # tc.variables["WITH_JAVA"] = option_on_off(self.options.with_java)
         # tc.variables["WITH_PYTHON"] = option_on_off(self.options.with_python)
         tc.variables["CONAN_DISABLE_CHECK_COMPILER"] = option_on_off(True)

@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(ENABLE_SHARED "" OFF)
 option(GLOBAL_BUILD "" ON)
 option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE property" ON)
-option(WITH_TESTS "Compile with unit tests." ON)
+option(ENABLE_TEST "Compile with unit tests." ON)
 option(WITH_JAVA "Compile the Java bindings." OFF)
 option(WITH_PYTHON "Compile the Python bindings." OFF)
 
@@ -85,6 +85,7 @@ _check_has_decl(sys/endian.h HAVE_SYS_ENDIAN_H htobe64 HAVE_DECL_HTOBE64)
 if (NOT GLOBAL_BUILD)
   find_package(secp256k1 REQUIRED)
 endif()
+find_package(GMP REQUIRED)
 find_package(Boost COMPONENTS boost REQUIRED)
 find_package(OpenSSL REQUIRED)
 
@@ -251,7 +252,7 @@ endif()
 target_compile_definitions(${PROJECT_NAME}-clone PRIVATE $<TARGET_PROPERTY:secp256k1::secp256k1,INTERFACE_COMPILE_DEFINITIONS>)
 target_include_directories(${PROJECT_NAME}-clone PRIVATE $<TARGET_PROPERTY:secp256k1::secp256k1,INTERFACE_INCLUDE_DIRECTORIES>)
 
-target_link_libraries(${PROJECT_NAME}-clone PUBLIC Boost::boost OpenSSL::Crypto)
+target_link_libraries(${PROJECT_NAME}-clone PUBLIC Boost::boost OpenSSL::Crypto gmp::gmp)
 
 if (${CURRENCY} STREQUAL "BCH")
   _group_sources(${PROJECT_NAME}-clone "${CMAKE_CURRENT_SOURCE_DIR}/src/bch-rules")
@@ -309,6 +310,7 @@ endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC secp256k1::secp256k1)
 target_link_libraries(${PROJECT_NAME} PUBLIC Boost::boost)
 target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::Crypto)
+target_link_libraries(${PROJECT_NAME} PUBLIC gmp::gmp)
 
 if (MINGW)
   target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32 wsock32) #TODO(fernando): manage with Conan
@@ -318,7 +320,7 @@ _group_sources(${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}")
 
 # Tests
 #==============================================================================
-if (WITH_TESTS)
+if (ENABLE_TEST)
   enable_testing()
   find_package(Catch2 3 REQUIRED)
 
