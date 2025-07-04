@@ -200,7 +200,7 @@ jobs:
       conan-password: ${{ secrets.CONAN_3_PASSWORD }}
 
   build-with-container:
-    needs: [setup, generate-matrix, build-deps-with-container]
+    needs: [setup, generate-matrix]
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
@@ -222,7 +222,7 @@ jobs:
       CONAN_PASSWORD: ${{ secrets.CONAN_3_PASSWORD }}
 
   build-without-container:
-    needs: [setup, generate-matrix, build-deps-without-container]
+    needs: [setup, generate-matrix]
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
@@ -276,8 +276,7 @@ jobs:
           cmake --preset conan-release \
                -DCMAKE_VERBOSE_MAKEFILE=ON \
                -DGLOBAL_BUILD=ON \
-               -DENABLE_TESTS=ON \
-               -DWITH_TESTS=ON \
+               -DENABLE_TEST=ON \
                -DCMAKE_BUILD_TYPE=Release
                
           # Build the project with tests
@@ -290,10 +289,6 @@ jobs:
           # Run tests with ctest (CTestTestfile.cmake is now generated automatically by CMake)
           ctest --output-on-failure --parallel 4 || echo "Some tests may have failed, but continuing..."
           
-    secrets:
-      CONAN_LOGIN_USERNAME: ${{ secrets.CONAN_LOGIN_USERNAME }}
-      CONAN_PASSWORD: ${{ secrets.CONAN_3_PASSWORD }}
-
   static-checks:
     # needs: wait-for-dependencies
     name: Static Checks

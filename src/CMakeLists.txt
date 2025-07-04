@@ -4,12 +4,6 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-# Enable testing for this directory so CMake generates CTestTestfile.cmake
-# This allows CTest to discover all test subdirectories automatically
-if(WITH_TESTS OR ENABLE_TESTS)
-    enable_testing()
-endif()
-
 add_subdirectory(secp256k1)
 add_subdirectory(infrastructure)
 add_subdirectory(domain)

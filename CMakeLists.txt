@@ -32,27 +32,22 @@ option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE proper
 option(WITH_CONSOLE "Compile console application." OFF)
 option(WITH_LOCAL_MINING "Compile with local mining." ON)
 option(ENABLE_TEST "Compile with enable test." ON)
-option(ENABLE_TESTS "Compile with enable test." ON)
 option(ENABLE_MODULE_RECOVERY "Compile with enable module recovery." ON)
 option(WITH_TOOLS "Compile with tools." OFF)
 option(WITH_CONSOLE_NODE_CINT "" OFF)
-option(WITH_TESTS "Compile with unit tests." ON)
 option(WITH_EXAMPLES "Compile with examples." OFF)
 option(ENABLE_SHARED "" OFF)
 option(ENABLE_SHARED_NODE_CINT "" ON)
 
-set(WITH_BIGNUM "no" CACHE STRING "Specify Bignum Implementation (gmp|no|auto).")
-set(ENABLE_POSITION_INDEPENDENT_CODE ON)
-set(WITH_CONSOLE OFF)
-set(WITH_LOCAL_MINING OFF)
-set(ENABLE_TEST ON)
-set(ENABLE_TESTS ON)
-set(ENABLE_MODULE_RECOVERY ON)
-set(WITH_TOOLS OFF)
-set(WITH_TESTS ON)
-set(WITH_EXAMPLES OFF)
-set(ENABLE_SHARED OFF)
-set(ENABLE_SHARED_NODE_CINT ON)
+# set(ENABLE_POSITION_INDEPENDENT_CODE ON)
+# set(WITH_CONSOLE OFF)
+# set(WITH_LOCAL_MINING OFF)
+# set(ENABLE_TEST ON)
+# set(ENABLE_MODULE_RECOVERY ON)
+# set(WITH_TOOLS OFF)
+# set(WITH_EXAMPLES OFF)
+# set(ENABLE_SHARED OFF)
+# set(ENABLE_SHARED_NODE_CINT ON)
 
 if (WITH_LOCAL_MINING)
 	add_definitions(-DWITH_LOCAL_MINING)
@@ -67,11 +62,15 @@ endif()
 
 find_package(gmp REQUIRED)
 
+# Enable testing if tests are enabled
+if(ENABLE_TEST)
+    message(STATUS "Knuth: Enabling CTest (ENABLE_TEST=${ENABLE_TEST})")
+    enable_testing()
+endif()
+
 add_subdirectory(src)
 
-if (WITH_TESTS)
-  enable_testing()
-endif()
+
 
 # Install the main kth CMake configuration file
 # ------------------------------------------------------------------------------

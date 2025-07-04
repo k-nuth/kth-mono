@@ -41,9 +41,8 @@ This document describes the updated build scripts that now include automatic tes
 
 ### CMake Changes
 - **Main CMakeLists.txt**: 
-  - `ENABLE_TESTS=ON` by default
-  - `WITH_TESTS=ON` by default
-  - `enable_testing()` is called when `WITH_TESTS` is enabled
+  - `ENABLE_TEST=ON` by default
+  - `enable_testing()` is called when `ENABLE_TEST` is enabled
 
 ## GitHub Actions Changes
 
@@ -93,7 +92,7 @@ conan install conanfile.py -o tests=False
 
 Or for CMake:
 ```bash
-cmake --preset conan-release -DENABLE_TESTS=OFF -DWITH_TESTS=OFF
+cmake --preset conan-release -DENABLE_TEST=OFF
 ```
 
 ## CI Behavior

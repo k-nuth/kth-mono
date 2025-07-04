@@ -1,331 +1,463 @@
-# Copyright (c) 2016-2025 Knuth Project developers.
-# Distributed under the MIT software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (c) 2017-2024 The Bitcoin developers
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.13)
+project(secp256k1 LANGUAGES C VERSION 0.1.0)
 
-project(secp256k1 VERSION 0 LANGUAGES C)
+# Store the original CMAKE_MODULE_PATH
+set(SECP256K1_ORIGINAL_MODULE_PATH ${CMAKE_MODULE_PATH})
+# Add paths for custom modules (locally scoped)
+set(SECP256K1_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+list(APPEND CMAKE_MODULE_PATH ${SECP256K1_MODULE_PATH})
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
-option(ENABLE_SHARED "" OFF)
-option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE property" ON)
+# # Add path for BCHN modules (uncomment if needed)
+# list(APPEND CMAKE_MODULE_PATH "/Users/fernando/dev/bchn/bitcoin-cash-node-master/cmake/modules")
 
-option(ENABLE_BENCHMARK "Compile benchmark." OFF)
-option(ENABLE_TESTS "Compile tests." ON)
-option(ENABLE_OPENSSL_TESTS "Enable OpenSSL tests, if OpenSSL is available" OFF)
+# Default to RelWithDebInfo configuration
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+		"Select the configuration for the build" FORCE)
+	set(__NO_USER_CMAKE_BUILD_TYPE ON CACHE BOOL "True if the user didn't set a build type on the command line")
+endif()
 
-option(ENABLE_EXPERIMENTAL "Alloc experimental configure options" OFF)
-option(ENABLE_ENDOMORPHISM "Enable endomorphism" OFF)
-option(ENABLE_ECMULT_STATIC_PRECOMPUTATION "Enable precomputed ecmult table for signing" ON)
-option(ENABLE_MODULE_ECDH "Enable ECDH shared secret computation (experimental)." OFF)
-option(ENABLE_MODULE_SCHNORR "Enable Schnorr signature module (experimental)." ON)
-option(ENABLE_MODULE_RECOVERY "Enable ECDSA pubkey recovery module." ON)
-option(ENABLE_MODULE_MULTISET "Enable multiset operations (experimental)." ON)
+option(SECP256K1_ENABLE_COVERAGE "Enable coverage" OFF)
+option(SECP256K1_ENABLE_BRANCH_COVERAGE "Enable branch coverage" OFF)
 
-message(STATUS "ENABLE_ECMULT_STATIC_PRECOMPUTATION: ${ENABLE_ECMULT_STATIC_PRECOMPUTATION}")
+include(AddCompilerFlags)
+
+if(SECP256K1_ENABLE_COVERAGE)
+	include(Coverage)
+
+	enable_coverage(${SECP256K1_ENABLE_BRANCH_COVERAGE})
+
+	exclude_from_coverage("${CMAKE_CURRENT_SOURCE_DIR}/src/bench")
+
+	# If no build type is manually defined, override the optimization level.
+	# Otherwise, alert the user than the coverage result might be useless.
+	if(__NO_USER_CMAKE_BUILD_TYPE)
+		set_c_optimization_level(0)
+	else()
+		message(WARNING "It is advised to not enforce CMAKE_BUILD_TYPE to get the best coverage results")
+	endif()
+
+	set(COVERAGE 1)
+endif()
+
+
+
+# libsecp256k1 use a different set of flags.
+add_c_compiler_flags(
+	-pedantic
+	-Wall
+	-Wextra
+	-Wcast-align
+	-Wshadow
+	-Wno-unused-function
+	-Wno-overlength-strings
+	-std=c89
+	-Wnested-externs
+	-Wstrict-prototypes
+	-Wno-long-long
+)
+
+# Default visibility is hidden on all targets.
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+
+include_directories(
+	.
+	src
+	# For the config
+	${CMAKE_CURRENT_BINARY_DIR}/src
+)
+
+# The library
+add_library(secp256k1 src/secp256k1.c)
+target_include_directories(secp256k1 
+	PUBLIC 
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+		$<INSTALL_INTERFACE:include>
+)
+
+# Create alias for namespaced target
+add_library(secp256k1::secp256k1 ALIAS secp256k1)
+
+set(SECP256K1_PUBLIC_HEADERS
+	include/secp256k1.h
+	include/secp256k1_preallocated.h
+)
+
+option(SECP256K1_ENABLE_BIGNUM "Use the GMP bignum implementation" OFF)
+if(SECP256K1_ENABLE_BIGNUM)
+	# We need to link in GMP
+	if(NOT __IS_NATIVE_BUILD)
+		# In Conan builds, use the Conan target
+		target_link_libraries(secp256k1 gmp::gmp)
+	else()
+		# In native builds, use the traditional FindGMP
+		find_package(GMP REQUIRED)
+		target_link_libraries(secp256k1 GMP::gmp)
+	endif()
+	set(USE_NUM_GMP 1)
+	set(USE_FIELD_INV_NUM 1)
+	set(USE_SCALAR_INV_NUM 1)
+else()
+	set(USE_NUM_NONE 1)
+	set(USE_FIELD_INV_BUILTIN 1)
+	set(USE_SCALAR_INV_BUILTIN 1)
+endif()
+
+message (STATUS "CMAKE_C_COMPILER_TARGET: ${CMAKE_C_COMPILER_TARGET}")
+message (STATUS "CMAKE_SYSTEM_PROCESSOR:  ${CMAKE_SYSTEM_PROCESSOR}")
+
+# Guess the target architecture, within the ones with supported ASM.
+# First check if the CMAKE_C_COMPILER_TARGET is set (should be when
+# cross compiling), then CMAKE_SYSTEM_PROCESSOR as a fallback if meaningful
+# (this is not the case for ARM as the content is highly non standard).
+if(CMAKE_C_COMPILER_TARGET MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+	set(SECP256K1_ASM_BUILD_TARGET "x86_64")
+	set(SECP256K1_DEFAULT_USE_ASM ON)
+elseif(CMAKE_C_COMPILER_TARGET MATCHES "arm-linux-gnueabihf")
+	set(SECP256K1_ASM_BUILD_TARGET "arm-linux-gnueabihf")
+	set(SECP256K1_DEFAULT_USE_ASM ON)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+	# arm64/aarch64 doesn't have ASM support
+	set(SECP256K1_DEFAULT_USE_ASM OFF)
+endif()
+
+# Enable ASM by default only if we are building for a compatible target.
+# The user can still enable/disable it manually if needed.
+option(SECP256K1_USE_ASM "Use assembly" ${SECP256K1_DEFAULT_USE_ASM})
+
+if(SECP256K1_USE_ASM)
+	macro(unsupported_asm_error)
+		message(FATAL_ERROR
+			"Assembly is enabled, but not supported for your target architecture."
+			"Re-run cmake with -DSECP256K1_USE_ASM=OFF to disable ASM support."
+		)
+	endmacro()
+
+	if(SECP256K1_ASM_BUILD_TARGET MATCHES "x86_64")
+		# We check if amd64 asm is supported.
+		check_c_source_compiles("
+			#include <stdint.h>
+			int main() {
+				uint64_t a = 11, tmp;
+				__asm__ __volatile__(\"movq \$0x100000000,%1; mulq %%rsi\" : \"+a\"(a) : \"S\"(tmp) : \"cc\", \"%rdx\");
+				return 0;
+			}
+		" USE_ASM_X86_64)
+
+		if(NOT USE_ASM_X86_64)
+			unsupported_asm_error()
+		endif()
+	elseif(SECP256K1_ASM_BUILD_TARGET MATCHES "arm-linux-gnueabihf")
+		enable_language(ASM)
+		set(USE_EXTERNAL_ASM 1)
+		add_library(secp256k1_common src/asm/field_10x26_arm.s)
+		target_link_libraries(secp256k1 secp256k1_common)
+	else()
+		unsupported_asm_error()
+	endif()
+endif()
+
+# We make sure __int128 is defined
+include(CheckTypeSize)
+check_type_size(__int128 SIZEOF___INT128)
+if(SIZEOF___INT128 EQUAL 16)
+	set(HAVE___INT128 1)
+else()
+	# If we do not support __int128, we should be falling back
+	# on 32bits implementations for field and scalar.
+endif()
+
+# Select the finite field implementation to use.
+# This can be autodetected or forced by setting USE_FIELD to 32bit or 64bit.
+# See the truth table below:
+# +----------------------------------------------------------------------------------------------------------------------+
+# | USE_FIELD=64bit | USE_FIELD=32bit | HAVE___INT128 | USE_ASM_X86_64 | USE_FIELD_5X52 | USE_FIELD_10x26 | Config error |
+# +----------------------------------------------------------------------------------------------------------------------+
+# |        0        |        0        |       0       |       0        |       0        |        1        |      0       |
+# |        0        |        0        |       0       |       1        |       1        |        0        |      0       |
+# |        0        |        0        |       1       |       0        |       1        |        0        |      0       |
+# |        0        |        0        |       1       |       1        |       1        |        0        |      0       |
+# |        0        |        1        |       0       |       0        |       0        |        1        |      0       |
+# |        0        |        1        |       0       |       1        |       0        |        1        |      0       |
+# |        0        |        1        |       1       |       0        |       0        |        1        |      0       |
+# |        0        |        1        |       1       |       1        |       0        |        1        |      0       |
+# |        1        |        0        |       0       |       0        |       0        |        0        |      1       |
+# |        1        |        0        |       0       |       1        |       1        |        0        |      0       |
+# |        1        |        0        |       1       |       0        |       1        |        0        |      0       |
+# |        1        |        0        |       1       |       1        |       1        |        0        |      0       |
+# +----------------------------------------------------------------------------------------------------------------------+
+set(USE_FIELD "" CACHE STRING "Force the finite field implementation to use (can be 32bit or 64bit)")
+if(USE_FIELD STREQUAL "64bit" AND NOT (HAVE___INT128 OR USE_ASM_X86_64))
+	message(SEND_ERROR "64 finite field requested but the compiler does not support __int128 or inline assembly")
+elseif(NOT USE_FIELD STREQUAL "32bit" AND (HAVE___INT128 OR USE_ASM_X86_64))
+	set(USE_FIELD_5X52 1)
+else()
+	set(USE_FIELD_10X26 1)
+endif()
+
+# Select the scalar implementation to use.
+# This can be autodetected or forced by setting USE_SCALAR to 32bit or 64bit.
+# See the truth table below:
+# +--------------------------------------------------------------------------------------------------------+
+# | USE_SCALAR=64bit | USE_SCALAR=32bit | HAVE___INT128 | USE_SCALAR_4X64 | USE_SCALAR_8X32 | Config error |
+# +--------------------------------------------------------------------------------------------------------+
+# |        0         |        0         |       0       |        0        |        1        |      0       |
+# |        0         |        0         |       1       |        1        |        0        |      0       |
+# |        0         |        1         |       0       |        0        |        1        |      0       |
+# |        0         |        1         |       1       |        0        |        1        |      0       |
+# |        1         |        0         |       0       |        0        |        0        |      1       |
+# |        1         |        0         |       1       |        1        |        0        |      0       |
+# +--------------------------------------------------------------------------------------------------------+
+set(USE_SCALAR "" CACHE STRING "Force the scalar implementation to use (can be 32bit or 64bit)")
+if(USE_SCALAR STREQUAL "64bit" AND NOT HAVE___INT128)
+	message(SEND_ERROR "64 scalar requested but the compiler does not support __int128")
+elseif(NOT USE_SCALAR STREQUAL "32bit" AND HAVE___INT128)
+	set(USE_SCALAR_4X64 1)
+else()
+	set(USE_SCALAR_8X32 1)
+endif()
+
+option(SECP256K1_BUILD_TEST "Build secp256k1's unit tests" ON)
+
+# Executable internal to secp256k1 need to have the HAVE_CONFIG_H define set.
+# For convenience, we wrap this into a function.
+function(link_secp256k1_internal NAME)
+	target_link_libraries(${NAME} secp256k1)
+	target_compile_definitions(${NAME} PRIVATE HAVE_CONFIG_H SECP256K1_BUILD)
+endfunction(link_secp256k1_internal)
+
+# Phony target to build benchmarks
+add_custom_target(bench-secp256k1)
+
+function(add_secp256k1_bench NAME)
+	set(EXECUTABLE_NAME "${NAME}-bench")
+	add_executable(${EXECUTABLE_NAME} EXCLUDE_FROM_ALL ${ARGN})
+	link_secp256k1_internal(${EXECUTABLE_NAME})
+
+	set(BENCH_NAME "bench-secp256k1-${NAME}")
+	add_custom_target(${BENCH_NAME}
+		COMMENT "Benchmarking libsecp256k1 ${NAME}"
+		COMMAND ${EXECUTABLE_NAME}
+		USES_TERMINAL
+	)
+	add_dependencies(bench-secp256k1 ${BENCH_NAME})
+endfunction(add_secp256k1_bench)
+
+# ECDH module
+option(SECP256K1_ENABLE_MODULE_ECDH "Build libsecp256k1's ECDH module" OFF)
+if(SECP256K1_ENABLE_MODULE_ECDH)
+	set(ENABLE_MODULE_ECDH 1)
+	add_secp256k1_bench(ecdh src/bench_ecdh.c)
+	list(APPEND SECP256K1_PUBLIC_HEADERS include/secp256k1_ecdh.h)
+endif()
+
+# MultiSet module
+option(SECP256K1_ENABLE_MODULE_MULTISET "Build libsecp256k1's MULTISET module" ON)
+if(SECP256K1_ENABLE_MODULE_MULTISET)
+    set(ENABLE_MODULE_MULTISET 1)
+	add_secp256k1_bench(multiset src/bench_multiset.c)
+	list(APPEND SECP256K1_PUBLIC_HEADERS include/secp256k1_multiset.h)
+endif()
+
+# Recovery module
+option(SECP256K1_ENABLE_MODULE_RECOVERY "Build libsecp256k1's recovery module" ON)
+if(SECP256K1_ENABLE_MODULE_RECOVERY)
+	set(ENABLE_MODULE_RECOVERY 1)
+	add_secp256k1_bench(recover src/bench_recover.c)
+	list(APPEND SECP256K1_PUBLIC_HEADERS include/secp256k1_recovery.h)
+endif()
+
+# Schnorr module
+option(SECP256K1_ENABLE_MODULE_SCHNORR "Build libsecp256k1's Schnorr module" ON)
+if(SECP256K1_ENABLE_MODULE_SCHNORR)
+	set(ENABLE_MODULE_SCHNORR 1)
+	list(APPEND SECP256K1_PUBLIC_HEADERS include/secp256k1_schnorr.h)
+endif()
+
+# External default callbacks
+option(SECP256K1_ENABLE_EXTERNAL_DEFAULT_CALLBACKS "Enable external default callbacks" OFF)
+if(SECP256K1_ENABLE_EXTERNAL_DEFAULT_CALLBACKS)
+	set(USE_EXTERNAL_DEFAULT_CALLBACKS 1)
+endif()
+
+# Endomorphism
+option(SECP256K1_ENABLE_ENDOMORPHISM "Enable endomorphism" ON)
+if(SECP256K1_ENABLE_ENDOMORPHISM)
+	set(USE_ENDOMORPHISM 1)
+endif()
 
 # Make the emult window size customizable.
 set(SECP256K1_ECMULT_WINDOW_SIZE 15 CACHE STRING "Window size for ecmult precomputation for verification, specified as integer in range [2..24].")
 if(${SECP256K1_ECMULT_WINDOW_SIZE} LESS 2 OR ${SECP256K1_ECMULT_WINDOW_SIZE} GREATER 24)
 	message(FATAL_ERROR "SECP256K1_ECMULT_WINDOW_SIZE must be an integer in range [2..24]")
 endif()
-add_definitions(-DECMULT_WINDOW_SIZE=${SECP256K1_ECMULT_WINDOW_SIZE})
 
 set(SECP256K1_ECMULT_GEN_PRECISION 4 CACHE STRING "Precision bits to tune the precomputed table size for signing.")
 set(VALID_PRECISIONS 2 4 8)
 if(NOT ${SECP256K1_ECMULT_GEN_PRECISION} IN_LIST VALID_PRECISIONS)
 	message(FATAL_ERROR "SECP256K1_ECMULT_GEN_PRECISION not 2, 4, 8")
 endif()
-add_definitions(-DECMULT_GEN_PREC_BITS=${SECP256K1_ECMULT_GEN_PRECISION})
 
-set(WITH_ASM "auto" CACHE STRING "Specify assembly optimizations to use (x86_64|arm|no|auto).")
-set(WITH_FIELD "auto" CACHE STRING "Specify Field Implementation (64bit|32bit|auto).")
-set(WITH_SCALAR "auto" CACHE STRING "Specify scalar implementation (64bit|32bit|auto).")
-set(WITH_BIGNUM "auto" CACHE STRING "Specify Bignum Implementation (gmp|mpir|no|auto).")
-
-set(MARCH_ID "" CACHE STRING "Specify the Microarchitecture ID (x86_64|...).")
-message( STATUS "Knuth: Compiling for Microarchitecture ID ${MARCH_ID}")
-
-message( STATUS "Knuth: CONAN_CXX_FLAGS ${CONAN_CXX_FLAGS}")
-message( STATUS "Knuth: CONAN_C_FLAGS ${CONAN_C_FLAGS}")
-
-find_package(gmp REQUIRED)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/ci_utils/cmake)
-
-include(Secp256k1Tools)
-
-
-#------------------------------------------------------------------------------
-if (ENABLE_ENDOMORPHISM)
-  add_definitions(-DUSE_ENDOMORPHISM)
-endif()
-
-if (ENABLE_ECMULT_STATIC_PRECOMPUTATION)
-  # add_definitions(-DUSE_ECMULT_STATIC_PRECOMPUTATION)
-
+# Static precomputation for elliptic curve multiplication
+option(SECP256K1_ECMULT_STATIC_PRECOMPUTATION "Precompute libsecp256k1's elliptic curve multiplication tables" ON)
+if(SECP256K1_ECMULT_STATIC_PRECOMPUTATION)
 	set(USE_ECMULT_STATIC_PRECOMPUTATION 1)
 
-  if(EXISTS ${CMAKE_SOURCE_DIR}/ci_utils/cmake/NativeExecutable.cmake)
-    include(${CMAKE_SOURCE_DIR}/ci_utils/cmake/NativeExecutable.cmake)
-  else()
-    message( STATUS "NativeExecutable.cmake doent exists")
-  endif()
+	# Check if precomputed table already exists (generated by Conan tool)
+	set(PRECOMPUTED_TABLE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/ecmult_static_context.h")
+	if(EXISTS "${PRECOMPUTED_TABLE_FILE}")
+		message(STATUS "Using existing precomputed secp256k1 tables: ${PRECOMPUTED_TABLE_FILE}")
+		target_sources(secp256k1 PRIVATE src/ecmult_static_context.h)
+	else()
+		# Fall back to native build system (legacy)
+		message(STATUS "Precomputed table not found, using native build system")
+		include(NativeExecutable)
+		native_add_cmake_flags(
+			"-DSECP256K1_ECMULT_WINDOW_SIZE=${SECP256K1_ECMULT_WINDOW_SIZE}"
+			"-DSECP256K1_ECMULT_GEN_PRECISION=${SECP256K1_ECMULT_GEN_PRECISION}"
+			"-DSECP256K1_USE_ASM=OFF"
+		)
+		add_native_executable(gen_context src/gen_context.c)
 
-	# # include(NativeExecutable)
-	add_native_executable(gen_context src/gen_context.c)
+		add_custom_command(
+			OUTPUT src/ecmult_static_context.h
+			COMMAND gen_context
+		)
 
-  native_target_include_directories(gen_context PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+		target_sources(secp256k1 PRIVATE src/ecmult_static_context.h)
+	endif()
+endif()
 
-  # target_include_directories(gen_context PUBLIC
-  # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  # $<INSTALL_INTERFACE:include>)
+include(InstallationHelper)
+if(BUILD_SHARED_LIBS)
+	install_shared_library(secp256k1 PUBLIC_HEADER ${SECP256K1_PUBLIC_HEADERS})
+else()
+	set_property(TARGET secp256k1 PROPERTY PUBLIC_HEADER ${SECP256K1_PUBLIC_HEADERS})
+	install_target(secp256k1)
+endif()
 
-	add_custom_command(
-		OUTPUT ecmult_static_context.h
-		COMMAND gen_context
-		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+# Create export set for secp256k1
+install(TARGETS secp256k1
+	EXPORT secp256k1-targets
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib
+	RUNTIME DESTINATION bin
+	PUBLIC_HEADER DESTINATION include
+)
+
+# Install the export set
+install(EXPORT secp256k1-targets
+	FILE secp256k1-targets.cmake
+	NAMESPACE secp256k1::
+	DESTINATION lib/cmake/secp256k1
+)
+
+# Generate the config
+configure_file(src/libsecp256k1-config.h.cmake.in src/libsecp256k1-config.h ESCAPE_QUOTES)
+target_compile_definitions(secp256k1 PRIVATE HAVE_CONFIG_H SECP256K1_BUILD)
+
+# Build the Java binding
+option(SECP256K1_ENABLE_JNI "Enable the Java Native Interface binding" OFF)
+if(SECP256K1_ENABLE_JNI)
+	if(NOT SECP256K1_ENABLE_MODULE_ECDH)
+		message(FATAL_ERROR "The secp256k1 JNI support requires ECDH. Try again with -DSECP256K1_ENABLE_MODULE_ECDH=ON.")
+	endif()
+
+	find_package(Java REQUIRED)
+	find_package(JNI REQUIRED)
+	include(UseJava)
+
+	add_library(secp256k1_jni SHARED
+		src/java/org_bitcoin_NativeSecp256k1.c
+		src/java/org_bitcoin_Secp256k1Context.c
 	)
 
-	# target_sources(${PROJECT_NAME} PRIVATE ecmult_static_context.h)
+	install_shared_library(secp256k1_jni)
 
-endif()
-
-# Implement --with-asm
-#------------------------------------------------------------------------------
-if (WITH_ASM STREQUAL "auto")
-  _check_has_64bit_asm()
-  if (HAS_64BIT_ASM)
-    set(WITH_ASM "x86_64")
-  else()
-    set(WITH_ASM "no")
-  endif()
-elseif (WITH_ASM STREQUAL "x86_64")
-  _check_has_64bit_asm()
-  if (NOT HAS_64BIT_ASM)
-    message(FATAL_ERROR "x86_64 assembly optimization requested but not available")
-  endif()
-elseif (NOT WITH_ASM STREQUAL "arm" AND NOT WITH_ASM STREQUAL "no")
-  message(FATAL_ERROR "Invalid assembly optimization selection: ${WITH_ASM}")
-endif()
-
-# Implement --with-field
-#------------------------------------------------------------------------------
-if (WITH_FIELD STREQUAL "auto")
-  if (WITH_ASM STREQUAL "x86_64")
-    set (WITH_FIELD "64bit")
-  else()
-    _check_has_int128()
-    if (HAS_INT128)
-      set(WITH_FIELD "64bit")
-    else()
-      set(WITH_FIELD "32bit")
-    endif()
-  endif()
-elseif (WITH_FIELD STREQUAL "64bit")
-  if (NOT WITH_ASM STREQUAL "x86_64")
-    _check_has_int128()
-    if (NOT HAS_INT128)
-      message(FATAL_ERROR "64bit field explicitly requested but neither __int128 support or x86_64 assembly available")
-    endif()
-  endif()
-elseif (NOT WITH_FIELD STREQUAL "32bit")
-  message(FATAL_ERROR "Invalid field implementation: ${WITH_FIELD}")
-endif()
-
-# Implement --with-scalar
-#------------------------------------------------------------------------------
-if (WITH_SCALAR STREQUAL "auto")
-  _check_has_int128()
-  if (HAS_INT128)
-    set(WITH_SCALAR "64bit")
-  else()
-    set(WITH_SCALAR "32bit")
-  endif()
-elseif (WITH_FIELD STREQUAL "64bit")
-  _check_has_int128()
-  if (NOT HAS_INT128)
-    message(FATAL_ERROR "64bit scalar explicitly requested but __int128 support not available")
-  endif()
-elseif (NOT WITH_FIELD STREQUAL "32bit")
-  message(FATAL_ERROR "Invalid scalar implementation: ${WITH_SCALAR}")
-endif()
-
-if (ENABLE_SHARED)
-  set(MODE SHARED)
-else()
-  set(MODE STATIC)
-endif()
-
-
-# Build
-#==============================================================================
-add_library(${PROJECT_NAME} ${MODE} include/secp256k1.h   src/secp256k1.c)
-add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-
-if (ENABLE_POSITION_INDEPENDENT_CODE)
-  set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
-endif(ENABLE_POSITION_INDEPENDENT_CODE)
-
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-target_include_directories(${PROJECT_NAME} PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-
-_check_has_int128()
-if (HAS_INT128)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DHAVE___INT128=1)
-endif()
-
-if (WITH_ASM STREQUAL "x86_64")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_ASM_X86_64=1)
-elseif (WITH_FIELD STREQUAL "arm")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_EXTERNAL_ASM=1)
-  target_sources(${PROJECT_NAME} PRIVATE "src/asm/field_10x26_arm.s")
-endif()
-
-if (WITH_FIELD STREQUAL "64bit")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_FIELD_5X52=1)
-elseif (WITH_FIELD STREQUAL "32bit")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_FIELD_10X26=1)
-endif()
-
-if (WITH_SCALAR STREQUAL "64bit")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_SCALAR_4X64=1)
-elseif (WITH_SCALAR STREQUAL "32bit")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_SCALAR_8X32=1)
-endif()
-
-if (${WITH_BIGNUM} STREQUAL "gmp")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DHAVE_LIBGMP=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_NUM_GMP=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_FIELD_INV_NUM=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_SCALAR_INV_NUM=1)
-elseif (${WITH_BIGNUM} STREQUAL "mpir")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DHAVE_LIBGMP=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_NUM_GMP=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_FIELD_INV_NUM=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_SCALAR_INV_NUM=1)
-elseif (${WITH_BIGNUM} STREQUAL "no")
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_NUM_NONE=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_FIELD_INV_BUILTIN=1)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DUSE_SCALAR_INV_BUILTIN=1)
-endif()
-
-if (ENABLE_ECMULT_STATIC_PRECOMPUTATION)
-	target_sources(${PROJECT_NAME} PRIVATE ecmult_static_context.h)
-endif()
-
-target_link_libraries(${PROJECT_NAME} gmp::gmp)
-
-if (ENABLE_MODULE_ECDH)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DENABLE_MODULE_ECDH=1)
-endif()
-
-if (ENABLE_MODULE_SCHNORR)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DENABLE_MODULE_SCHNORR=1)
-endif()
-
-if (ENABLE_MODULE_RECOVERY)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DENABLE_MODULE_RECOVERY=1)
-endif()
-
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "secp256k1")
-
-# Benchmark
-#==============================================================================
-if (ENABLE_BENCHMARK)
-  add_executable(bench_verify src/bench_verify.c)
-  target_link_libraries(bench_verify ${PROJECT_NAME})
-  set_target_properties(bench_verify PROPERTIES FOLDER "secp256k1")
-
-  if (ENABLE_OPENSSL_TESTS)
-    target_compile_definitions(bench_verify PRIVATE -DENABLE_OPENSSL_TESTS)
-  endif()
-
-
-
-  add_executable(bench_sign src/bench_sign.c)
-  target_link_libraries(bench_sign ${PROJECT_NAME})
-  set_target_properties(bench_sign PROPERTIES FOLDER "secp256k1")
-
-  add_executable(bench_internal src/bench_internal.c)
-  target_link_libraries(bench_internal ${PROJECT_NAME})
-  set_target_properties(bench_internal PROPERTIES FOLDER "secp256k1")
-
-  if (ENABLE_MODULE_ECDH)
-    add_executable(bench_ecdh src/bench_ecdh.c)
-    target_link_libraries(bench_ecdh ${PROJECT_NAME})
-    set_target_properties(bench_ecdh PROPERTIES FOLDER "secp256k1")
-  endif()
-
-  if (ENABLE_MODULE_SCHNORR)
-    add_executable(bench_schnorr_verify src/bench_schnorr_verify.c)
-    target_link_libraries(bench_schnorr_verify ${PROJECT_NAME})
-    set_target_properties(bench_schnorr_verify PROPERTIES FOLDER "secp256k1")
-  endif()
-
-  if (ENABLE_MODULE_RECOVERY)
-    add_executable(bench_recover src/bench_recover.c)
-    target_link_libraries(bench_recover ${PROJECT_NAME})
-    set_target_properties(bench_recover PROPERTIES FOLDER "secp256k1")
-  endif()
-
-  if (ENABLE_MODULE_MULTISET)
-    add_executable(bench_multiset src/bench_multiset.c)
-    target_link_libraries(bench_multiset ${PROJECT_NAME})
-    set_target_properties(bench_multiset PROPERTIES FOLDER "secp256k1")
-  endif()
+	target_include_directories(secp256k1_jni PUBLIC ${JNI_INCLUDE_DIRS})
+	# As per CMake documentation: the POSITION_INDEPENDENT_CODE property is set
+	# when a target is created. It defaults to True for SHARED or MODULE library
+	# targets and False otherwise.
+	# The secp256ki_jni library being shared, the property is set and it will
+	# build with PIC enabled. But the secp256k1 dependency might not have the
+	# property set, so it's associated source files won't be built with PIC
+	# enabled. That would cause the linker to fail.
+	# Forcing the property for the secp256k1 library fixes the issue.
+	set_target_properties(secp256k1 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+	link_secp256k1_internal(secp256k1_jni)
 endif()
 
 # Tests
-#==============================================================================
-if (ENABLE_TESTS)
-  add_executable(tests
-    src/tests.c)
+message(STATUS "secp256k1 test configuration:")
+message(STATUS "  SECP256K1_BUILD_TEST: ${SECP256K1_BUILD_TEST}")
+message(STATUS "  ENABLE_TEST: ${ENABLE_TEST}")
 
-  if (ENABLE_OPENSSL_TESTS)
-    target_compile_definitions(tests PRIVATE -DENABLE_OPENSSL_TESTS)
-  endif()
+if(SECP256K1_BUILD_TEST AND ENABLE_TEST)
+	message(STATUS "secp256k1: Building tests (condition met: SECP256K1_BUILD_TEST AND ENABLE_TEST)")
+	include(TestSuite)
+	create_test_suite(secp256k1)
 
-  target_compile_definitions(tests PRIVATE -DVERIFY)
-  target_include_directories(tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR})
+	function(create_secp256k1_test NAME FILES)
+		message(STATUS "secp256k1: Creating test ${NAME} with files: ${FILES}")
+		# Create the test executable, but don't exclude from all if tests are enabled
+		add_executable(${NAME} ${FILES})
+		link_secp256k1_internal(${NAME})
+		# Also add to CTest for integration with ctest command
+		add_test(NAME ${NAME} COMMAND ${NAME})
+		message(STATUS "secp256k1: Added test ${NAME} to CTest and will be built automatically")
+	endfunction()
 
-  target_link_libraries(tests ${PROJECT_NAME})
+	create_secp256k1_test(secp256k1-tests src/tests.c)
+	create_secp256k1_test(secp256k1-exhaustive_tests src/tests_exhaustive.c)
 
-  enable_testing()
-  add_test(
-    NAME test
-    COMMAND tests)
+	# This should not be enabled at the same time as coverage is.
+	# The VERIFY failure branch is not expected to be reached, so it would make
+	# coverage appear lower if set.
+	if(NOT SECP256K1_ENABLE_COVERAGE)
+		target_compile_definitions(secp256k1-tests PRIVATE VERIFY)
+		target_compile_definitions(secp256k1-exhaustive_tests PRIVATE VERIFY)
+	endif()
 
-  set_target_properties(tests PROPERTIES FOLDER "secp256k1")
-endif()
+	if(SECP256K1_ENABLE_JNI)
+		set(SECP256k1_JNI_TEST_JAR "secp256k1-jni-test")
 
+		set(CMAKE_JNI_TARGET TRUE)
+		add_jar(secp256k1-jni-test-jar
+			SOURCES
+				src/java/org/bitcoin/NativeSecp256k1.java
+				src/java/org/bitcoin/NativeSecp256k1Test.java
+				src/java/org/bitcoin/NativeSecp256k1Util.java
+				src/java/org/bitcoin/Secp256k1Context.java
+			ENTRY_POINT org/bitcoin/NativeSecp256k1Test
+			OUTPUT_NAME "${SECP256k1_JNI_TEST_JAR}"
+		)
+		add_dependencies(secp256k1-jni-test-jar secp256k1_jni)
 
+		add_custom_target(check-secp256k1-java
+			COMMAND
+				"${Java_JAVA_EXECUTABLE}"
+				"-Djava.library.path=${CMAKE_CURRENT_BINARY_DIR}"
+				"-jar"
+				"${SECP256k1_JNI_TEST_JAR}.jar"
+			WORKING_DIRECTORY
+				"${CMAKE_CURRENT_BINARY_DIR}"
+		)
+		add_dependencies(check-secp256k1-java secp256k1-jni-test-jar)
+		add_dependencies(check-secp256k1 check-secp256k1-java)
+	endif()
+endif(SECP256K1_BUILD_TEST AND ENABLE_TEST)
 
-# Install
-# ------------------------------------------------------------------------------
+# Benchmarks
+add_secp256k1_bench(verify src/bench_verify.c)
+add_secp256k1_bench(sign src/bench_sign.c)
+add_secp256k1_bench(internal src/bench_internal.c)
+add_secp256k1_bench(ecmult src/bench_ecmult.c)
 
-include(GNUInstallDirs)
-install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}-targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-# Generate and install a CMake package configuration file
-install(EXPORT ${PROJECT_NAME}-targets
-    FILE ${PROJECT_NAME}-config.cmake
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
+# Restore original CMAKE_MODULE_PATH to avoid interfering with other modules
+set(CMAKE_MODULE_PATH ${SECP256K1_ORIGINAL_MODULE_PATH})

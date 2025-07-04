@@ -18,8 +18,7 @@ conan install conanfile.py --lockfile=build/conan.lock -of build --build=missing
 cmake --preset conan-release \
          -DCMAKE_VERBOSE_MAKEFILE=ON \
          -DGLOBAL_BUILD=ON \
-         -DENABLE_TESTS=ON \
-         -DWITH_TESTS=ON \
+         -DENABLE_TEST=ON \
          -DCMAKE_BUILD_TYPE=Release
 
 cmake --build --preset conan-release -j4

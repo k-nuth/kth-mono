@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SHARED "" OFF)
 option(ENABLE_POSITION_INDEPENDENT_CODE "Enable POSITION_INDEPENDENT_CODE property" ON)
-option(WITH_TESTS "Compile with unit tests." ON)
+option(ENABLE_TEST "Compile with unit tests." ON)
 
 
 option(GLOBAL_BUILD "" ON)
@@ -191,7 +191,7 @@ _group_sources(${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}")
 
 # Tests
 # ------------------------------------------------------------------------------
-if (WITH_TESTS)
+if (ENABLE_TEST)
     enable_testing()
     find_package(Catch2 3 REQUIRED)
 

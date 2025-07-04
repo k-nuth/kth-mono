@@ -17,7 +17,6 @@
 #include "secp256k1.c"
 #include "include/secp256k1.h"
 #include "include/secp256k1_preallocated.h"
-#include "include/secp256k1_preallocated.h"
 #include "testrand_impl.h"
 
 #include "contrib/lax_der_parsing.c"
@@ -172,26 +171,6 @@ void run_context_tests(int use_prealloc) {
         both = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     }
 
-    if (use_prealloc) {
-        none_prealloc = malloc(secp256k1_context_preallocated_size(SECP256K1_CONTEXT_NONE));
-        sign_prealloc = malloc(secp256k1_context_preallocated_size(SECP256K1_CONTEXT_SIGN));
-        vrfy_prealloc = malloc(secp256k1_context_preallocated_size(SECP256K1_CONTEXT_VERIFY));
-        both_prealloc = malloc(secp256k1_context_preallocated_size(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY));
-        CHECK(none_prealloc != NULL);
-        CHECK(sign_prealloc != NULL);
-        CHECK(vrfy_prealloc != NULL);
-        CHECK(both_prealloc != NULL);
-        none = secp256k1_context_preallocated_create(none_prealloc, SECP256K1_CONTEXT_NONE);
-        sign = secp256k1_context_preallocated_create(sign_prealloc, SECP256K1_CONTEXT_SIGN);
-        vrfy = secp256k1_context_preallocated_create(vrfy_prealloc, SECP256K1_CONTEXT_VERIFY);
-        both = secp256k1_context_preallocated_create(both_prealloc, SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    } else {
-        none = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
-        sign = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-        vrfy = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
-        both = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    }
-
     memset(&zero_pubkey, 0, sizeof(zero_pubkey));
 
     ecount = 0;
@@ -200,12 +179,6 @@ void run_context_tests(int use_prealloc) {
     secp256k1_context_set_illegal_callback(sign, counting_illegal_callback_fn, &ecount2);
     secp256k1_context_set_error_callback(sign, counting_illegal_callback_fn, NULL);
     CHECK(vrfy->error_callback.fn != sign->error_callback.fn);
-
-    /* check if sizes for cloning are consistent */
-    CHECK(secp256k1_context_preallocated_clone_size(none) == secp256k1_context_preallocated_size(SECP256K1_CONTEXT_NONE));
-    CHECK(secp256k1_context_preallocated_clone_size(sign) == secp256k1_context_preallocated_size(SECP256K1_CONTEXT_SIGN));
-    CHECK(secp256k1_context_preallocated_clone_size(vrfy) == secp256k1_context_preallocated_size(SECP256K1_CONTEXT_VERIFY));
-    CHECK(secp256k1_context_preallocated_clone_size(both) == secp256k1_context_preallocated_size(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY));
 
     /* check if sizes for cloning are consistent */
     CHECK(secp256k1_context_preallocated_clone_size(none) == secp256k1_context_preallocated_size(SECP256K1_CONTEXT_NONE));
@@ -340,21 +313,10 @@ void run_context_tests(int use_prealloc) {
         free(vrfy_prealloc);
         free(both_prealloc);
     } else {
-        if (use_prealloc) {
-        secp256k1_context_preallocated_destroy(none);
-        secp256k1_context_preallocated_destroy(sign);
-        secp256k1_context_preallocated_destroy(vrfy);
-        secp256k1_context_preallocated_destroy(both);
-        free(none_prealloc);
-        free(sign_prealloc);
-        free(vrfy_prealloc);
-        free(both_prealloc);
-    } else {
         secp256k1_context_destroy(none);
-            secp256k1_context_destroy(sign);
-            secp256k1_context_destroy(vrfy);
-            secp256k1_context_destroy(both);
-    }
+        secp256k1_context_destroy(sign);
+        secp256k1_context_destroy(vrfy);
+        secp256k1_context_destroy(both);
     }
     /* Defined as no-op. */
     secp256k1_context_destroy(NULL);
@@ -431,7 +393,6 @@ void run_scratch_tests(void) {
     /* cleanup */
     secp256k1_scratch_space_destroy(none, NULL); /* no-op */
     secp256k1_context_destroy(none);
-    secp256k1_context_preallocated_destroy(NULL);
 }
 
 /***** HASH TESTS *****/
@@ -2282,22 +2243,6 @@ void test_ge(void) {
         ge_equals_gej(&ge[i], &gej[i]);
     }
 
-    /* Test batch gej -> ge conversion with many infinities. */
-    for (i = 0; i < 4 * runs + 1; i++) {
-        random_group_element_test(&ge[i]);
-        /* randomly set half the points to infinity */
-        if(secp256k1_fe_is_odd(&ge[i].x)) {
-            secp256k1_ge_set_infinity(&ge[i]);
-        }
-        secp256k1_gej_set_ge(&gej[i], &ge[i]);
-    }
-    /* batch invert */
-    secp256k1_ge_set_all_gej_var(ge, gej, 4 * runs + 1);
-    /* check result */
-    for (i = 0; i < 4 * runs + 1; i++) {
-        ge_equals_gej(&ge[i], &gej[i]);
-    }
-
     free(ge);
     free(gej);
     free(zinv);
@@ -3120,7 +3065,7 @@ void test_ecmult_multi_batching(void) {
     data.pt = pt;
     secp256k1_gej_neg(&r2, &r2);
 
-    /* Test with empty scratch space. It should compute the correct result using
+    /* Test with empty scratch space. It should compute the correct result using 
      * ecmult_mult_simple algorithm which doesn't require a scratch space. */
     scratch = secp256k1_scratch_create(&ctx->error_callback, 0);
     CHECK(secp256k1_ecmult_multi_var(&ctx->error_callback, &ctx->ecmult_ctx, scratch, &r, &scG, ecmult_multi_callback, &data, n_points));
@@ -3242,7 +3187,6 @@ void test_constant_wnaf(const secp256k1_scalar *number, int w) {
     for (i = 0; i < 16; ++i) {
         secp256k1_scalar_shr_int(&num, 8);
     }
-    bits = 128;
     bits = 128;
 #endif
     skew = secp256k1_wnaf_const(wnaf, &num, w, bits);
@@ -3385,15 +3329,12 @@ void run_wnaf(void) {
     test_constant_wnaf(&n, 4);
     /* Test 0 */
     test_fixed_wnaf_small();
-    /* Test 0 */
-    test_fixed_wnaf_small();
     /* Random tests */
     for (i = 0; i < count; i++) {
         random_scalar_order(&n);
         test_wnaf(&n, 4+(i%10));
         test_constant_wnaf_negate(&n);
         test_constant_wnaf(&n, 4 + (i % 10));
-        test_fixed_wnaf(&n, 4 + (i % 10));
         test_fixed_wnaf(&n, 4 + (i % 10));
     }
     secp256k1_scalar_set_int(&n, 0);
@@ -3859,7 +3800,6 @@ void run_ec_pubkey_parse_test(void) {
     ecount = 0;
     VG_UNDEF(&pubkey, sizeof(pubkey));
     CHECK(secp256k1_ec_pubkey_parse(ctx, &pubkey, pubkeyc, 65) == 1);
-    CHECK(secp256k1_ec_pubkey_parse(secp256k1_context_no_precomp, &pubkey, pubkeyc, 65) == 1);
     CHECK(secp256k1_ec_pubkey_parse(secp256k1_context_no_precomp, &pubkey, pubkeyc, 65) == 1);
     VG_CHECK(&pubkey, sizeof(pubkey));
     CHECK(ecount == 0);
@@ -4497,50 +4437,13 @@ int test_ecdsa_der_parse(const unsigned char *sig, size_t siglen, int certainly_
     if (valid_der) {
         ret |= (!roundtrips_der_lax) << 12;
         ret |= (len_der != len_der_lax) << 13;
-        ret |= ((len_der != len_der_lax) || ((len_der != len_der_lax) || (memcmp(roundtrip_der_lax, roundtrip_der, len_der) != 0))) << 14;
+        ret |= ((len_der != len_der_lax) || (memcmp(roundtrip_der_lax, roundtrip_der, len_der) != 0)) << 14;
     }
     ret |= (roundtrips_der != roundtrips_der_lax) << 15;
     if (parsed_der) {
         ret |= (!parsed_der_lax) << 16;
     }
 
-#ifdef ENABLE_OPENSSL_TESTS
-    sig_openssl = ECDSA_SIG_new();
-    sigptr = sig;
-    parsed_openssl = (d2i_ECDSA_SIG(&sig_openssl, &sigptr, siglen) != NULL);
-    if (parsed_openssl) {
-        ECDSA_SIG_get0(sig_openssl, &r, &s);
-        valid_openssl = !BN_is_negative(r) && !BN_is_negative(s) && BN_num_bits(r) > 0 && BN_num_bits(r) <= 256 && BN_num_bits(s) > 0 && BN_num_bits(s) <= 256;
-        if (valid_openssl) {
-            unsigned char tmp[32] = {0};
-            BN_bn2bin(r, tmp + 32 - BN_num_bytes(r));
-            valid_openssl = memcmp(tmp, max_scalar, 32) < 0;
-        }
-        if (valid_openssl) {
-            unsigned char tmp[32] = {0};
-            BN_bn2bin(s, tmp + 32 - BN_num_bytes(s));
-            valid_openssl = memcmp(tmp, max_scalar, 32) < 0;
-        }
-    }
-    len_openssl = i2d_ECDSA_SIG(sig_openssl, NULL);
-    if (len_openssl <= 2048) {
-        unsigned char *ptr = roundtrip_openssl;
-        CHECK(i2d_ECDSA_SIG(sig_openssl, &ptr) == len_openssl);
-        roundtrips_openssl = valid_openssl && ((size_t)len_openssl == siglen) && (memcmp(roundtrip_openssl, sig, siglen) == 0);
-    } else {
-        len_openssl = 0;
-    }
-    ECDSA_SIG_free(sig_openssl);
-
-    ret |= (parsed_der && !parsed_openssl) << 4;
-    ret |= (valid_der && !valid_openssl) << 5;
-    ret |= (roundtrips_openssl && !parsed_der) << 6;
-    ret |= (roundtrips_der != roundtrips_openssl) << 7;
-    if (roundtrips_openssl) {
-        ret |= (len_der != (size_t)len_openssl) << 8;
-        ret |= ((len_der != (size_t)len_openssl) || (memcmp(roundtrip_der, roundtrip_openssl, len_der) != 0)) << 9;
-    }
-#endif
     return ret;
 }
 
@@ -5164,7 +5067,7 @@ int main(int argc, char **argv) {
         const char* ch = argv[2];
         while (pos < 16 && ch[0] != 0 && ch[1] != 0) {
             unsigned short sh;
-            if (((sscanf(ch, "%2hx", &sh)) == 1) == 1) {
+            if ((sscanf(ch, "%2hx", &sh)) == 1) {
                 seed16[pos] = sh;
             } else {
                 break;
@@ -5176,7 +5079,6 @@ int main(int argc, char **argv) {
         FILE *frand = fopen("/dev/urandom", "r");
         if ((frand == NULL) || fread(&seed16, 1, sizeof(seed16), frand) != sizeof(seed16)) {
             uint64_t t = time(NULL) * (uint64_t)1337;
-            fprintf(stderr, "WARNING: could not read 16 bytes from /dev/urandom; falling back to insecure PRNG\n");
             fprintf(stderr, "WARNING: could not read 16 bytes from /dev/urandom; falling back to insecure PRNG\n");
             seed16[0] ^= t;
             seed16[1] ^= t >> 8;
@@ -5241,7 +5143,6 @@ int main(int argc, char **argv) {
     run_ecmult_constants();
     run_ecmult_gen_blind();
     run_ecmult_const_tests();
-    run_ecmult_multi_tests();
     run_ecmult_multi_tests();
     run_ec_combine();
 
