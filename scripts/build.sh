@@ -20,7 +20,6 @@ cmake --preset conan-release \
          -DCMAKE_VERBOSE_MAKEFILE=ON \
          -DGLOBAL_BUILD=ON \
          -DENABLE_TEST=ON \
-         -DENABLE_TEST=ON \
          -DCMAKE_BUILD_TYPE=Release
 
 if [ $? -ne 0 ]; then
