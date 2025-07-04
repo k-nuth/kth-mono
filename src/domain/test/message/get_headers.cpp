@@ -74,7 +74,7 @@ TEST_CASE("get headers  constructor 5  always  equals params", "[get headers]") 
     REQUIRE(stop == instance.stop_hash());
 }
 
-TEST_CASE("get headers  from data  insufficient bytes  failure", "[get headers]") {
+TEST_CASE("get headers from data insufficient bytes  failure", "[get headers]") {
     data_chunk const raw{0xab, 0xcd};
     message::get_headers instance;
 
@@ -82,7 +82,7 @@ TEST_CASE("get headers  from data  insufficient bytes  failure", "[get headers]"
                                    message::get_headers::version_minimum, raw));
 }
 
-TEST_CASE("get headers  from data  insufficient version  failure", "[get headers]") {
+TEST_CASE("get headers from data insufficient version  failure", "[get headers]") {
     const message::get_headers expected{
         {hash_literal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
          hash_literal("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
@@ -98,7 +98,7 @@ TEST_CASE("get headers  from data  insufficient version  failure", "[get headers
                                    message::get_headers::version_minimum - 1, data));
 }
 
-TEST_CASE("get headers  factory from data 1  valid input  success", "[get headers]") {
+TEST_CASE("get headers from data valid input  success", "[get headers]") {
     const message::get_headers expected{
         {hash_literal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
          hash_literal("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
@@ -108,8 +108,10 @@ TEST_CASE("get headers  factory from data 1  valid input  success", "[get header
         hash_literal("7777777777777777777777777777777777777777777777777777777777777777")};
 
     auto const data = expected.to_data(message::get_headers::version_minimum);
-    auto const result = create<message::get_headers>(
-        message::get_headers::version_minimum, data);
+    byte_reader reader(data);
+    auto const result_exp = message::get_headers::from_data(reader, message::get_headers::version_minimum);
+    REQUIRE(result_exp);
+    auto const result = std::move(*result_exp);
 
     REQUIRE(result.is_valid());
     REQUIRE(expected == result);
@@ -119,46 +121,7 @@ TEST_CASE("get headers  factory from data 1  valid input  success", "[get header
         result.serialized_size(message::get_headers::version_minimum));
 }
 
-TEST_CASE("get headers  factory from data 2  valid input  success", "[get headers]") {
-    const message::get_headers expected{
-        {hash_literal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-         hash_literal("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-         hash_literal("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"),
-         hash_literal("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"),
-         hash_literal("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")},
-        hash_literal("7777777777777777777777777777777777777777777777777777777777777777")};
 
-    auto const data = expected.to_data(message::get_headers::version_minimum);
-    data_source istream(data);
-    auto const result = create<message::get_headers>(
-        message::get_headers::version_minimum, istream);
-
-    REQUIRE(result.is_valid());
-    REQUIRE(expected == result);
-    REQUIRE(data.size() == result.serialized_size(message::get_headers::version_minimum));
-    REQUIRE(expected.serialized_size(message::get_headers::version_minimum) == result.serialized_size(message::get_headers::version_minimum));
-}
-
-TEST_CASE("get headers  factory from data 3  valid input  success", "[get headers]") {
-    const message::get_headers expected{
-        {hash_literal("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-         hash_literal("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-         hash_literal("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"),
-         hash_literal("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"),
-         hash_literal("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")},
-        hash_literal("7777777777777777777777777777777777777777777777777777777777777777")};
-
-    auto const data = expected.to_data(message::get_headers::version_minimum);
-    data_source istream(data);
-    istream_reader source(istream);
-    auto const result = create<message::get_headers>(
-        message::get_headers::version_minimum, source);
-
-    REQUIRE(result.is_valid());
-    REQUIRE(expected == result);
-    REQUIRE(data.size() == result.serialized_size(message::get_headers::version_minimum));
-    REQUIRE(expected.serialized_size(message::get_headers::version_minimum) == result.serialized_size(message::get_headers::version_minimum));
-}
 
 TEST_CASE("get headers  operator assign equals  always  matches equivalent", "[get headers]") {
     hash_list start = {

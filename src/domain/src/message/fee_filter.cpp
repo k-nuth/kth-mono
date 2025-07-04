@@ -74,6 +74,7 @@ void fee_filter::to_data(uint32_t version, data_sink& stream) const {
 }
 
 bool fee_filter::is_valid() const {
+    // return !insufficient_version_;
     return !insufficient_version_ || (minimum_fee_ > 0);
 }
 
