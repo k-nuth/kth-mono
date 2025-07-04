@@ -125,21 +125,30 @@ TEST_CASE("script from data testnet 119058 invalid op codes success", "[script]"
     auto const raw_script = to_chunk(base16_literal("0130323066643366303435313438356531306633383837363437356630643265396130393739343332353534313766653139316438623963623230653430643863333030326431373463336539306366323433393231383761313037623634373337633937333135633932393264653431373731636565613062323563633534353732653302ae"));
 
     script parsed;
-    REQUIRE(entity_from_data(parsed, raw_script, false));
+    byte_reader reader(raw_script);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    parsed = std::move(*result);
 }
 
 TEST_CASE("script from data parse success", "[script]") {
     auto const raw_script = to_chunk(base16_literal("3045022100ff1fc58dbd608e5e05846a8e6b45a46ad49878aef6879ad1a7cf4c5a7f853683022074a6a10f6053ab3cddc5620d169c7374cd42c1416c51b9744db2c8d9febfb84d01"));
 
     script parsed;
-    REQUIRE(entity_from_data(parsed, raw_script, true));
+    byte_reader reader(raw_script);
+    auto result = script::from_data(reader, true);
+    REQUIRE(result);
+    parsed = std::move(*result);
 }
 
 TEST_CASE("script from data to data roundtrips", "[script]") {
     auto const normal_output_script = to_chunk(base16_literal("76a91406ccef231c2db72526df9338894ccf9355e8f12188ac"));
 
     script out_script;
-    REQUIRE(entity_from_data(out_script, normal_output_script, false));
+    byte_reader reader(normal_output_script);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    out_script = std::move(*result);
 
     auto const roundtrip = out_script.to_data(false);
     REQUIRE(roundtrip == normal_output_script);
@@ -166,7 +175,10 @@ TEST_CASE("script from data to data weird roundtrips", "[script]") {
         "74b1d185dbf5b4db4ddb0642848868685174519c6351670068"));
 
     script weird;
-    REQUIRE(entity_from_data(weird, weird_raw_script, false));
+    byte_reader reader(weird_raw_script);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    weird = std::move(*result);
 
     auto const roundtrip_result = weird.to_data(false);
     REQUIRE(roundtrip_result == weird_raw_script);
@@ -174,24 +186,14 @@ TEST_CASE("script from data to data weird roundtrips", "[script]") {
 
 TEST_CASE("script factory from data chunk test", "[script]") {
     auto const raw = to_chunk(base16_literal("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac"));
-    auto const instance = create<script>(raw, false);
+    byte_reader reader(raw);
+    auto const result_exp = script::from_data(reader, false);
+    REQUIRE(result_exp);
+    auto const instance = std::move(*result_exp);
     REQUIRE(instance.is_valid());
 }
 
-TEST_CASE("script factory from data stream test", "[script]") {
-    auto raw = to_chunk(base16_literal("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac"));
-    data_source istream(raw);
-    auto instance = create<script>(istream, false);
-    REQUIRE(instance.is_valid());
-}
 
-TEST_CASE("script factory from data reader test", "[script]") {
-    auto raw = to_chunk(base16_literal("76a914fc7b44566256621affb1541cc9d59f08336d276b88ac"));
-    data_source istream(raw);
-    istream_reader source(istream);
-    auto const instance = create<script>(source, false);
-    REQUIRE(instance.is_valid());
-}
 
 TEST_CASE("script from data  first byte invalid wire code  success", "[script]") {
     auto const raw = to_chunk(base16_literal(
@@ -200,7 +202,10 @@ TEST_CASE("script from data  first byte invalid wire code  success", "[script]")
         "8292e8a8ade38191e381a6e381afe38184e381aae38184"));
 
     script instance;
-    REQUIRE(entity_from_data(instance, raw, false));
+    byte_reader reader(raw);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    instance = std::move(*result);
 }
 
 TEST_CASE("script from data  internal invalid wire code  success", "[script]") {
@@ -210,7 +215,10 @@ TEST_CASE("script from data  internal invalid wire code  success", "[script]") {
         "8292e8a8ade38191e381a6e381afe38184e381aae38184"));
 
     script instance;
-    REQUIRE(entity_from_data(instance, raw, false));
+    byte_reader reader(raw);
+    auto result = script::from_data(reader, false);
+    REQUIRE(result);
+    instance = std::move(*result);
 }
 
 TEST_CASE("script from string  empty  success", "[script]") {
@@ -548,8 +556,10 @@ TEST_CASE("script checksig  single  uses one hash", "[script]") {
     // input 315ac7d4c26d69668129cc352851d9389b4a6868f1509c6c8b66bead11e2619f:1
     data_chunk tx_data;
     decode_base16(tx_data, "0100000002dc38e9359bd7da3b58386204e186d9408685f427f5e513666db735aa8a6b2169000000006a47304402205d8feeb312478e468d0b514e63e113958d7214fa572acd87079a7f0cc026fc5c02200fa76ea05bf243af6d0f9177f241caf606d01fcfd5e62d6befbca24e569e5c27032102100a1a9ca2c18932d6577c58f225580184d0e08226d41959874ac963e3c1b2feffffffffdc38e9359bd7da3b58386204e186d9408685f427f5e513666db735aa8a6b2169010000006b4830450220087ede38729e6d35e4f515505018e659222031273b7366920f393ee3ab17bc1e022100ca43164b757d1a6d1235f13200d4b5f76dd8fda4ec9fc28546b2df5b1211e8df03210275983913e60093b767e85597ca9397fb2f418e57f998d6afbbc536116085b1cbffffffff0140899500000000001976a914fcc9b36d38cf55d7d5b4ee4dddb6b2c17612f48c88ac00000000");
-    transaction parent_tx;
-    REQUIRE(entity_from_data(parent_tx, tx_data));
+    byte_reader reader(tx_data);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const parent_tx = std::move(*result);
 
     data_chunk distinguished;
     decode_base16(distinguished, "30450220087ede38729e6d35e4f515505018e659222031273b7366920f393ee3ab17bc1e022100ca43164b757d1a6d1235f13200d4b5f76dd8fda4ec9fc28546b2df5b1211e8df");
@@ -560,8 +570,10 @@ TEST_CASE("script checksig  single  uses one hash", "[script]") {
     data_chunk script_data;
     decode_base16(script_data, "76a91433cef61749d11ba2adf091a5e045678177fe3a6d88ac");
 
-    script script_code;
-    REQUIRE(entity_from_data(script_code, script_data, false));
+    byte_reader reader2(script_data);
+    auto result2 = script::from_data(reader2, false);
+    REQUIRE(result2);
+    auto const script_code = std::move(*result2);
 
     ec_signature signature;
     static auto const index = 1u;
@@ -575,8 +587,10 @@ TEST_CASE("script checksig  normal  success", "[script]") {
     // input 315ac7d4c26d69668129cc352851d9389b4a6868f1509c6c8b66bead11e2619f:0
     data_chunk tx_data;
     decode_base16(tx_data, "0100000002dc38e9359bd7da3b58386204e186d9408685f427f5e513666db735aa8a6b2169000000006a47304402205d8feeb312478e468d0b514e63e113958d7214fa572acd87079a7f0cc026fc5c02200fa76ea05bf243af6d0f9177f241caf606d01fcfd5e62d6befbca24e569e5c27032102100a1a9ca2c18932d6577c58f225580184d0e08226d41959874ac963e3c1b2feffffffffdc38e9359bd7da3b58386204e186d9408685f427f5e513666db735aa8a6b2169010000006b4830450220087ede38729e6d35e4f515505018e659222031273b7366920f393ee3ab17bc1e022100ca43164b757d1a6d1235f13200d4b5f76dd8fda4ec9fc28546b2df5b1211e8df03210275983913e60093b767e85597ca9397fb2f418e57f998d6afbbc536116085b1cbffffffff0140899500000000001976a914fcc9b36d38cf55d7d5b4ee4dddb6b2c17612f48c88ac00000000");
-    transaction parent_tx;
-    REQUIRE(entity_from_data(parent_tx, tx_data));
+    byte_reader reader(tx_data);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const parent_tx = std::move(*result);
 
     data_chunk distinguished;
     decode_base16(distinguished, "304402205d8feeb312478e468d0b514e63e113958d7214fa572acd87079a7f0cc026fc5c02200fa76ea05bf243af6d0f9177f241caf606d01fcfd5e62d6befbca24e569e5c27");
@@ -587,8 +601,10 @@ TEST_CASE("script checksig  normal  success", "[script]") {
     data_chunk script_data;
     decode_base16(script_data, "76a914fcc9b36d38cf55d7d5b4ee4dddb6b2c17612f48c88ac");
 
-    script script_code;
-    REQUIRE(entity_from_data(script_code, script_data, false));
+    byte_reader reader2(script_data);
+    auto result2 = script::from_data(reader2, false);
+    REQUIRE(result2);
+    auto const script_code = std::move(*result2);
 
     ec_signature signature;
     static auto const index = 0u;
@@ -600,8 +616,10 @@ TEST_CASE("script checksig  normal  success", "[script]") {
 TEST_CASE("script create endorsement  single input single output  expected", "[script]") {
     data_chunk tx_data;
     decode_base16(tx_data, "0100000001b3807042c92f449bbf79b33ca59d7dfec7f4cc71096704a9c526dddf496ee0970100000000ffffffff01905f0100000000001976a91418c0bd8d1818f1bf99cb1df2269c645318ef7b7388ac00000000");
-    transaction new_tx;
-    REQUIRE(entity_from_data(new_tx, tx_data));
+    byte_reader reader(tx_data);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const new_tx = std::move(*result);
 
     script prevout_script;
     REQUIRE(prevout_script.from_string("dup hash160 [88350574280395ad2c3e2ee20e322073d94e5e40] equalverify checksig"));
@@ -615,18 +633,20 @@ TEST_CASE("script create endorsement  single input single output  expected", "[s
     REQUIRE(out_result.has_value());
     
     auto const& out = out_result.value();
-    auto const result = encode_base16(out);
+    auto const result2 = encode_base16(out);
     // auto const expected = "3045022100e428d3cc67a724cb6cfe8634aa299e58f189d9c46c02641e936c40cc16c7e8ed0220083949910fe999c21734a1f33e42fca15fb463ea2e08f0a1bccd952aacaadbb801";
     auto const expected = "304402200245ea46be39d72fed03c899aabc446b3c9baf93f57c2b382757856c3209854b0220795946074804a08c0053116eafe851c1a37b24414199afecf286f1eb4d82167801";
 
-    REQUIRE(result == expected);
+    REQUIRE(result2 == expected);
 }
 
 TEST_CASE("script create endorsement  single input no output  expected", "[script]") {
     data_chunk tx_data;
     decode_base16(tx_data, "0100000001b3807042c92f449bbf79b33ca59d7dfec7f4cc71096704a9c526dddf496ee0970000000000ffffffff0000000000");
-    transaction new_tx;
-    REQUIRE(entity_from_data(new_tx, tx_data));
+    byte_reader reader(tx_data);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const new_tx = std::move(*result);
 
     script prevout_script;
     REQUIRE(prevout_script.from_string("dup hash160 [88350574280395ad2c3e2ee20e322073d94e5e40] equalverify checksig"));
@@ -640,17 +660,19 @@ TEST_CASE("script create endorsement  single input no output  expected", "[scrip
     REQUIRE(out_result.has_value());
     
     auto const& out = out_result.value();
-    auto const result = encode_base16(out);
+    auto const result2 = encode_base16(out);
     // auto const expected = "3045022100ba57820be5f0b93a0d5b880fbf2a86f819d959ecc24dc31b6b2d4f6ed286f253022071ccd021d540868ee10ca7634f4d270dfac7aea0d5912cf2b104111ac9bc756b01";
     auto const expected = "304402202d32085880e02b7f58a23db8a01eebfe105b6efda19e426960148d152ae67c76022028868ba8d97a4983252b247ae7f3203106c691a6ff83cc0f9b11289115ce4f3801";
-    REQUIRE(result == expected);
+    REQUIRE(result2 == expected);
 }
 
 TEST_CASE("script generate signature hash  all  expected", "[script]") {
     data_chunk tx_data;
     decode_base16(tx_data, "0100000001b3807042c92f449bbf79b33ca59d7dfec7f4cc71096704a9c526dddf496ee0970000000000ffffffff0000000000");
-    transaction new_tx;
-    REQUIRE(entity_from_data(new_tx, tx_data));
+    byte_reader reader(tx_data);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const new_tx = std::move(*result);
 
     script prevout_script;
     REQUIRE(prevout_script.from_string("dup hash160 [88350574280395ad2c3e2ee20e322073d94e5e40] equalverify checksig"));
@@ -659,9 +681,9 @@ TEST_CASE("script generate signature hash  all  expected", "[script]") {
     auto const index = 0u;
     auto const sighash_type = sighash_algorithm::all;
     auto const sighash = script::generate_signature_hash(new_tx, index, prevout_script, sighash_type, 0u);
-    auto const result = encode_base16(sighash.first);
+    auto const result2 = encode_base16(sighash.first);
     auto const expected = "f89572635651b2e4f89778350616989183c98d1a721c911324bf9f17a0cf5bf0";
-    REQUIRE(result == expected);
+    REQUIRE(result2 == expected);
 }
 
 // Ad-hoc test cases.
@@ -687,8 +709,10 @@ TEST_CASE("script native  block 290329 tx valid", "[script]") {
     data_chunk decoded_script;
     REQUIRE(decode_base16(decoded_script, encoded_script));
 
-    transaction tx;
-    REQUIRE(entity_from_data(tx, decoded_tx));
+    byte_reader reader(decoded_tx);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const tx = std::move(*result);
     REQUIRE(tx.inputs().size() > index);
 
     auto const& input = tx.inputs()[index];
@@ -701,8 +725,8 @@ TEST_CASE("script native  block 290329 tx valid", "[script]") {
     ////std::cout << input.script().to_string(forks) << std::endl;
     ////std::cout << input.witness().to_string() << std::endl;
 
-    auto const result = verify(tx, index, forks);
-    REQUIRE(result.value() == error::success);
+    auto const result2 = verify(tx, index, forks);
+    REQUIRE(result2.value() == error::success);
 }
 
 TEST_CASE("script native  block 438513 tx valid", "[script]") {
@@ -725,8 +749,10 @@ TEST_CASE("script native  block 438513 tx valid", "[script]") {
     data_chunk decoded_script;
     REQUIRE(decode_base16(decoded_script, encoded_script));
 
-    transaction tx;
-    REQUIRE(entity_from_data(tx, decoded_tx));
+    byte_reader reader(decoded_tx);
+    auto result = transaction::from_data(reader, true);
+    REQUIRE(result);
+    auto const tx = std::move(*result);
     REQUIRE(tx.inputs().size() > index);
 
     auto const& input = tx.inputs()[index];
@@ -735,8 +761,8 @@ TEST_CASE("script native  block 438513 tx valid", "[script]") {
     prevout.set_script(create<script>(decoded_script, false));
     REQUIRE(prevout.script().is_valid());
 
-    auto const result = verify(tx, index, forks);
-    REQUIRE(result.value() == error::success);
+    auto const result2 = verify(tx, index, forks);
+    REQUIRE(result2.value() == error::success);
 }
 
 // End Test Suite

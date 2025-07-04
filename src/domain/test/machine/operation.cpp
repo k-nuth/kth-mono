@@ -55,20 +55,24 @@ TEST_CASE("operation  constructor 5  valid input  returns input initialized", "[
     REQUIRE(instance.is_valid());
 }
 
-TEST_CASE("operation  from data  insufficient bytes  failure", "[operation]") {
+TEST_CASE("operation from data insufficient bytes  failure", "[operation]") {
     data_chunk const data;
-    operation instance;
-
-    REQUIRE( ! entity_from_data(instance, data));
+    byte_reader reader(data);
+    auto result = operation::from_data(reader);
+    REQUIRE( ! result);
+    auto const instance = std::move(*result);
     REQUIRE( ! instance.is_valid());
 }
 
-TEST_CASE("operation  from data  roundtrip push size 0  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push size 0  success", "[operation]") {
     auto const data0 = to_chunk(base16_literal(""));
     auto const raw_operation = to_chunk(base16_literal("00"));
     operation instance;
 
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -80,12 +84,15 @@ TEST_CASE("operation  from data  roundtrip push size 0  success", "[operation]")
     REQUIRE(instance.data() == data0);
 }
 
-TEST_CASE("operation  from data  roundtrip push size 75  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push size 75  success", "[operation]") {
     auto const data75 = data_chunk(75, '.');
     auto const raw_operation = build_chunk({base16_literal("4b"), data75});
     operation instance;
 
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -97,7 +104,7 @@ TEST_CASE("operation  from data  roundtrip push size 75  success", "[operation]"
     REQUIRE(instance.data() == data75);
 }
 
-TEST_CASE("operation  from data  roundtrip push negative 1  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push negative 1  success", "[operation]") {
     static auto const op_79 = static_cast<uint8_t>(opcode::push_negative_1);
     auto const data1 = data_chunk{op_79};
     auto const raw_operation = data1;
@@ -105,7 +112,10 @@ TEST_CASE("operation  from data  roundtrip push negative 1  success", "[operatio
 
     // This is read as an encoded operation, not as data.
     // Constructors read (unencoded) data and can select minimal encoding.
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -118,7 +128,7 @@ TEST_CASE("operation  from data  roundtrip push negative 1  success", "[operatio
     REQUIRE(instance.data() == data_chunk{});
 }
 
-TEST_CASE("operation  from data  roundtrip push positive 1  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push positive 1  success", "[operation]") {
     static auto const op_81 = static_cast<uint8_t>(opcode::push_positive_1);
     auto const data1 = data_chunk{op_81};
     auto const raw_operation = data1;
@@ -126,7 +136,10 @@ TEST_CASE("operation  from data  roundtrip push positive 1  success", "[operatio
 
     // This is read as an encoded operation, not as data.
     // Constructors read (unencoded) data and can select minimal encoding.
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -139,7 +152,7 @@ TEST_CASE("operation  from data  roundtrip push positive 1  success", "[operatio
     REQUIRE(instance.data() == data_chunk{});
 }
 
-TEST_CASE("operation  from data  roundtrip push positive 16  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push positive 16  success", "[operation]") {
     static auto const op_96 = static_cast<uint8_t>(opcode::push_positive_16);
     auto const data1 = data_chunk{op_96};
     auto const raw_operation = data1;
@@ -147,7 +160,10 @@ TEST_CASE("operation  from data  roundtrip push positive 16  success", "[operati
 
     // This is read as an encoded operation, not as data.
     // Constructors read (unencoded) data and can select minimal encoding.
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -160,14 +176,17 @@ TEST_CASE("operation  from data  roundtrip push positive 16  success", "[operati
     REQUIRE(instance.data() == data_chunk{});
 }
 
-TEST_CASE("operation  from data  roundtrip push one size  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push one size  success", "[operation]") {
     auto const data255 = data_chunk(255, '.');
     auto const raw_operation = build_chunk({base16_literal("4c"
                                                            "ff"),
                                             data255});
     operation instance;
 
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -179,14 +198,17 @@ TEST_CASE("operation  from data  roundtrip push one size  success", "[operation]
     REQUIRE(instance.data() == data255);
 }
 
-TEST_CASE("operation  from data  roundtrip push two size  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push two size  success", "[operation]") {
     auto const data520 = data_chunk(520, '.');
     auto const raw_operation = build_chunk({base16_literal("4d"
                                                            "0802"),
                                             data520});
     operation instance;
 
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -198,14 +220,17 @@ TEST_CASE("operation  from data  roundtrip push two size  success", "[operation]
     REQUIRE(instance.data() == data520);
 }
 
-TEST_CASE("operation  from data  roundtrip push four size  success", "[operation]") {
+TEST_CASE("operation from data roundtrip push four size  success", "[operation]") {
     auto const data520 = data_chunk(520, '.');
     auto const raw_operation = build_chunk({base16_literal("4e"
                                                            "08020000"),
                                             data520});
     operation instance;
 
-    REQUIRE(entity_from_data(instance, raw_operation));
+    byte_reader reader(raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    instance = std::move(*result);
     REQUIRE(instance.is_valid());
     REQUIRE(raw_operation == instance.to_data());
 
@@ -217,46 +242,39 @@ TEST_CASE("operation  from data  roundtrip push four size  success", "[operation
     REQUIRE(instance.data() == data520);
 }
 
-TEST_CASE("operation  factory from data 1  roundtrip  success", "[operation]") {
-    auto operation = create<machine::operation>(valid_raw_operation);
+TEST_CASE("operation from data roundtrip  success", "[operation]") {
+    byte_reader reader(valid_raw_operation);
+    auto result_exp = machine::operation::from_data(reader);
+    REQUIRE(result_exp);
+    auto const operation = std::move(*result_exp);
 
     REQUIRE(operation.is_valid());
     data_chunk output = operation.to_data();
     REQUIRE(output == valid_raw_operation);
 }
 
-TEST_CASE("operation  factory from data 2  roundtrip  success", "[operation]") {
-    data_source istream(valid_raw_operation);
-    auto operation = create<machine::operation>(istream);
 
-    REQUIRE(operation.is_valid());
-    data_chunk output = operation.to_data();
-    REQUIRE(output == valid_raw_operation);
-}
-
-TEST_CASE("operation  factory from data 3  roundtrip  success", "[operation]") {
-    data_source istream(valid_raw_operation);
-    istream_reader source(istream);
-    auto operation = create<machine::operation>(source);
-
-    REQUIRE(operation.is_valid());
-    data_chunk output = operation.to_data();
-    REQUIRE(output == valid_raw_operation);
-}
 
 TEST_CASE("operation  operator assign equals 1  always  matches equivalent", "[operation]") {
-    operation expected;
-    REQUIRE(entity_from_data(expected, valid_raw_operation));
+    byte_reader reader(valid_raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    auto const expected = std::move(*result);
     operation instance;
     operation value;
-    REQUIRE(entity_from_data(value, valid_raw_operation));
+    reader.reset();
+    result = operation::from_data(reader);
+    REQUIRE(result);
+    value = std::move(*result);
     instance = std::move(value);
     REQUIRE(instance == expected);
 }
 
 TEST_CASE("operation  operator assign equals 2  always  matches equivalent", "[operation]") {
-    operation expected;
-    REQUIRE(entity_from_data(expected, valid_raw_operation));
+    byte_reader reader(valid_raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    auto const expected = std::move(*result);
     operation instance;
     instance = expected;
     REQUIRE(instance == expected);
@@ -265,30 +283,48 @@ TEST_CASE("operation  operator assign equals 2  always  matches equivalent", "[o
 TEST_CASE("operation  operator boolean equals  duplicates  returns true", "[operation]") {
     operation alpha;
     operation beta;
-    REQUIRE(entity_from_data(alpha, valid_raw_operation));
-    REQUIRE(entity_from_data(beta, valid_raw_operation));
+    byte_reader reader(valid_raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    alpha = std::move(*result);
+    reader.reset();
+    result = operation::from_data(reader);
+    REQUIRE(result);
+    beta = std::move(*result);
     REQUIRE(alpha == beta);
 }
 
 TEST_CASE("operation  operator boolean equals  differs  returns false", "[operation]") {
     operation alpha;
     operation beta;
-    REQUIRE(entity_from_data(alpha, valid_raw_operation));
+    byte_reader reader(valid_raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    alpha = std::move(*result);
     REQUIRE(alpha != beta);
 }
 
 TEST_CASE("operation  operator boolean not equals  duplicates  returns false", "[operation]") {
     operation alpha;
     operation beta;
-    REQUIRE(entity_from_data(alpha, valid_raw_operation));
-    REQUIRE(entity_from_data(beta, valid_raw_operation));
+    byte_reader reader(valid_raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    alpha = std::move(*result);
+    reader.reset();
+    result = operation::from_data(reader);
+    REQUIRE(result);
+    beta = std::move(*result);
     REQUIRE(alpha == beta);
 }
 
 TEST_CASE("operation  operator boolean not equals  differs  returns true", "[operation]") {
     operation alpha;
     operation beta;
-    REQUIRE(entity_from_data(alpha, valid_raw_operation));
+    byte_reader reader(valid_raw_operation);
+    auto result = operation::from_data(reader);
+    REQUIRE(result);
+    alpha = std::move(*result);
     REQUIRE(alpha != beta);
 }
 
